@@ -4,6 +4,57 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v1.15.1 — 2026-07-25
+
+**The advisor now knows about buff slots.** EverQuest buffs occupy effect
+slots, and two spells in the same slot do not add — the second overwrites
+the first. So a loadout holding both Center and Bravery (both `ac-slot-1`)
+had quietly spent a gem on nothing, and the existing supersession check
+could not see it: it reasons from effect ids and magnitudes, and slot
+occupancy is not in that data.
+
+- `_gate_stacking` keeps the **strongest** spell per slot — curated lines run
+  weakest to strongest, and the strongest is what you end up with whatever
+  order you cast in. It runs across must_have + should_have together (they
+  are one slot fill) and *before* the promote step, so a freed gem refills
+  from the alternatives; the promote loop skips anything that would recreate
+  the clash.
+- Prebuffs get the same gate. Long-duration buffs are the worst place to
+  stack two of a slot, because the second cast silently throws away the
+  first one's mana and remaining duration.
+- Data is rari/eqlfinest's hand-curated spell lines (CC0, from the same
+  author as the routing data already used here), vendored as
+  `backend/spell_lines.json` — 112 lines over 344 spells. Coverage is
+  partial against the client's ~66,000 spell records, so a spell that is not
+  in the table is **never** dropped: absence of data is not evidence that two
+  buffs are compatible.
+
+**"Nothing is happening" now says which nothing.** The app reads the game's
+own `eqclient.ini` to tell apart two states that look identical from the
+outside — logging was never switched on (you need to type `/log on`) versus
+logging is on but nothing has happened yet (just play). If the game is
+*running* and its `Log=` setting is off, the hint is promoted to a banner
+rather than sitting in the quiet advisory line, because in that state
+nothing you do is being recorded at all. It fires even when an old log file
+exists, which is the case that used to be silently misleading.
+
+This is a read-only check, deliberately. Other companions set `Log=1`
+themselves so the step disappears; this one will not write to a game file it
+was not asked to write to.
+
+**Also**
+
+- The MCP setup instructions pointed at a different project that happens to
+  share the name `everquest-legends-mcp`. It has no tags and no eqlbuilds
+  data, so following them left every spell/AA unlock level falling back to
+  the wiki. Now points at ArtSabintsev's, the one actually in use.
+- Recorded that the loot-filter action codes are only half confirmed: 4=sell
+  is provable from the log and 3=merge is agreed, but a dedicated editor for
+  those files documents 1 and 2 the other way round. Only a display label is
+  affected, and it is flagged rather than guessed at.
+- Repo now has a description and topics, and releases are built by CI on a
+  clean runner rather than a laptop.
+
 ## v1.15.0 — 2026-07-25
 
 **A standalone .exe** — one 59 MB file, nothing to install. Plus a settings
