@@ -53,13 +53,24 @@ class _TextExtract(HTMLParser):
         return "\n".join(out).strip()
 
 
+_SSL_CTX = None
+
+
 def _ssl_ctx():
-    import ssl
-    try:
-        import certifi
-        return ssl.create_default_context(cafile=certifi.where())
-    except ImportError:
-        return ssl.create_default_context()
+    """Cached: building this parses certifi's whole CA bundle (~190ms on
+    Windows) and every wiki request used to pay it — half the wall time of
+    a page fetch. An SSLContext is read-only once configured and is safe to
+    share across the worker threads _get() runs in; a lost race just builds
+    one extra context."""
+    global _SSL_CTX
+    if _SSL_CTX is None:
+        import ssl
+        try:
+            import certifi
+            _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+        except ImportError:
+            _SSL_CTX = ssl.create_default_context()
+    return _SSL_CTX
 
 
 def _get(params: dict) -> dict:

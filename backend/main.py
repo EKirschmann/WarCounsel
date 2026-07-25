@@ -17,8 +17,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import (Depends, FastAPI, HTTPException, Request, WebSocket,
+                     WebSocketDisconnect)
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
@@ -550,7 +551,7 @@ async def lifespan(app: FastAPI):
         t.cancel()
 
 
-APP_VERSION = "1.14.0"  # bump together with frontend/lib/version.ts
+APP_VERSION = "1.14.1"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/eql_companion"
 
 app = FastAPI(title="EQL Companion", version=APP_VERSION, lifespan=lifespan)
@@ -868,15 +869,9 @@ def _parse_ver(v: str) -> tuple:
 async def update_check():
     """Compare the running version against the newest GitHub tag. On-demand
     (the version badge in the header triggers it) — never automatic."""
-    import ssl
     import urllib.request
 
-    def _ctx():
-        try:
-            import certifi
-            return ssl.create_default_context(cafile=certifi.where())
-        except ImportError:
-            return ssl.create_default_context()
+    from backend.wiki_http import _ssl_ctx as _ctx  # cached CA bundle
 
     def fetch_api():
         req = urllib.request.Request(
@@ -1176,33 +1171,46 @@ async def get_map(zone: Optional[str] = None):
     return {"available": True, **data}
 
 
+def _wants_gzip(request: Request) -> bool:
+    return "gzip" in request.headers.get("accept-encoding", "").lower()
+
+
+def _geometry_response(result) -> Response:
+    """Forward an already-serialized (and possibly already-compressed) zone
+    payload. GZipMiddleware leaves a response alone once Content-Encoding is
+    set, so the cached gzip is never re-compressed."""
+    body, encoding = result
+    headers = {"Content-Encoding": encoding} if encoding else None
+    return Response(content=body, media_type="application/json",
+                    headers=headers)
+
 @app.get("/api/geometry")
-async def get_zone_geometry(zone: Optional[str] = None):
+async def get_zone_geometry(request: Request, zone: Optional[str] = None):
     """Client-mined 2D wall/floor geometry (defaults to the current zone).
     Extraction runs in a worker thread and caches to data/geometry/."""
     target = zone or tracker.zone
     if not target:
         return {"available": False, "zone": None,
                 "reason": "No zone known yet — enter a zone or pass ?zone="}
-    data = await asyncio.to_thread(geometry_for_zone, target)
-    if data is None:
+    result = await asyncio.to_thread(geometry_for_zone, target, _wants_gzip(request))
+    if result is None:
         return {"available": False, "zone": normalize_zone(target),
                 "reason": "No client geometry for this place"}
-    return data
+    return _geometry_response(result)
 
 
 @app.get("/api/geometry3d")
-async def get_zone_geometry3d(zone: Optional[str] = None):
+async def get_zone_geometry3d(request: Request, zone: Optional[str] = None):
     """Full 3D triangle soup (floors/ramps/walls/props; ceilings excluded)."""
     target = zone or tracker.zone
     if not target:
         return {"available": False, "zone": None,
                 "reason": "No zone known yet — enter a zone or pass ?zone="}
-    data = await asyncio.to_thread(geometry3d_for_zone, target)
-    if data is None:
+    result = await asyncio.to_thread(geometry3d_for_zone, target, _wants_gzip(request))
+    if result is None:
         return {"available": False, "zone": normalize_zone(target),
                 "reason": "No client geometry for this place"}
-    return data
+    return _geometry_response(result)
 
 
 @app.get("/api/texture/{short}/{name}")

@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { API_URL, apiGet } from "@/lib/api";
+import { makeCadence, prefersReducedMotion } from "@/lib/glide";
 import type { Position, ZoneGeometry3D } from "@/lib/types";
 
 /** Defaults per spec: ceilings never shipped, walls on at 50%, stairs &
@@ -192,6 +193,8 @@ function Atlas3DEffects({
 }) {
   const followRef = useRef(follow);
   followRef.current = follow;
+  const heroRaf = useRef(0);
+  const cadenceRef = useRef(makeCadence()); // measured position-feed tick
 
   // panning drags the orbit target off the hero — release the follow lock,
   // exactly like dragging the 2D chart does
@@ -296,21 +299,45 @@ function Atlas3DEffects({
   useEffect(() => {
     const s = sceneRef.current;
     if (!s) return;
-    if (position) {
-      s.hero.position.set(position.y, position.x, position.z);
-      s.hero.visible = true;
-      if (follow) {
-        const delta = s.hero.position.clone().sub(s.controls.target);
-        if (delta.lengthSq() > 0.01) {
-          s.camera.position.add(delta);
-          s.controls.target.copy(s.hero.position);
-          s.controls.update();
-        }
-      }
-    } else {
+    cancelAnimationFrame(heroRaf.current);
+    if (!position) {
       s.hero.visible = false;
+      s.render();
+      return;
     }
-    s.render();
+    const target = new THREE.Vector3(position.y, position.x, position.z);
+    const applyFollow = () => {
+      if (!follow) return;
+      const delta = s.hero.position.clone().sub(s.controls.target);
+      if (delta.lengthSq() > 0.01) {
+        s.camera.position.add(delta);
+        s.controls.target.copy(s.hero.position);
+        s.controls.update();
+      }
+    };
+    const jump = s.hero.visible ? s.hero.position.distanceTo(target) : Infinity;
+    if (!s.hero.visible || prefersReducedMotion() || jump > 2000 || jump < 0.05) {
+      s.hero.position.copy(target);
+      s.hero.visible = true;
+      applyFollow();
+      s.render();
+      return;
+    }
+    // Interpolate between fixes exactly as the 2D chart does — linearly and
+    // over the feed's measured cadence. Snapping straight to each fix made
+    // the hero (and the follow camera with it) lurch once a second.
+    const duration = cadenceRef.current.tick(performance.now());
+    const start = performance.now();
+    const from = s.hero.position.clone();
+    const step = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      s.hero.position.lerpVectors(from, target, t);
+      applyFollow();
+      s.render();
+      if (t < 1) heroRaf.current = requestAnimationFrame(step);
+    };
+    heroRaf.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(heroRaf.current);
   }, [position, follow, geom, sceneRef]);
 
   return null;

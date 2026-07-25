@@ -2,6 +2,7 @@
 
 import { FormEvent, memo, useCallback, useEffect, useRef, useState } from "react";
 import { apiGet, apiSend } from "@/lib/api";
+import { makeCadence, prefersReducedMotion } from "@/lib/glide";
 import { Atlas3D } from "@/components/Atlas3D";
 import type { GeometryFloor, MapData, Position, ZoneGeometry } from "@/lib/types";
 
@@ -209,6 +210,7 @@ export const AtlasPanel = memo(function AtlasPanel({
   const followRef = useRef(true); // keep the hero centered until the user drags
   const dispRef = useRef<{ x: number; y: number } | null>(null); // eased on-screen position
   const glideRaf = useRef(0);
+  const cadenceRef = useRef(makeCadence()); // measured position-feed tick
   const noiseRef = useRef<[number, number, number][]>([]);
   const vellumRef = useRef<HTMLCanvasElement | null>(null);
   const vellumKey = useRef("");
@@ -478,8 +480,7 @@ export const AtlasPanel = memo(function AtlasPanel({
     };
   }, [view, zone]);
 
-  // glide the marker (and the follow camera) toward each new position;
-  // snap on the first fix, reduced motion, or a gate-sized jump
+  // glide the marker (and the follow camera) toward each new fix
   useEffect(() => {
     cancelAnimationFrame(glideRaf.current);
     if (!position) {
@@ -488,22 +489,25 @@ export const AtlasPanel = memo(function AtlasPanel({
       return;
     }
     const from = dispRef.current;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const jump = from ? Math.hypot(position.x - from.x, position.y - from.y) : Infinity;
-    if (!from || reduced || jump > 2000 || jump < 0.5) {
+    // snap on the first fix, reduced motion, a zone-line-sized jump, or a
+    // no-op repeat of the same coordinates
+    if (!from || prefersReducedMotion() || jump > 2000 || jump < 0.05) {
       dispRef.current = { x: position.x, y: position.y };
       if (followRef.current) centerOnPlayer();
       draw();
       return;
     }
+    // Linear, over the feed's measured cadence, so consecutive fixes chain
+    // into continuous motion. (Easing out braked to a standstill inside every
+    // tick, and that pause is what made tracking look like it stepped.)
+    const duration = cadenceRef.current.tick(performance.now());
     const start = performance.now();
-    const DURATION = 700; // ms - just under the ~1s OCR cadence
     const fx = from.x;
     const fy = from.y;
     const step = (now: number) => {
-      const t = Math.min((now - start) / DURATION, 1);
-      const e = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      dispRef.current = { x: fx + (position.x - fx) * e, y: fy + (position.y - fy) * e };
+      const t = Math.min((now - start) / duration, 1);
+      dispRef.current = { x: fx + (position.x - fx) * t, y: fy + (position.y - fy) * t };
       if (followRef.current) centerOnPlayer();
       draw();
       if (t < 1) glideRaf.current = requestAnimationFrame(step);

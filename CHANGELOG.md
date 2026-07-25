@@ -4,6 +4,46 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v1.14.1 — 2026-07-22
+
+An efficiency pass over the two slowest user-facing paths and the log
+parser, plus smoother live position tracking. Every figure below was
+measured on this repo's fixture log and a real 15MB zone payload.
+
+**Faster**
+
+- **Wiki requests stop rebuilding the TLS context every call.** Building
+  it parses certifi's entire CA bundle — 190ms — and every HTTP wiki fetch
+  paid that toll. Cached once, so a page fetch drops from ~0.40s to
+  ~0.22s. The update check reuses the same context instead of building a
+  second one.
+- **Zone geometry is served straight from its cache.** `/api/geometry` and
+  `/api/geometry3d` were parsing their own JSON cache purely so the
+  response layer could re-serialize it — 251ms + 300ms on the 15MB
+  Greater Faydark payload. Those bytes now reach the client untouched.
+  A zone payload is fixed for a given .s3d, so its gzip is cached beside
+  it as well and the middleware no longer re-compresses 15MB per request:
+  **~1.5s -> ~69ms** for a cached zone. Clients that do not accept gzip
+  still get plain JSON. Cache writes are atomic (temp file + rename) and
+  reads carry a shape check, since nothing parses the cache anymore to
+  notice a truncated one.
+- **Log parsing is ~35% faster** — 15.4 -> 10.0 us/line. The timestamp is
+  fixed-width, so it is sliced rather than run through `strptime` (which
+  re-reads the locale on every call), and a combat burst's repeated stamps
+  hit a small bounded memo. Unusual shapes still fall back to `strptime`;
+  the fast path was verified to agree with it on every stamp in the
+  fixture, and parser coverage is unchanged at 3045 events / 283 unparsed.
+
+**Smoother**
+
+- **Live position tracking no longer moves in little steps.** The 2D chart
+  eased out over a fixed 700ms, so it braked to a standstill inside every
+  ~1s OCR tick and then sat there; the 3D hero snapped with no
+  interpolation at all. Both now interpolate linearly over the feed's
+  *measured* cadence (`frontend/lib/glide.ts`), so consecutive fixes chain
+  into continuous motion instead of stuttering. Sub-unit movements glide
+  rather than hop; zone-line-sized jumps, the first fix, and
+  `prefers-reduced-motion` still snap.
 ## v1.14.0 — 2026-07-22
 
 Combat intelligence round (ideas surveyed from EQBuddy and itsspin/spinips

@@ -224,11 +224,39 @@ def _verb_root(verb: str) -> Optional[str]:
     return None
 
 
+# "Sat Jul 05 11:30:00 2026" is fixed-width, so slice it instead of paying
+# strptime — which re-reads the locale on every call and costs ~30x as much.
+# Combat bursts stamp many lines with the same second, so a small memo
+# absorbs most of what is left. Anything not matching the exact shape falls
+# through to strptime, which still covers space-padded days.
+_MONTHS = {"Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
+           "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12}
+_TS_MEMO: dict = {}
+
+
 def _parse_ts(ts_str: str) -> Optional[datetime]:
-    try:
-        return datetime.strptime(" ".join(ts_str.split()), TS_FMT)
-    except ValueError:
-        return None
+    hit = _TS_MEMO.get(ts_str)
+    if hit is not None:
+        return hit
+    value = None
+    if len(ts_str) == 24 and ts_str[13] == ":" and ts_str[16] == ":":
+        month = _MONTHS.get(ts_str[4:7])
+        if month:
+            try:
+                value = datetime(int(ts_str[20:24]), month, int(ts_str[8:10]),
+                                 int(ts_str[11:13]), int(ts_str[14:16]),
+                                 int(ts_str[17:19]))
+            except ValueError:
+                value = None
+    if value is None:
+        try:
+            value = datetime.strptime(" ".join(ts_str.split()), TS_FMT)
+        except ValueError:
+            return None  # unparseable — not memoed; rare and cheap to retry
+    if len(_TS_MEMO) > 512:
+        _TS_MEMO.clear()
+    _TS_MEMO[ts_str] = value
+    return value
 
 def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.LogEvent]:
     """Parse a raw log line into an event, or None if unrecognized."""

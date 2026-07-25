@@ -16,8 +16,10 @@ install; nothing is downloaded.
 Not yet extracted (future 3D pass): placeable props (objects.wld transforms
 into <zone>_obj.s3d) and ceilings (downward faces mostly obscure dungeons).
 """
+import gzip
 import json
 import logging
+import os
 import re
 import struct
 import zlib
@@ -224,8 +226,54 @@ def _short_candidates(zone_name: str) -> list:
     return cands
 
 
-def geometry_for_zone(zone_name: str) -> Optional[dict]:
-    """Cached geometry payload for a zone, or None when no .s3d exists."""
+def _write_cache(path: Path, raw: bytes) -> None:
+    """Write via a temp file + atomic rename so a crash mid-write can never
+    leave a truncated payload behind (we no longer parse the cache on read,
+    so nothing downstream would catch one)."""
+    tmp = path.with_suffix(path.suffix + ".part")
+    try:
+        tmp.write_bytes(raw)
+        os.replace(tmp, path)
+    except OSError:
+        logger.warning("Could not cache geometry at %s", path.name)
+
+
+def _served(cache: Path, raw: bytes, want_gzip: bool):
+    """(body, content_encoding) for a zone payload. A zone's JSON is fixed
+    for a given .s3d, so its gzip is built once and cached beside it: with
+    the parse gone, compressing a 15MB zone (~1s at the middleware's level
+    9) is otherwise the whole cost of the request. Level 9 is worth it here
+    precisely because it is paid once, not per request."""
+    if not want_gzip:
+        return raw, None
+    gz = cache.with_suffix(cache.suffix + ".gz")
+    try:
+        if gz.exists() and gz.stat().st_mtime >= cache.stat().st_mtime:
+            body = gz.read_bytes()
+            if body[:2] == b"\x1f\x8b":  # gzip magic — catches a partial file
+                return body, "gzip"
+    except OSError:
+        pass
+    body = gzip.compress(raw, 9)
+    _write_cache(gz, body)
+    return body, "gzip"
+
+
+def _cache_ok(raw: bytes) -> bool:
+    """O(1) sanity check standing in for the json.loads we skip: a complete
+    payload is a JSON object. Guards against pre-existing truncated files."""
+    s = raw.strip()
+    return bool(s) and s[:1] == b"{" and s[-1:] == b"}"
+
+
+def geometry_for_zone(zone_name: str, want_gzip: bool = False):
+    """Cached geometry payload as raw JSON BYTES, or None when no .s3d
+    exists, as (body, content_encoding). Bytes rather than a dict: the
+    payload is already JSON on disk and the endpoint only forwards it, so
+    parsing here just to have the response layer re-serialize costs ~0.5s
+    on a big zone and buys nothing. Pass want_gzip when the client accepts
+    it to get the cached compressed copy instead.
+    """
     game_dir = Path(settings.eql_game_dir)
     for short in _short_candidates(zone_name):
         s3d = game_dir / f"{short}.s3d"
@@ -235,20 +283,19 @@ def geometry_for_zone(zone_name: str) -> Optional[dict]:
         cache = GEOMETRY_DIR / f"{short}.v2.json"
         try:
             if cache.exists() and cache.stat().st_mtime >= s3d.stat().st_mtime:
-                return json.loads(cache.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+                raw = cache.read_bytes()
+                if _cache_ok(raw):
+                    return _served(cache, raw, want_gzip)
+        except OSError:
             pass
         try:
             payload = build_geometry(s3d, short)
         except Exception:
             logger.exception("Geometry extraction failed for %s", s3d.name)
             return None
-        try:
-            cache.write_text(json.dumps(payload, separators=(",", ":")),
-                             encoding="utf-8")
-        except OSError:
-            logger.warning("Could not cache geometry for %s", short)
-        return payload
+        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        _write_cache(cache, raw)
+        return _served(cache, raw, want_gzip)
     return None
 
 
@@ -562,8 +609,9 @@ def build_geometry3d(s3d_path: Path, short: str) -> dict:
     }
 
 
-def geometry3d_for_zone(zone_name: str) -> Optional[dict]:
-    """Cached textured 3D payload, or None when no .s3d exists."""
+def geometry3d_for_zone(zone_name: str, want_gzip: bool = False):
+    """Cached textured 3D payload as raw JSON BYTES (see geometry_for_zone
+    on why bytes), or None when no .s3d exists."""
     game_dir = Path(settings.eql_game_dir)
     for short in _short_candidates(zone_name):
         s3d = game_dir / f"{short}.s3d"
@@ -573,20 +621,19 @@ def geometry3d_for_zone(zone_name: str) -> Optional[dict]:
         cache = GEOMETRY3D_DIR / f"{short}.v3.json"
         try:
             if cache.exists() and cache.stat().st_mtime >= s3d.stat().st_mtime:
-                return json.loads(cache.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+                raw = cache.read_bytes()
+                if _cache_ok(raw):
+                    return _served(cache, raw, want_gzip)
+        except OSError:
             pass
         try:
             payload = build_geometry3d(s3d, short)
         except Exception:
             logger.exception("3D extraction failed for %s", s3d.name)
             return None
-        try:
-            cache.write_text(json.dumps(payload, separators=(",", ":")),
-                             encoding="utf-8")
-        except OSError:
-            logger.warning("Could not cache 3D geometry for %s", short)
-        return payload
+        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        _write_cache(cache, raw)
+        return _served(cache, raw, want_gzip)
     return None
 
 
