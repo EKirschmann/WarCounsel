@@ -149,8 +149,12 @@ jobs:
         # its tray fails soft -- so a missing hidden import would ship silently.
         shell: pwsh
         run: |
-          & (Resolve-Path dist/EQLCompanion.exe) --overlay-check
-          if ($LASTEXITCODE -ne 0) { throw "overlay self-check failed (exit $LASTEXITCODE)" }
+          # Start-Process -Wait, not '&': the exe is a WINDOWED (GUI subsystem)
+          # binary, so PowerShell does not block on it and $LASTEXITCODE comes
+          # back empty rather than a status.
+          $p = Start-Process -FilePath (Resolve-Path dist/EQLCompanion.exe) `
+                 -ArgumentList '--overlay-check' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "overlay self-check failed (exit $($p.ExitCode))" }
           "overlay imports + tray backend OK" | Write-Host
           "started in $([int]$sw.Elapsed.TotalSeconds)s, reports $($info.version), packaged=$($info.packaged)" | Write-Host
 
