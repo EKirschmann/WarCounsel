@@ -266,6 +266,18 @@ throttled `state` pushes. REST highlights (see main.py for all):
   for old clients; `steps` carries {zone, via} labels.
 - Position feeds: `/loc` lines always; optional screen OCR (RapidOCR — the
   Windows OCR engine silently drops short lines like "Z: 4").
+- **Position is INTERPOLATED, linearly, over the feed's measured cadence**
+  (`frontend/lib/glide.ts`, used by both the 2D chart and the 3D hero).
+  Fixes arrive ~1/s, so easing out — or snapping — makes tracking visibly
+  step: an ease-out brakes to a standstill inside every tick and waits.
+  Do not "improve" this back to an easing curve or a fixed duration.
+  First fix, zone-line jumps, and reduced-motion snap on purpose.
+- **Geometry endpoints serve CACHED BYTES, never a dict**: the payload is
+  already JSON on disk, so parsing it just to have FastAPI re-serialize
+  cost ~0.55s on a 15MB zone. Its gzip is cached beside it too (immutable
+  per .s3d), which is why the response sets Content-Encoding itself —
+  GZipMiddleware leaves an already-encoded response alone. Cache writes
+  are atomic + shape-checked on read, since nothing parses them anymore.
 
 ## Advisor — "the LLM proposes, structured data disposes"
 
@@ -528,7 +540,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v1.14.0**. MCP server clone at `MCP_SERVER_DIR` is on ArtSabintsev
+Latest: **v1.14.1**. MCP server clone at `MCP_SERVER_DIR` is on ArtSabintsev
 **v1.3.4** (data snapshot refreshed twice weekly; stay on release tags, not
 main — post-1.3.4 has an unreleased TypeScript 6->7 bump). Update the MCP
 with `git merge --ff-only <tag> && npm install && npm run build` in its
