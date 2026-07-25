@@ -655,7 +655,7 @@ class OverlayMeter:
 def _already_running() -> bool:
     """Named-mutex singleton: survives backend restarts losing the process
     handle (which used to allow a second overlay on the next toggle)."""
-    ctypes.windll.kernel32.CreateMutexW(None, False, "EQLCompanionOverlayMutex")
+    ctypes.windll.kernel32.CreateMutexW(None, False, "WarCounselOverlayMutex")
     return ctypes.windll.kernel32.GetLastError() == 183  # ERROR_ALREADY_EXISTS
 
 

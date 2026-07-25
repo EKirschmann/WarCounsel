@@ -1,4 +1,4 @@
-# Installing the EQL Companion — the plain-language guide
+# Installing the WarCounsel — the plain-language guide
 
 Written for people who have never installed a program from a ZIP file.
 You do NOT need git, GitHub knowledge, or anything a programmer uses.
@@ -39,11 +39,11 @@ install (Option B) — the two can live side by side.
 
 ### A1. Download it
 
-1. Open <https://github.com/EKirschmann/eql_companion/releases> in your
+1. Open <https://github.com/EKirschmann/WarCounsel/releases> in your
    browser.
-2. Under the newest release, click **EQLCompanion.exe**.
+2. Under the newest release, click **WarCounsel.exe**.
 3. Put it wherever you like — Desktop is fine. It makes a `data` folder next
-   to itself, so a folder of its own (say `Documents\EQL Companion`) keeps
+   to itself, so a folder of its own (say `Documents\WarCounsel`) keeps
    things tidy.
 
 > **Avoid `C:\Program Files`.** Windows makes that folder read-only for
@@ -74,7 +74,7 @@ exactly this file.
 
 ### A3. First run
 
-Double-click **EQLCompanion.exe**. The first launch takes a few seconds
+Double-click **WarCounsel.exe**. The first launch takes a few seconds
 (the one-file build unpacks itself each time it starts), then a window
 opens with the dashboard.
 
@@ -105,19 +105,19 @@ your session history, settings, alert rules, and any map geometry it mined
 from the game files. Nothing else on your PC is touched.
 
 (If you put the .exe somewhere Windows will not let programs write, it uses
-`%LOCALAPPDATA%\EQLCompanion\data` instead. The gear panel always shows the
+`%LOCALAPPDATA%\WarCounsel\data` instead. The gear panel always shows the
 folder it actually chose.)
 
 ### A6. Updating
 
-Download the newer **EQLCompanion.exe** and replace the old one. Your `data`
+Download the newer **WarCounsel.exe** and replace the old one. Your `data`
 folder is left alone, so sessions, settings, and maps survive. The version
 number in the top-left corner of the app tells you when a newer release is
 out — click it to check.
 
 ### A7. Uninstalling
 
-Delete `EQLCompanion.exe` and its `data` folder. That is the whole
+Delete `WarCounsel.exe` and its `data` folder. That is the whole
 uninstall — nothing was written to the registry, and nothing was installed
 anywhere else.
 
@@ -154,16 +154,16 @@ same app as the full install.
 
 ### Step 1 — Download and unzip
 
-1. Open <https://github.com/EKirschmann/eql_companion/releases> in your
+1. Open <https://github.com/EKirschmann/WarCounsel/releases> in your
    browser.
 2. Under the newest version (the one at the top), click
    **Source code (zip)** to download it.
 3. Open your Downloads folder, **right-click the ZIP → Extract All… →
-   Extract**. Put it somewhere easy, like `Documents\eql_companion`.
+   Extract**. Put it somewhere easy, like `Documents\WarCounsel`.
 
 > ⚠ **The one mistake everyone makes:** double-clicking INTO the ZIP
 > without extracting first. Nothing works from inside a ZIP. If your
-> folder path starts with something like `Downloads\eql_companion.zip\`,
+> folder path starts with something like `Downloads\WarCounsel.zip\`,
 > you are inside the ZIP — go back and use **Extract All**.
 
 **You'll know it worked when:** you have a normal folder containing
@@ -223,7 +223,7 @@ the War Ledger within a second.
 
 ## Day to day
 
-- **Start it:** double-click **EQLCompanion.exe** (Option A) or
+- **Start it:** double-click **WarCounsel.exe** (Option A) or
   **start_companion.bat** (Option B). Right-click → Send to → Desktop to
   make a shortcut either way.
 - **Settings:** the **gear** in the top-right corner — game folder, and

@@ -4,6 +4,40 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.0.0 — 2026-07-25 — now **WarCounsel**
+
+Renamed, in time for EverQuest Legends' launch on July 28.
+
+"Companion" is the most crowded word in this corner of GitHub, and it
+undersold what this actually is. **War** is the live combat half — DPS meter,
+overlay, encounter breakdowns, the War Ledger, drop tracking. **Counsel** is
+the advisor — wiki-grounded loadouts, gear recommendations, exaltation
+tracking, one-click spell-set writing. Nothing else in this space does both,
+and now the name says so.
+
+**What this means for you**
+
+- **The download is now `WarCounsel.exe`.** Put it in the same folder as the
+  old one and it picks up your existing `data` folder automatically — every
+  session, setting and mined map survives. Then delete `EQLCompanion.exe`.
+- **Any desktop shortcut needs remaking**, since the filename changed. This
+  is the one-off cost of the rename, and the reason it is happening before
+  launch rather than after.
+- **If your data lived in `%LOCALAPPDATA%`** (the case when the .exe sits
+  somewhere Windows will not let programs write), it stays exactly where it
+  is. The app looks for the old folder and keeps using it rather than
+  starting empty — nothing is moved, so nothing can be half-moved.
+- **The old GitHub URL still works.** GitHub redirects it, including clones
+  and the update check.
+
+**Also in this release**
+
+- **A real icon.** The executable had none, and no version resource either —
+  Properties → Details was blank. It now carries an icon at seven sizes and
+  reports its version, product name and description, which is what Windows,
+  antivirus and support all read.
+- **Build actions updated** off the deprecated Node 20 runtime.
+
 ## v1.16.0 — 2026-07-25
 
 **Group numbers you can compare.** An ally's pet used to fold into its

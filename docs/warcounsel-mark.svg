@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="WarCounsel">
+  <title>WarCounsel</title>
+  <defs>
+    <linearGradient id="wc-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2030"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+    <!-- the parchment: warm at the top edge, deeper toward the roll -->
+    <linearGradient id="wc-scroll" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2d9a0"/>
+      <stop offset="0.55" stop-color="#d8ab5c"/>
+      <stop offset="1" stop-color="#a9702f"/>
+    </linearGradient>
+    <linearGradient id="wc-roll" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b47c37"/>
+      <stop offset="0.5" stop-color="#f0d29a"/>
+      <stop offset="1" stop-color="#a9702f"/>
+    </linearGradient>
+    <!-- the blade: lit from the left so it reads against the parchment -->
+    <linearGradient id="wc-steel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4e3b8"/>
+      <stop offset="0.45" stop-color="#d9b46b"/>
+      <stop offset="1" stop-color="#9d7534"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" fill="url(#wc-bg)"/>
+
+  <!-- ===== scroll, behind the blade ===== -->
+  <g>
+    <!-- body -->
+    <rect x="52" y="96" width="152" height="104" fill="url(#wc-scroll)"/>
+    <!-- rolled ends: drawn as closed shapes rather than strokes so they
+         survive being scaled down to a 16px favicon -->
+    <path d="M52 96 a16 16 0 0 0 0 32 l0 72 a16 16 0 0 1 0 -32 Z" fill="url(#wc-roll)"/>
+    <path d="M204 96 a16 16 0 0 1 0 32 l0 72 a16 16 0 0 0 0 -32 Z" fill="url(#wc-roll)"/>
+    <rect x="52" y="96" width="152" height="3" fill="#f7e6bd" opacity="0.55"/>
+  </g>
+
+  <!-- ===== runes, drawn as geometry — Unicode runic text does not render
+       without a runic font, and is illegible below ~48px anyway ===== -->
+  <g stroke="#8a5a22" stroke-width="2.6" stroke-linecap="round" fill="none" opacity="0.75">
+    <!-- left column -->
+    <path d="M72 116 l10 0 M77 116 l0 14"/>
+    <path d="M72 142 l10 -8 M72 142 l10 8"/>
+    <path d="M72 168 l0 14 M72 168 l10 7 l-10 7"/>
+    <!-- right column -->
+    <path d="M174 116 l10 0 M179 116 l0 14"/>
+    <path d="M174 142 l0 14 M174 142 l10 14 M184 142 l0 14"/>
+    <path d="M174 168 l10 14 M184 168 l-10 14"/>
+  </g>
+
+  <!-- ===== sword, through the scroll ===== -->
+  <g>
+    <!-- pommel + grip -->
+    <circle cx="128" cy="34" r="11" fill="url(#wc-steel)"/>
+    <rect x="122" y="44" width="12" height="26" rx="2" fill="url(#wc-steel)"/>
+    <!-- crossguard -->
+    <path d="M92 72 l72 0 l-8 13 l-56 0 Z" fill="url(#wc-steel)"/>
+    <!-- Blade. Dark where it crosses the parchment, gold where it clears it:
+         a gold blade on a gold scroll loses its silhouette the moment the
+         icon is scaled to 32px, which is most of where it will be seen. -->
+    <path d="M116 85 l24 0 l0 128 l-12 22 l-12 -22 Z" fill="#1b2233"/>
+    <path d="M116 85 l24 0 l0 6 l-24 0 Z" fill="url(#wc-steel)"/>
+    <path d="M116 200 l24 0 l0 13 l-12 22 l-12 -22 Z" fill="url(#wc-steel)"/>
+    <!-- edge highlights keep the dark section from reading as a hole -->
+    <rect x="116" y="85" width="2.5" height="118" fill="#e6cf95" opacity="0.85"/>
+    <rect x="137.5" y="85" width="2.5" height="118" fill="#9d7534" opacity="0.9"/>
+    <!-- meter ticks down the blade: the "War" half of the name, and what
+         keeps this from being a generic sword-and-scroll -->
+    <g fill="#e6cf95">
+      <rect x="121" y="104" width="14" height="3.5"/>
+      <rect x="121" y="122" width="10" height="3.5"/>
+      <rect x="121" y="140" width="14" height="3.5"/>
+      <rect x="121" y="158" width="8"  height="3.5"/>
+      <rect x="121" y="176" width="12" height="3.5"/>
+    </g>
+  </g>
+</svg>

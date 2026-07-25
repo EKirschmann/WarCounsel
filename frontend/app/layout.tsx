@@ -21,7 +21,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EQL Companion",
+  title: "WarCounsel",
   description: "Live combat companion for EverQuest Legends",
 };
 

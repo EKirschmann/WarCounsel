@@ -1,23 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="140" viewBox="0 0 760 140" role="img" aria-label="EQL Companion">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="180" viewBox="0 0 760 180" role="img" aria-label="WarCounsel">
+  <title>WarCounsel — combat meter and advisor for EverQuest Legends</title>
   <defs>
-    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e7cd92"/>
-      <stop offset="0.55" stop-color="#c8aa6e"/>
-      <stop offset="1" stop-color="#8f7443"/>
-    </linearGradient>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#181c22"/>
-      <stop offset="1" stop-color="#101318"/>
+      <stop offset="0" stop-color="#1b2030"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0d9a0"/>
+      <stop offset="0.55" stop-color="#d8ab5c"/>
+      <stop offset="1" stop-color="#a9702f"/>
+    </linearGradient>
+    <linearGradient id="scroll" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2d9a0"/>
+      <stop offset="0.55" stop-color="#d8ab5c"/>
+      <stop offset="1" stop-color="#a9702f"/>
+    </linearGradient>
+    <linearGradient id="roll" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b47c37"/>
+      <stop offset="0.5" stop-color="#f0d29a"/>
+      <stop offset="1" stop-color="#a9702f"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4e3b8"/>
+      <stop offset="0.45" stop-color="#d9b46b"/>
+      <stop offset="1" stop-color="#9d7534"/>
     </linearGradient>
   </defs>
-  <rect x="1.5" y="1.5" width="757" height="137" fill="url(#bg)" stroke="rgba(200,170,110,0.34)" stroke-width="1"/>
-  <rect x="7.5" y="7.5" width="745" height="125" fill="none" stroke="rgba(200,170,110,0.18)" stroke-width="1"/>
-  <!-- gauge motif: four flat square-ended bars -->
-  <rect x="40" y="44" width="52" height="7" fill="#c8aa6e"/>
-  <rect x="40" y="58" width="36" height="7" fill="#d4574a"/>
-  <rect x="40" y="72" width="44" height="7" fill="#1fb38c"/>
-  <rect x="40" y="86" width="24" height="7" fill="#b07cc6"/>
-  <text x="120" y="76" font-family="Georgia, 'Times New Roman', serif" font-size="50" letter-spacing="5" fill="url(#gold)" font-weight="bold">EQL COMPANION</text>
-  <rect x="120" y="86" width="590" height="1" fill="rgba(200,170,110,0.34)"/>
-  <text x="121" y="105" font-family="Georgia, 'Times New Roman', serif" font-size="12" letter-spacing="3.4" fill="#8b8577">A LOG-AWARE ADVISOR FOR EVERQUEST LEGENDS</text>
+
+  <rect x="1.5" y="1.5" width="757" height="177" fill="url(#bg)"
+        stroke="rgba(216,171,92,0.34)" stroke-width="1"/>
+  <rect x="7.5" y="7.5" width="745" height="165" fill="none"
+        stroke="rgba(216,171,92,0.16)" stroke-width="1"/>
+
+  <!-- mark: the icon art, scaled into the left third -->
+  <g transform="translate(44,22) scale(0.53)">
+    <rect x="52" y="96" width="152" height="104" fill="url(#scroll)"/>
+    <path d="M52 96 a16 16 0 0 0 0 32 l0 72 a16 16 0 0 1 0 -32 Z" fill="url(#roll)"/>
+    <path d="M204 96 a16 16 0 0 1 0 32 l0 72 a16 16 0 0 0 0 -32 Z" fill="url(#roll)"/>
+    <rect x="52" y="96" width="152" height="3" fill="#f7e6bd" opacity="0.55"/>
+    <g stroke="#8a5a22" stroke-width="2.6" stroke-linecap="round" fill="none" opacity="0.75">
+      <path d="M72 116 l10 0 M77 116 l0 14"/>
+      <path d="M72 142 l10 -8 M72 142 l10 8"/>
+      <path d="M72 168 l0 14 M72 168 l10 7 l-10 7"/>
+      <path d="M174 116 l10 0 M179 116 l0 14"/>
+      <path d="M174 142 l0 14 M174 142 l10 14 M184 142 l0 14"/>
+      <path d="M174 168 l10 14 M184 168 l-10 14"/>
+    </g>
+    <circle cx="128" cy="34" r="11" fill="url(#steel)"/>
+    <rect x="122" y="44" width="12" height="26" rx="2" fill="url(#steel)"/>
+    <path d="M92 72 l72 0 l-8 13 l-56 0 Z" fill="url(#steel)"/>
+    <path d="M116 85 l24 0 l0 128 l-12 22 l-12 -22 Z" fill="#1b2233"/>
+    <path d="M116 85 l24 0 l0 6 l-24 0 Z" fill="url(#steel)"/>
+    <path d="M116 200 l24 0 l0 13 l-12 22 l-12 -22 Z" fill="url(#steel)"/>
+    <rect x="116" y="85" width="2.5" height="118" fill="#e6cf95" opacity="0.85"/>
+    <rect x="137.5" y="85" width="2.5" height="118" fill="#9d7534" opacity="0.9"/>
+    <g fill="#e6cf95">
+      <rect x="121" y="104" width="14" height="3.5"/>
+      <rect x="121" y="122" width="10" height="3.5"/>
+      <rect x="121" y="140" width="14" height="3.5"/>
+      <rect x="121" y="158" width="8"  height="3.5"/>
+      <rect x="121" y="176" width="12" height="3.5"/>
+    </g>
+  </g>
+
+  <text x="210" y="88" font-family="Georgia, 'Times New Roman', serif"
+        font-size="52" letter-spacing="3" font-weight="bold" fill="url(#gold)">WARCOUNSEL</text>
+  <rect x="212" y="100" width="500" height="1" fill="rgba(216,171,92,0.34)"/>
+  <text x="213" y="122" font-family="Georgia, 'Times New Roman', serif"
+        font-size="12.5" letter-spacing="3.1" fill="#8b8577">COMBAT METER AND ADVISOR FOR EVERQUEST LEGENDS</text>
 </svg>

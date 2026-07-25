@@ -1,4 +1,4 @@
-"""EQL Companion backend.
+"""WarCounsel backend.
 
 FastAPI app that:
 - tails the EQL log, parses events, tracks character/session state
@@ -553,11 +553,11 @@ async def lifespan(app: FastAPI):
         t.cancel()
 
 
-APP_VERSION = "1.16.0"  # bump together with frontend/lib/version.ts
-GITHUB_REPO = "EKirschmann/eql_companion"
+APP_VERSION = "2.0.0"  # bump together with frontend/lib/version.ts
+GITHUB_REPO = "EKirschmann/WarCounsel"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 
-app = FastAPI(title="EQL Companion", version=APP_VERSION, lifespan=lifespan)
+app = FastAPI(title="WarCounsel", version=APP_VERSION, lifespan=lifespan)
 
 # Single-process mode: if the frontend has been static-exported (the exe /
 # same-origin build), serve it from this same server. Mounted AFTER all
@@ -913,7 +913,7 @@ async def update_check():
     # swaps the .exe, so say that instead of naming a script it does not have
     how = None
     if newer:
-        how = ("download the new EQLCompanion.exe from the releases page"
+        how = ("download the new WarCounsel.exe from the releases page"
                if is_frozen() else
                "close the companion and run update_companion.bat")
     return {"current": APP_VERSION, "latest": latest, "update_available": newer,
@@ -932,13 +932,13 @@ async def run_update():
         return {"launched": False, "packaged": True,
                 "releases_url": RELEASES_URL,
                 "note": "This is the packaged build — close it and replace "
-                        "EQLCompanion.exe with the new download. Your data "
+                        "WarCounsel.exe with the new download. Your data "
                         "folder beside it is kept."}
     bat = bundle_path("update_companion.bat")
     if not bat.exists():
         raise HTTPException(404, "update_companion.bat not found")
     subprocess.Popen(
-        ["cmd", "/c", "start", "EQL Companion update", str(bat)],
+        ["cmd", "/c", "start", "WarCounsel update", str(bat)],
         cwd=str(bat.parent),
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
     )

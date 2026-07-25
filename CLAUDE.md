@@ -2,7 +2,7 @@
 
 Guidance for AI coding assistants (and humans) working in this repository.
 
-# EQL Companion — Real-Time Log-Aware Assistant
+# WarCounsel — Real-Time Log-Aware Assistant
 
 A real-time companion for EverQuest Legends: tails the combat log, tracks the
 character, and provides a live HUD (vitals, war ledger, encounters), an Atlas

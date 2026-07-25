@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""EQL Companion — git-free updater.
+"""WarCounsel — git-free updater.
 
 Downloads the latest code ZIP straight from GitHub (the same content the
 green "Download ZIP" button serves) and lays it over this install,
@@ -45,7 +45,7 @@ def _open(req, timeout):
 import json
 
 ROOT = Path(__file__).resolve().parent
-REPO = "EKirschmann/eql_companion"
+REPO = "EKirschmann/WarCounsel"
 FALLBACK_ZIP = f"https://github.com/{REPO}/archive/refs/heads/main.zip"
 
 
@@ -148,7 +148,7 @@ def deps() -> None:
 
 def main() -> None:
     say("=" * 56)
-    say("EQL Companion updater (no git needed)")
+    say("WarCounsel updater (no git needed)")
     say("Your .env and data folder are never touched.")
     say("=" * 56)
     try:

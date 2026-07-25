@@ -16,8 +16,8 @@ from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
-ICON_NAME = "EQLCompanionOverlay"
-TITLE = "EQL Companion — overlay"
+ICON_NAME = "WarCounselOverlay"
+TITLE = "WarCounsel — overlay"
 
 
 def available() -> bool:

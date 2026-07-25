@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""EQL Companion — first-run setup wizard.
+"""WarCounsel — first-run setup wizard.
 
 Interactive, dependency-free (stdlib only). Everything you choose here is
 written to .env — you can change any answer later by editing that file.
@@ -229,7 +229,7 @@ def write_env(values: dict) -> None:
 
 def main() -> None:
     say("=" * 62)
-    say("EQL Companion setup")
+    say("WarCounsel setup")
     say("Every answer here just fills in the .env file — you can change")
     say("any of it later by editing .env in this folder.")
     say("=" * 62)

@@ -1,7 +1,7 @@
 @echo off
-rem Build the single-file EQL Companion executable. No OCR (that would pull in
+rem Build the single-file WarCounsel executable. No OCR (that would pull in
 rem onnxruntime + numpy); LLM counsel IS included so the settings panel's API
-rem key field works. Produces dist\EQLCompanion.exe with no runtime deps.
+rem key field works. Produces dist\WarCounsel.exe with no runtime deps.
 rem Prereqs on the BUILD machine only: Python 3.11+, Node 18+.
 if not "%~1"=="stay" (cmd /k ""%~f0" stay" & exit /b)
 cd /d %~dp0
@@ -33,12 +33,13 @@ python scripts\make_version_file.py || (echo version file failed & exit /b 1)
 rem --add-data entries are READ-ONLY assets resolved through paths.bundle_path().
 rem Writable state never lives here: a one-file bundle is a temp dir that is
 rem thrown away on exit (see backend/paths.py).
-pyinstaller --noconfirm --onefile --windowed --name EQLCompanion ^
+pyinstaller --noconfirm --onefile --windowed --name WarCounsel ^
   --add-data "frontend/out;frontend/out" ^
   --add-data "data/eqlbuilds;data/eqlbuilds" ^
   --add-data "class_guides;class_guides" ^
   --add-data "backend/spell_lines.json;backend" ^
   --version-file build/version_info.txt ^
+  --icon docs/warcounsel.ico ^
   --collect-submodules backend ^
   --hidden-import uvicorn.logging --hidden-import uvicorn.protocols ^
   --hidden-import uvicorn.protocols.http.auto ^
@@ -54,7 +55,7 @@ pyinstaller --noconfirm --onefile --windowed --name EQLCompanion ^
   --exclude-module langgraph --exclude-module onnxruntime ^
   run_companion.py || (echo PyInstaller failed & exit /b 1)
 
-echo [5/5] Done -^> dist\EQLCompanion.exe
+echo [5/5] Done -^> dist\WarCounsel.exe
 echo Ship that single file. Users need nothing installed. First run creates
-echo data\ beside it (or in %%LOCALAPPDATA%%\EQLCompanion when that folder is
+echo data\ beside it (or in %%LOCALAPPDATA%%\WarCounsel when that folder is
 echo read-only) and finds the game via the Windows registry.

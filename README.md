@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="EQL Companion" width="640">
+  <img src="docs/logo.svg" alt="WarCounsel" width="640">
 </p>
 
 A real-time companion app for **EverQuest Legends**. It tails your combat log
@@ -88,7 +88,7 @@ play**.
 | Screen-OCR position tracking | no | yes |
 | Download | ~42 MB, one file | a repo plus its dependencies |
 
-**[Download EQLCompanion.exe →](https://github.com/EKirschmann/eql_companion/releases/latest)**
+**[Download WarCounsel.exe →](https://github.com/EKirschmann/WarCounsel/releases/latest)**
 
 It needs nothing installed, finds your game through the Windows registry,
 and keeps its data in a `data` folder beside itself. First launch takes a
@@ -136,13 +136,13 @@ over plain HTTP automatically — no Node beyond the UI is required.
 > (download the ZIP, extract, run `install_companion.bat`).
 
 ```
-git clone https://github.com/EKirschmann/eql_companion
-cd eql_companion
+git clone https://github.com/EKirschmann/WarCounsel
+cd WarCounsel
 install_companion.bat
 ```
 
 No git? Download the newest **Source code (zip)** from the
-[releases page](https://github.com/EKirschmann/eql_companion/releases),
+[releases page](https://github.com/EKirschmann/WarCounsel/releases),
 extract, run `install_companion.bat`.
 
 The installer pulls dependencies, then a short wizard finds your EverQuest

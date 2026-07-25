@@ -1,0 +1,75 @@
+<svg height="280" width="200" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient y2="100%" x2="0%" y1="0%" x1="0%" id="gold">
+      <stop stop-color="#f0d080" offset="0%"></stop>
+      <stop stop-color="#d4a84b" offset="45%"></stop>
+      <stop stop-color="#a pen 67b" offset="100%"></stop>
+    </linearGradient>
+    <linearGradient y2="0%" x2="100%" y1="0%" x1="0%">
+      <stop stop-color="#e8c878" offset="0%"></stop>
+      <stop stop-color="#d4a84b" offset="50%"></stop>
+      <stop stop-color="#c49a3c" offset="100%"></stop>
+    </linearGradient>
+  </defs>
+
+  
+  <rect fill="#0d1117" height="280" width="200"></rect>
+
+  
+  <g stroke-width="1.2" stroke="#8b6914" fill="url(#scroll)">
+    
+    <path d="M55 70 
+             C40 70, 32 85, 38 100
+             L42 195
+             C36 210, 48 225, 65 220
+             L65 75 Z"></path>
+    
+    <path d="M145 70 
+             C160 70, 168 85, 162 100
+             L158 195
+             C164 210, 152 225, 135 220
+             L135 75 Z"></path>
+    
+    <path d="M65 75 L135 75 L135 220 L65 220 Z"></path>
+  </g>
+
+  
+  <g opacity="0.7" font-size="9" font-family="serif" fill="#8b6914">
+    <text y="105" x="48">ᚨ</text>
+    <text y="125" x="48">ᛏ</text>
+    <text y="145" x="48">ᚱ</text>
+    <text y="165" x="48">ᚢ</text>
+    <text y="185" x="48">ᚾ</text>
+    <text y="105" x="145">ᛊ</text>
+    <text y="125" x="145">ᚲ</text>
+    <text y="145" x="145">ᛖ</text>
+    <text y="165" x="145">ᛚ</text>
+    <text y="185" x="145">ᛞ</text>
+  </g>
+
+  
+  <g stroke-width="1" stroke="#8b6914" fill="url(#gold)">
+    
+    <circle r="11" cy="38" cx="100"></circle>
+    
+    <rect rx="2" height="28" width="12" y="48" x="94"></rect>
+    
+    <path d="M68 78 L132 78 L128 88 L72 88 Z"></path>
+    
+    <path d="M92 88 
+             L92 230 
+             L100 255 
+             L108 230 
+             L108 88 Z"></path>
+    
+    <rect stroke="none" fill="#1a1f2e" height="125" width="6" y="95" x="97"></rect>
+    
+    <g stroke-width="1.5" stroke="#d4a84b">
+      <line y2="115" x2="103" y1="115" x1="97"></line>
+      <line y2="135" x2="103" y1="135" x1="97"></line>
+      <line y2="155" x2="103" y1="155" x1="97"></line>
+      <line y2="175" x2="103" y1="175" x1="97"></line>
+      <line y2="195" x2="103" y1="195" x1="97"></line>
+    </g>
+  </g>
+</svg>

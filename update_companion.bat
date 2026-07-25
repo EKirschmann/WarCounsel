@@ -1,5 +1,5 @@
 @echo off
-rem EQL Companion - updater. Close the companion windows before running.
+rem WarCounsel - updater. Close the companion windows before running.
 rem Git installs update via git; ZIP installs update via the Python
 rem downloader - no git needed either way. Relaunches under cmd /k so the
 rem window never closes before it can be read.

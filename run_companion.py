@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Single-process launcher for the packaged EQL Companion.
+"""Single-process launcher for the packaged WarCounsel.
 
 Starts the FastAPI server (which serves BOTH the API and the static UI) and
 opens the dashboard in a native window. Also runnable straight from source
@@ -26,7 +26,7 @@ import webbrowser
 
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
-WINDOW_TITLE = "EQL Companion"
+WINDOW_TITLE = "WarCounsel"
 
 
 def _is_frozen() -> bool:
@@ -78,7 +78,7 @@ def _setup_logging() -> None:
 
 
 def _port_is_ours(port: int) -> bool:
-    """Is an EQL Companion already serving here? (Re-launching should focus
+    """Is an WarCounsel already serving here? (Re-launching should focus
     the running instance rather than race it for the log file.)"""
     import json
     import urllib.request
@@ -165,7 +165,7 @@ def _serve() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="EQLCompanion", add_help=True)
+    parser = argparse.ArgumentParser(prog="WarCounsel", add_help=True)
     parser.add_argument("--overlay", action="store_true",
                         help="run the combat overlay window only")
     parser.add_argument("--ocr-overlay", action="store_true",
@@ -191,7 +191,7 @@ def main() -> None:
         else:
             _serve()
     except Exception:
-        _fatal("EQL Companion failed to start.")
+        _fatal("WarCounsel failed to start.")
         raise
 
 

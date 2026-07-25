@@ -1,5 +1,5 @@
 @echo off
-rem EQL Companion - one-shot installer: dependencies + guided setup.
+rem WarCounsel - one-shot installer: dependencies + guided setup.
 rem Offers to install Python / Node.js automatically via winget when missing.
 rem The first line relaunches under "cmd /k" so this window NEVER closes by
 rem itself - whatever happens, the user can read it.

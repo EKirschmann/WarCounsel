@@ -20,7 +20,10 @@ import os
 import sys
 from pathlib import Path
 
-APP_NAME = "EQLCompanion"
+APP_NAME = "WarCounsel"
+# The name this shipped under before 1.x -> 2.0. Existing installs have a
+# populated folder under it; see data_dir().
+LEGACY_APP_NAME = "EQLCompanion"
 
 
 def is_frozen() -> bool:
@@ -78,6 +81,14 @@ def data_dir() -> Path:
         else:
             base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
             candidate = Path(base) / APP_NAME / "data"
+            # Renaming the app must not orphan an existing install's
+            # sessions, settings and mined geometry. If there is nothing at
+            # the new location but the old one has data, keep using the old
+            # one -- adopting it in place is safe, where moving files could
+            # half-succeed and lose some.
+            legacy = Path(base) / LEGACY_APP_NAME / "data"
+            if not candidate.exists() and legacy.is_dir():
+                candidate = legacy
     else:
         candidate = Path("data")
     candidate.mkdir(parents=True, exist_ok=True)

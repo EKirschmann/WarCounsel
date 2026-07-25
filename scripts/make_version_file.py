@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Windows VERSIONINFO resource for the packaged executable.
 
-The asset filename stays EQLCompanion.exe on purpose — GitHub's
+The asset filename stays WarCounsel.exe on purpose — GitHub's
 `/releases/latest/download/<name>` permalink only resolves for a stable
 name, desktop shortcuts survive an in-place replacement, and the data folder
 sits beside the exe, so accumulating copies would scatter it. The version
@@ -34,15 +34,16 @@ VSVersionInfo(
     StringFileInfo([
       StringTable(
         '040904B0',
-        [StringStruct('CompanyName', 'EQL Companion contributors'),
+        [StringStruct('CompanyName', 'WarCounsel contributors'),
          StringStruct('FileDescription',
-                      'EQL Companion — live companion for EverQuest Legends'),
+                      'WarCounsel — combat meter and advisor for '
+                      'EverQuest Legends'),
          StringStruct('FileVersion', '{ver}'),
-         StringStruct('InternalName', 'EQLCompanion'),
+         StringStruct('InternalName', 'WarCounsel'),
          StringStruct('LegalCopyright',
                       'MIT licensed. Reads your log; never touches the game.'),
-         StringStruct('OriginalFilename', 'EQLCompanion.exe'),
-         StringStruct('ProductName', 'EQL Companion'),
+         StringStruct('OriginalFilename', 'WarCounsel.exe'),
+         StringStruct('ProductName', 'WarCounsel'),
          StringStruct('ProductVersion', '{ver}')])
     ]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
