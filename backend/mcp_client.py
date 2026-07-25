@@ -24,6 +24,8 @@ MCP_PROTOCOL_VERSION = "2024-11-05"
 
 
 class MCPClient:
+    _announced_missing = False  # class-level: log the absence once per run
+
     def __init__(self):
         self.process: Optional[subprocess.Popen] = None
         self._lock = asyncio.Lock()
@@ -55,8 +57,20 @@ class MCPClient:
             return True
         cmd = self._server_command()
         if not cmd:
-            logger.warning("MCP server not found under %s (clone + npm install it)",
-                           settings.mcp_server_dir)
+            # Every wiki lookup lands here when there is no clone, so say it
+            # ONCE. An empty mcp_server_dir is a deliberate configuration
+            # (the packaged build ships without Node), not a problem worth
+            # a warning -- the HTTP fallback covers it either way.
+            if not MCPClient._announced_missing:
+                MCPClient._announced_missing = True
+                if settings.mcp_server_dir:
+                    logger.warning(
+                        "MCP server not found under %s (clone + npm install "
+                        "it) - using the wiki over plain HTTP",
+                        settings.mcp_server_dir)
+                else:
+                    logger.info("No MCP server configured - using the wiki "
+                                "over plain HTTP")
             return False
         try:
             self.process = subprocess.Popen(

@@ -13,9 +13,10 @@ import ctypes
 import json
 import sys
 import tkinter as tk
-from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "data" / "ocr_config.json"
+from backend.paths import data_path
+
+CONFIG_PATH = data_path("ocr_config.json")
 GRIP = 18  # px corner zone that resizes instead of moves
 
 

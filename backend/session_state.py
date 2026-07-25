@@ -16,7 +16,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-STATE_FILE = Path("data/session_state.json")
+from backend.paths import data_path
+
+STATE_FILE = data_path("session_state.json")
 
 # Everything session-shaped on CharacterTracker. Skipped on purpose:
 # _dmg_window (60s DPS window — stale after any restart), pending_encounters

@@ -40,6 +40,8 @@ from backend.map_system import find_route, known_zones, load_map, normalize_zone
 from backend.ocr_system import OcrWatcher, load_config as ocr_load_config, \
     ocr_region, parse_loc_text, save_config as ocr_save_config
 from backend.models import Base, Character, ChatMessageRow, LogEventRow
+from backend.paths import (bundle_path, child_command, child_cwd, is_frozen,
+                            data_dir, data_path)
 from backend.spellbook import (clear_find_cache, exports_status,
                                load_export, load_spellbook)
 from backend.state_tracker import CharacterTracker
@@ -50,7 +52,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # check_same_thread=False: milestone writes run in a worker thread (db_writer_loop)
-Path("data").mkdir(exist_ok=True)  # sqlite cannot create the directory itself
+data_dir()  # resolve/create the state root: sqlite cannot make its own
 engine = create_engine(
     settings.database_url, echo=False,
     connect_args={"check_same_thread": False}
@@ -82,7 +84,7 @@ watcher: Optional[LogWatcher] = None
 ocr_watcher: Optional[OcrWatcher] = None
 _character_id: Optional[int] = None
 _last_state_broadcast = 0.0
-ADVICE_CACHE_FILE = Path("data/advice_cache.json")
+ADVICE_CACHE_FILE = data_path("advice_cache.json")
 
 
 def _sig_norm(sig: tuple) -> tuple:
@@ -553,6 +555,7 @@ async def lifespan(app: FastAPI):
 
 APP_VERSION = "1.14.1"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/eql_companion"
+RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 
 app = FastAPI(title="EQL Companion", version=APP_VERSION, lifespan=lifespan)
 
@@ -561,7 +564,7 @@ app = FastAPI(title="EQL Companion", version=APP_VERSION, lifespan=lifespan)
 # /api and /ws routes are registered (done at import end).
 def _mount_static_ui() -> None:
     from fastapi.staticfiles import StaticFiles
-    ui = Path(__file__).resolve().parent.parent / "frontend" / "out"
+    ui = bundle_path("frontend", "out")
     if ui.is_dir():
         app.mount("/", StaticFiles(directory=str(ui), html=True), name="ui")
         logger.info("Serving static UI from %s", ui)
@@ -906,8 +909,15 @@ async def update_check():
         return {"current": APP_VERSION, "latest": None,
                 "error": f"could not reach GitHub ({err or 'no tags found'})"}
     newer = latest is not None and _parse_ver(latest) > _parse_ver(APP_VERSION)
+    # the packaged build has no source tree to update in place — the user
+    # swaps the .exe, so say that instead of naming a script it does not have
+    how = None
+    if newer:
+        how = ("download the new EQLCompanion.exe from the releases page"
+               if is_frozen() else
+               "close the companion and run update_companion.bat")
     return {"current": APP_VERSION, "latest": latest, "update_available": newer,
-            "how": "close the companion and run update_companion.bat" if newer else None}
+            "packaged": is_frozen(), "releases_url": RELEASES_URL, "how": how}
 
 
 @app.post("/api/update/run")
@@ -916,7 +926,15 @@ async def run_update():
     survives the backend restarting under it). update_companion.bat routes
     git installs to git pull and ZIP installs to the Python downloader."""
     import subprocess
-    bat = Path(__file__).resolve().parent.parent / "update_companion.bat"
+    if is_frozen():
+        # Nothing to pull or rebuild inside a one-file bundle, and the exe
+        # cannot overwrite itself while it is running.
+        return {"launched": False, "packaged": True,
+                "releases_url": RELEASES_URL,
+                "note": "This is the packaged build — close it and replace "
+                        "EQLCompanion.exe with the new download. Your data "
+                        "folder beside it is kept."}
+    bat = bundle_path("update_companion.bat")
     if not bat.exists():
         raise HTTPException(404, "update_companion.bat not found")
     subprocess.Popen(
@@ -1219,7 +1237,7 @@ async def get_zone_texture(short: str, name: str):
     import re as _re
     if not (_re.fullmatch(r"[a-z0-9_]+", short) and _re.fullmatch(r"[a-z0-9_.-]+", name)):
         raise HTTPException(status_code=400, detail="bad texture path")
-    path = Path("data") / "textures" / short / name
+    path = data_path("textures", short, name)
     if not path.exists():
         raise HTTPException(status_code=404, detail="no such texture")
     return FileResponse(path, media_type="image/png",
@@ -1294,8 +1312,8 @@ async def toggle_combat_overlay():
         _overlay_proc = None
         return {"running": False}
     _overlay_proc = subprocess.Popen(
-        [_sys.executable, "-m", "backend.overlay"],
-        cwd=str(Path(__file__).resolve().parent.parent),
+        child_command("backend.overlay", "--overlay"),
+        cwd=str(child_cwd()),
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
     )
     return {"running": True}
@@ -1312,8 +1330,8 @@ async def ocr_launch_overlay():
     import subprocess
     import sys as _sys
     subprocess.Popen(
-        [_sys.executable, "-m", "backend.ocr_overlay"],
-        cwd=str(Path(__file__).resolve().parent.parent),
+        child_command("backend.ocr_overlay", "--ocr-overlay"),
+        cwd=str(child_cwd()),
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
     )
     return {"launched": True}

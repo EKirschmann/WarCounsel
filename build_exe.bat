@@ -25,16 +25,28 @@ if exist "%MCP_SERVER_DIR%\dist\data\eqlbuilds\classes.json" (
 )
 
 echo [4/5] Running PyInstaller...
-pyinstaller --noconfirm --onefile --name EQLCompanion ^
+rem --add-data entries are READ-ONLY assets resolved through paths.bundle_path().
+rem Writable state never lives here: a one-file bundle is a temp dir that is
+rem thrown away on exit (see backend/paths.py).
+pyinstaller --noconfirm --onefile --windowed --name EQLCompanion ^
   --add-data "frontend/out;frontend/out" ^
   --add-data "data/eqlbuilds;data/eqlbuilds" ^
+  --add-data "class_guides;class_guides" ^
   --collect-submodules backend ^
   --hidden-import uvicorn.logging --hidden-import uvicorn.protocols ^
   --hidden-import uvicorn.protocols.http.auto ^
+  --hidden-import uvicorn.protocols.http.h11_impl ^
   --hidden-import uvicorn.protocols.websockets.auto ^
+  --hidden-import uvicorn.protocols.websockets.websockets_impl ^
   --hidden-import uvicorn.lifespan.on ^
+  --hidden-import uvicorn.loops.asyncio ^
+  --exclude-module numpy --exclude-module matplotlib ^
+  --exclude-module rapidocr --exclude-module rapidocr_onnxruntime ^
+  --exclude-module mss --exclude-module cv2 --exclude-module torch ^
+  --exclude-module langchain --exclude-module langgraph --exclude-module onnxruntime ^
   run_companion.py || (echo PyInstaller failed & exit /b 1)
 
-echo [5/5] Done -> dist\EQLCompanion.exe
+echo [5/5] Done -^> dist\EQLCompanion.exe
 echo Ship that single file. Users need nothing installed. First run creates
-echo data\ next to it and reads logs per .env (EQL_GAME_DIR).
+echo data\ beside it (or in %%LOCALAPPDATA%%\EQLCompanion when that folder is
+echo read-only) and finds the game via the Windows registry.

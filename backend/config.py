@@ -3,6 +3,12 @@ from pathlib import Path
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from backend.paths import data_path
+
+# Sentinel: only a database_url still equal to this gets re-pointed at the
+# resolved state dir, so an explicit DATABASE_URL in .env always wins.
+_DEFAULT_DB_URL = "sqlite:///./data/companion.db"
+
 
 def _registry_game_dir() -> str | None:
     """EQL install dir from the Daybreak uninstall key (DisplayIcon /
@@ -47,7 +53,7 @@ class Settings(BaseSettings):
     custom_model: str = ""
 
     # Database
-    database_url: str = "sqlite:///./data/companion.db"
+    database_url: str = _DEFAULT_DB_URL
 
     # EQL install — set EQL_GAME_DIR in .env; Logs/ and maps/ derive from it
     # unless individually overridden. Default = the launcher's standard path.
@@ -75,6 +81,11 @@ class Settings(BaseSettings):
             self.eql_maps_dir = str(game / "maps")
         if not self.eql_maps_custom_dir:
             self.eql_maps_custom_dir = str(Path(self.eql_maps_dir) / "Dark Brewall")
+        # The packaged app keeps state outside its (temporary) bundle dir, so
+        # the default DB has to follow data_dir() rather than the CWD. Posix
+        # separators: a sqlite URL with backslashes is not portable.
+        if self.database_url == _DEFAULT_DB_URL:
+            self.database_url = "sqlite:///" + data_path("companion.db").as_posix()
         return self
 
     # MCP (optional -- the advisor degrades to ungrounded counsel when absent)
@@ -90,5 +101,5 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
+# Resolved writable state root (see backend/paths.py); created on first use.
+DATA_DIR = data_path()

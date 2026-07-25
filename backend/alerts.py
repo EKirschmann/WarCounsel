@@ -19,7 +19,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-RULES_FILE = Path("data") / "tracked_rules.json"
+from backend.paths import data_path
+
+RULES_FILE = data_path("tracked_rules.json")
 KINDS = ("loot", "kill", "death", "zone", "tell", "fade", "bighit")
 _EXAMPLE = [
     {"kind": "loot", "pattern": "Kitchen Toolbelt",

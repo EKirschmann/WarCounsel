@@ -28,11 +28,12 @@ from pathlib import Path
 from typing import Optional
 
 from backend.config import settings
+from backend.paths import data_path
 from backend.map_system import ZONE_FILES, _canonical, normalize_zone
 
 logger = logging.getLogger(__name__)
 
-GEOMETRY_DIR = Path("data") / "geometry"
+GEOMETRY_DIR = data_path("geometry")
 NAME_DIR_CRC = 0x61580AC9
 WALL_NZ = 0.7          # |unit normal z| below this = wall, above = floor/ceiling
 FLOOR_BAND_GAP = 15.0  # min z separation between detected floors
@@ -302,8 +303,8 @@ def geometry_for_zone(zone_name: str, want_gzip: bool = False):
 # ------------------------------------------------------------------- 3D view
 
 XOR_KEY = (0x95, 0x3A, 0xC5, 0x2A, 0x95, 0x7A, 0x95, 0x6A)
-GEOMETRY3D_DIR = Path("data") / "geometry3d"
-TEXTURE_DIR = Path("data") / "textures"
+GEOMETRY3D_DIR = data_path("geometry3d")
+TEXTURE_DIR = data_path("textures")
 FLAT_NZ = 0.95          # unit-normal z above this = flat floor
 RAMP_NZ = 0.34          # RAMP_NZ..FLAT_NZ (upward) = ramp/stair
 MASKED_METHODS = {0x13, 0x14, 0x17}  # color-key transparency (leaves, grates)
@@ -444,7 +445,10 @@ def _export_textures(short: str, used: dict, archives: list) -> None:
     """Convert used BMPs to PNG under data/textures/<short>/ (masked ones get
     palette-index-0 transparency, the classic color-key convention)."""
     from io import BytesIO
-    from PIL import Image
+    try:
+        from PIL import Image
+    except ImportError:  # optional dependency; caller degrades gracefully
+        raise RuntimeError("Pillow is not installed - textures unavailable")
 
     out_dir = TEXTURE_DIR / short
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -581,8 +585,15 @@ def build_geometry3d(s3d_path: Path, short: str) -> dict:
                              obj_tables.get(matlist, []),
                              layer_override="props", transform=tf)
 
-    _export_textures(short, used_tex,
-                     [files] + ([obj_archive] if obj_archive else []))
+    # Textures are a nicety: the mesh is the payload. A bad BMP -- or a
+    # build without Pillow -- must not cost the user the whole zone, so a
+    # failure here degrades to an untextured 3D view.
+    try:
+        _export_textures(short, used_tex,
+                         [files] + ([obj_archive] if obj_archive else []))
+    except Exception:
+        logger.warning("Texture export failed for %s - serving untextured",
+                       short, exc_info=True)
 
     out_layers = {}
     xs, ys, zs = [], [], []

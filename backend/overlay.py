@@ -30,7 +30,9 @@ from pathlib import Path
 
 API_CHAR = "http://localhost:8000/api/character"
 API_ENCS = "http://localhost:8000/api/encounters?limit=5"
-STATE_FILE = Path("data") / "overlay_ui.json"
+from backend.paths import data_path
+
+STATE_FILE = data_path("overlay_ui.json")
 
 GWL_EXSTYLE = -20
 WS_EX_LAYERED = 0x00080000
@@ -583,7 +585,14 @@ def _already_running() -> bool:
     return ctypes.windll.kernel32.GetLastError() == 183  # ERROR_ALREADY_EXISTS
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entrypoint for both `python -m backend.overlay` and the packaged
+    executable's --overlay flag. The named mutex keeps it a singleton
+    either way."""
     if _already_running():
         raise SystemExit(0)
     OverlayMeter().root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

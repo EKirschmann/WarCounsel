@@ -25,7 +25,9 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = Path("data") / "ocr_config.json"
+from backend.paths import data_path
+
+CONFIG_PATH = data_path("ocr_config.json")
 DEFAULT_CONFIG = {"left": 100, "top": 100, "width": 240, "height": 130, "enabled": False}
 GAME_PROCESS = "eqgame.exe"
 
@@ -37,14 +39,19 @@ try:
     try:
         from rapidocr_onnxruntime import RapidOCR   # Python <= 3.12
         _OCR_V2 = False
-    except ImportError:
+    except Exception:
         from rapidocr import RapidOCR               # successor pkg, 3.13+
         _OCR_V2 = True
     HAS_DEPS = True
     _IMPORT_ERROR = None
-except ImportError as e:  # keep the app booting without OCR extras
+except Exception as e:
+    # Deliberately broad. OCR is OPTIONAL, so nothing it does may stop the
+    # app from booting -- and a half-present install does not fail cleanly:
+    # rapidocr raises FileNotFoundError when its model manifest is missing
+    # (e.g. a packaged build with no onnxruntime), which an ImportError
+    # guard would let through to kill startup for everyone.
     HAS_DEPS = False
-    _IMPORT_ERROR = str(e)
+    _IMPORT_ERROR = f"{type(e).__name__}: {e}"
 
 _engine = None
 

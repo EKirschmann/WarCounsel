@@ -13,7 +13,9 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
-_CONFIG = Path("data/llm_config.json")
+from backend.paths import data_path
+
+_CONFIG = data_path("llm_config.json")
 _lock = threading.Lock()
 _cache: dict = {}
 

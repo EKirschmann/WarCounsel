@@ -773,7 +773,9 @@ async def item_acquisition(name: str) -> dict:
 
 
 # ------------------------------------------------------------ class guides
-CLASS_GUIDES_DIR = Path("class_guides")
+from backend.paths import bundle_path
+
+CLASS_GUIDES_DIR = bundle_path("class_guides")
 
 
 # reference files loaded ONLY for the main advisor consult (the gear

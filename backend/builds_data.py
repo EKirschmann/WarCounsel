@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from backend.config import settings
+from backend.paths import bundle_path
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +22,9 @@ _cache: dict = {"file": None, "mtime": None, "data": None, "index": None}
 
 
 def _snapshot_file() -> Optional[Path]:
-    # bundled copy first (self-contained exe / no MCP clone needed)
-    here = Path(__file__).resolve().parent.parent
-    local = here / "data" / "eqlbuilds" / "classes.json"
+    # bundled copy first (self-contained exe / no MCP clone needed);
+    # read-only, so it rides inside the bundle rather than the state dir
+    local = bundle_path("data", "eqlbuilds", "classes.json")
     if local.exists():
         return local
     if not settings.mcp_server_dir:
