@@ -193,6 +193,11 @@ To update: close the companion, run `update_companion.bat`, start it again —
 works for both git clones (pull) and ZIP installs (a built-in downloader;
 git is never required). What changed is in [CHANGELOG.md](CHANGELOG.md).
 
+## License
+
+MIT — see [LICENSE](LICENSE), which also credits the community
+projects whose data and techniques are vendored here.
+
 ## Notes
 
 - Sessions survive backend restarts (state snapshots to `data/`)
