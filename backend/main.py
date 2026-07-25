@@ -553,7 +553,7 @@ async def lifespan(app: FastAPI):
         t.cancel()
 
 
-APP_VERSION = "1.14.1"  # bump together with frontend/lib/version.ts
+APP_VERSION = "1.15.0"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/eql_companion"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 

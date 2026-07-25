@@ -4,6 +4,61 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v1.15.0 — 2026-07-25
+
+**A standalone .exe** — one 59 MB file, nothing to install. Plus a settings
+panel, because a downloaded executable has no `.env` to edit.
+
+**Download and run**
+
+- `build_exe.bat` produces `dist\EQLCompanion.exe`: no Python, no Node, no
+  pip. It finds your game through the Windows registry, opens a native
+  WebView2 window, and keeps its data in a `data` folder beside itself
+  (or `%LOCALAPPDATA%\EQLCompanion` when that folder is read-only).
+  ~4s first start; everything works except screen OCR — HUD, overlay,
+  Atlas 3D with textures, timers, alerts, and LLM counsel all included.
+- The build is now verified rather than theoretical, and finding out how
+  fixed five defects — four of which were bugs in the source install too:
+  - **Optional dependencies could abort startup.** `ocr_system` caught only
+    `ImportError`, but a half-present rapidocr raises `FileNotFoundError`
+    when its model manifest is missing, killing the whole app over a
+    feature that build does not even ship. The guard is deliberately broad
+    now.
+  - **One bad texture cost the whole zone.** A failure in the 3D texture
+    export aborted the entire payload; it degrades to an untextured view.
+  - **Helper windows**: `/api/overlay` ran `[sys.executable, "-m", ...]`,
+    which frozen would boot a second server. Flags now (`--overlay`).
+  - **No console in a windowed build**: `sys.stdout` is None and uvicorn's
+    formatter calls `.isatty()` on it. Streams adopt a log file, and
+    pywebview's main-thread requirement moved uvicorn to a worker, so
+    closing the window shuts down through the normal lifespan.
+  - **Paths**: `backend/paths.py` splits read-only bundled assets from
+    writable state, so nothing lands in a temp dir that is wiped on exit.
+
+**Settings — the gear in the header**
+
+- Game folder with a **Test** button that reports what it actually found
+  ("3 character log(s)") or what is wrong, and a one-click fill from
+  registry detection. Saving re-derives the paths and restarts the tailer;
+  no restart needed.
+- Advisor model, including an API key field. Providers the running build
+  cannot support are greyed out rather than silently falling back.
+- **Keys live in `data/secrets.json` and nowhere else.** Never logged
+  (field names only), never returned to the browser (`GET /api/settings`
+  reports booleans), and explicitly gitignored. A key field omitted from a
+  save is left untouched, so saving a game folder cannot wipe it; an
+  explicit empty value clears it.
+
+**Also**
+
+- `requirements-lite.txt` now lists the LLM clients deliberately.
+  PyInstaller bundles only what the build machine has installed, so
+  omitting them produced an exe whose API key field could never work —
+  depending on who ran the build.
+- "MCP server not found" was logged on every wiki lookup; said once now.
+- README and INSTALL.md cover both installs, including the SmartScreen
+  warning an unsigned binary raises and how to verify it yourself.
+
 ## v1.14.1 — 2026-07-22
 
 An efficiency pass over the two slowest user-facing paths and the log
