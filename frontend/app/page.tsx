@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SettingsModal } from "@/components/SettingsModal";
 import { apiGet, apiSend } from "@/lib/api";
 import type { LedgerRow, Snapshot, WsMessage } from "@/lib/types";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -103,6 +104,7 @@ export default function Home() {
 
   const status = useWebSocket(onMessage);
   const [chars, setChars] = useState<CharacterEntry[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeFile, setActiveFile] = useState<string | null>(null);
 
   useEffect(() => {
@@ -201,6 +203,20 @@ export default function Home() {
           </div>
           <button
             type="button"
+            className="gear-btn"
+            title="Settings — game folder, advisor model"
+            aria-label="Settings"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M12 8.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 0 0 12 8.5zm7.4 3.5c0-.5-.05-.9-.13-1.35l2.06-1.6-2-3.46-2.45 1a7.4 7.4 0 0 0-2.33-1.35L14.2 2h-4l-.35 2.24A7.4 7.4 0 0 0 7.52 5.6l-2.45-1-2 3.46 2.06 1.6a7.7 7.7 0 0 0 0 2.7l-2.06 1.6 2 3.46 2.45-1a7.4 7.4 0 0 0 2.33 1.35L10.2 22h4l.35-2.24a7.4 7.4 0 0 0 2.33-1.35l2.45 1 2-3.46-2.06-1.6c.08-.45.13-.85.13-1.35z"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
             className="overlay-btn"
             data-on={overlayOn ? "1" : undefined}
             onClick={() =>
@@ -272,6 +288,9 @@ export default function Home() {
           lastDeath={snap?.last_death ?? null}
         />
       </div>
+      {settingsOpen && (
+        <SettingsModal onClose={() => setSettingsOpen(false)} />
+      )}
     </main>
   );
 }

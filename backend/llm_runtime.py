@@ -14,6 +14,7 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 from backend.paths import data_path
+from backend.secrets_store import resolve as _key
 
 _CONFIG = data_path("llm_config.json")
 _lock = threading.Lock()
@@ -71,14 +72,17 @@ def _build(provider: str, model: str):
         # any OpenAI-compatible endpoint: Groq, OpenRouter, Together,
         # Gemini's compat layer, a friend's LM Studio over LAN, ...
         from langchain_openai import ChatOpenAI
-        return ChatOpenAI(model=model, base_url=settings.custom_base_url,
-                          api_key=settings.custom_api_key or "unset")
+        return ChatOpenAI(
+            model=model,
+            base_url=_load().get("custom_base_url") or settings.custom_base_url,
+            api_key=_key("custom_api_key", settings.custom_api_key) or "unset")
     if provider == "openai":
         from langchain_openai import ChatOpenAI
         # Reasoning models (o-series, gpt-5.x) reject temperature and use
         # max_completion_tokens internally — pass nothing but the model.
-        return ChatOpenAI(model=model,
-                          api_key=settings.openai_api_key or "unset")
+        return ChatOpenAI(
+            model=model,
+            api_key=_key("openai_api_key", settings.openai_api_key) or "unset")
     if provider == "lmstudio":
         # LM Studio speaks the OpenAI API. Start its local server (Developer
         # tab); enable JIT model loading + idle auto-unload.
@@ -89,8 +93,16 @@ def _build(provider: str, model: str):
         from langchain_ollama import ChatOllama
         return ChatOllama(model=model)
     from langchain_anthropic import ChatAnthropic
-    return ChatAnthropic(model=model, max_tokens=8000,
-                         api_key=settings.anthropic_api_key or "unset")
+    return ChatAnthropic(
+        model=model, max_tokens=8000,
+        api_key=_key("anthropic_api_key", settings.anthropic_api_key)
+        or "unset")
+
+
+def clear_cache() -> None:
+    """Drop built chat models so the next consult picks up a new key."""
+    with _lock:
+        _cache.clear()
 
 
 def get_llm():

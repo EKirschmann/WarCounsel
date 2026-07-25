@@ -29,3 +29,8 @@ desktop.ini
 /dist/
 *.spec
 data/eqlbuilds/
+
+# API keys. Already covered by data/ above, but named explicitly so they
+# stay out even if that rule is ever narrowed.
+data/secrets.json
+secrets.json

@@ -478,6 +478,27 @@ the Brewall custom-map dir derive from it. LLM fields: `LLM_PROVIDER`,
 empty = wiki over HTTP. Key changes need a backend restart; the provider/
 model selection itself is runtime-switchable in the UI.
 
+## Settings & secrets (the gear in the header)
+
+- **Three layers, and they do not mix.** `.env` is the base; the UI writes
+  non-secret overrides to `data/app_config.json` (applied in `config.py`'s
+  validator BEFORE Logs/ and maps/ derive, so a folder chosen in the panel
+  behaves exactly like one in `.env`); API KEYS go to `data/secrets.json`
+  and nowhere else.
+- **Keys are write-only from the browser's point of view.** `GET
+  /api/settings` reports `keys_set: {field: bool}` — never a value, and
+  `secrets_store` logs field NAMES only. If a diagnostics/support dump is
+  ever added, it must exclude `secrets.json`; that separation is the entire
+  reason the file exists rather than living in `app_config.json`, which is
+  exactly the sort of file users paste into bug reports.
+- A key field ABSENT from a POST body is left untouched (so saving a game
+  folder never wipes a key); an explicit `""` clears it. Both are covered
+  by tests in the API — keep that behaviour if you extend the panel.
+- `secrets_store.FIELDS` / `app_config.FIELDS` are ALLOW-LISTS: a typo in a
+  caller must not silently mint a new setting.
+- Changing the game folder re-derives the paths and restarts the tailer via
+  `switch_character()` — no restart required.
+
 ## Frontend conventions
 
 - **StoneGlass design tokens** (inherited from an earlier in-game skin

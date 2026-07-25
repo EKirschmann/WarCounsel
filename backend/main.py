@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from backend.agent.advisor import generate_advice, generate_gear_advice
 from backend.agent.graph import get_agent
 from backend.agent.state import AgentState, ProfileData
-from backend.config import settings
+from backend.config import _registry_game_dir, settings
 from backend.game_data import hunting_candidates, spell_classes
 from backend import session_state
 from backend.geometry_system import geometry3d_for_zone, geometry_for_zone
@@ -982,6 +982,112 @@ async def api_llm_set(body: dict):
     _gear_cache = None
     _save_advice_cache()
     return {"active": active(), "openai_key_set": bool(settings.openai_api_key)}
+
+
+def _describe_game_dir(path: str) -> dict:
+    """Is this folder a usable EQL install? The settings panel shows this
+    verdict before saving, so nobody has to guess why nothing is tracked."""
+    p = Path(path) if path else None
+    if not p or not p.is_dir():
+        return {"path": path, "ok": False, "reason": "Folder does not exist"}
+    logs = p / "Logs"
+    if not logs.is_dir():
+        return {"path": str(p), "ok": False,
+                "reason": "No Logs folder here - is this the EverQuest "
+                          "Legends install folder?"}
+    found = sorted(logs.glob("eqlog_*.txt"))
+    if not found:
+        return {"path": str(p), "ok": False, "logs": str(logs),
+                "reason": "Logs folder has no eqlog_*.txt yet - type "
+                          "/log on in-game once."}
+    return {"path": str(p), "ok": True, "logs": str(logs),
+            "log_count": len(found),
+            "reason": f"{len(found)} character log(s) found"}
+
+
+@app.get("/api/settings")
+async def api_settings_get():
+    """Everything the settings panel needs. Secrets are reported as
+    booleans ONLY -- a stored key is never sent back to the browser."""
+    from backend.app_config import load as overrides
+    from backend.llm_runtime import active, custom_model, openai_model
+    from backend.secrets_store import which_are_set
+    return {
+        "game": _describe_game_dir(settings.eql_game_dir),
+        "detected_game_dir": _registry_game_dir(),
+        "data_dir": str(data_dir().resolve()),
+        "packaged": is_frozen(),
+        "llm": {
+            "active": active(),
+            "openai_model": openai_model(),
+            "custom_model": custom_model(),
+            "custom_base_url": settings.custom_base_url,
+            "lmstudio_base_url": settings.lmstudio_base_url,
+            "keys_set": which_are_set(),
+        },
+        "overrides": sorted(overrides().keys()),
+        "version": APP_VERSION,
+    }
+
+
+@app.post("/api/settings/validate-game-dir")
+async def api_validate_game_dir(body: dict):
+    """Check a folder without saving it (the panel's Test button)."""
+    return _describe_game_dir(str(body.get("game_dir") or "").strip())
+
+
+@app.post("/api/settings")
+async def api_settings_set(body: dict):
+    """Persist settings. Keys go to data/secrets.json, everything else to
+    data/app_config.json; an omitted key field is left untouched, so saving
+    other settings never has to resend a secret the UI was never shown."""
+    from backend.app_config import update as update_config
+    from backend.llm_runtime import clear_cache, set_active, active
+    from backend.secrets_store import FIELDS as SECRET_FIELDS, update as update_secrets
+
+    secrets_in = {f: body[f] for f in SECRET_FIELDS if f in body}
+    if secrets_in:
+        update_secrets(secrets_in)
+        clear_cache()  # rebuild chat models against the new key
+
+    config_in = {k: v for k, v in body.items() if k not in SECRET_FIELDS}
+    game_changed = False
+    if "eql_game_dir" in config_in:
+        wanted = str(config_in["eql_game_dir"] or "").strip()
+        verdict = _describe_game_dir(wanted) if wanted else {"ok": True}
+        if wanted and not verdict.get("ok"):
+            raise HTTPException(400, verdict.get("reason", "Unusable folder"))
+        game_changed = wanted != settings.eql_game_dir
+    if config_in:
+        update_config(config_in)
+        # apply in-memory so the change takes hold without a restart
+        for field, value in update_config({}).items():
+            if hasattr(settings, field):
+                setattr(settings, field, value)
+        if game_changed:
+            game = Path(settings.eql_game_dir)
+            settings.eql_log_dir = str(game / "Logs")
+            settings.eql_maps_dir = str(game / "maps")
+            settings.eql_maps_custom_dir = str(game / "maps" / "Dark Brewall")
+            clear_find_cache()
+
+    if "llm_provider" in config_in:
+        set_active(str(config_in["llm_provider"]),
+                   config_in.get("openai_model") or config_in.get("custom_model"))
+        global _advice_cache, _gear_cache
+        _advice_cache = None
+        _gear_cache = None
+
+    restarted = False
+    if game_changed:
+        # repoint the tailer at the new install's newest log
+        new_log = discover_log_file(Path(settings.eql_log_dir),
+                                    settings.eql_character_name)
+        if new_log:
+            restarted = await switch_character(new_log.name)
+
+    return {"saved": True, "game_dir_changed": game_changed,
+            "watcher_restarted": restarted, "llm": active()}
 
 
 @app.get("/api/hunting")

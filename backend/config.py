@@ -67,6 +67,14 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _derive_game_paths(self):
+        # Settings chosen in the UI override .env. Applied BEFORE Logs/ and
+        # maps/ derive, so a game folder picked from the settings panel
+        # behaves exactly like one written into .env. (Secrets are resolved
+        # separately, at use time -- see backend/secrets_store.py.)
+        from backend.app_config import load as _overrides
+        for _field, _value in _overrides().items():
+            if hasattr(self, _field):
+                setattr(self, _field, _value)
         game = Path(self.eql_game_dir)
         if not game.is_dir():
             # custom install path: the Daybreak uninstall registry key

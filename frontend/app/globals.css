@@ -1785,3 +1785,139 @@ button.app-version:hover { color: var(--gold-bright); }
   background: var(--dmg-out);
   opacity: 0.75;
 }
+
+/* ---------- settings (gear + modal) ---------- */
+/* Same glass/gold vocabulary as the panels: flat, square-ended, no radius. */
+.gear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  color: #9d8f6e;
+  background: rgba(18, 21, 26, 0.82);
+  border: 1px solid rgba(200, 170, 110, 0.34);
+  cursor: pointer;
+}
+.gear-btn:hover { color: #c8aa6e; border-color: rgba(200, 170, 110, 0.6); }
+
+.modal-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 8, 11, 0.72);
+}
+.modal-card {
+  width: min(560px, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: rgba(18, 21, 26, 0.97);
+  border: 1px solid rgba(200, 170, 110, 0.34);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(200, 170, 110, 0.22);
+}
+.modal-head h2 {
+  margin: 0;
+  font-family: var(--font-display, Cinzel), serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: #c8aa6e;
+}
+.modal-x {
+  background: none;
+  border: none;
+  color: #8b8577;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.modal-x:hover { color: #c8aa6e; }
+.modal-body { padding: 14px 16px 16px; }
+
+.set-block { margin-bottom: 18px; }
+.set-block > label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8b8577;
+}
+.set-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.set-row input { flex: 1 1 auto; min-width: 0; }
+.modal-card input,
+.modal-card select {
+  padding: 7px 9px;
+  color: #e8e2d4;
+  background: rgba(10, 12, 15, 0.9);
+  border: 1px solid rgba(200, 170, 110, 0.28);
+  font-family: var(--font-mono, "IBM Plex Mono"), monospace;
+  font-size: 0.82rem;
+}
+.modal-card select { width: 100%; }
+.modal-card input:focus-visible,
+.modal-card select:focus-visible,
+.modal-card button:focus-visible {
+  outline: 2px solid #c8aa6e;
+  outline-offset: 1px;
+}
+.modal-card button {
+  padding: 7px 12px;
+  color: #c8aa6e;
+  background: rgba(28, 32, 39, 0.9);
+  border: 1px solid rgba(200, 170, 110, 0.34);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.modal-card button:hover:not(:disabled) { border-color: rgba(200, 170, 110, 0.65); }
+.modal-card button:disabled { opacity: 0.45; cursor: default; }
+.set-primary { color: #0e1013 !important; background: #c8aa6e !important; }
+
+.set-link {
+  margin-top: 2px;
+  padding: 0 !important;
+  color: #8b8577 !important;
+  background: none !important;
+  border: none !important;
+  font-size: 0.74rem !important;
+  text-decoration: underline;
+}
+.set-link:hover { color: #c8aa6e !important; }
+
+.set-note {
+  margin: 6px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #8b8577;
+}
+.set-note[data-ok="1"] { color: #1fb38c; }
+.set-note[data-ok="0"] { color: #d4574a; }
+.set-note code {
+  color: #b9ad92;
+  font-family: var(--font-mono, "IBM Plex Mono"), monospace;
+  font-size: 0.72rem;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(200, 170, 110, 0.18);
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-card { transition: none; }
+}
+
