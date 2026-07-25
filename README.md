@@ -64,7 +64,43 @@ Click-through by default; Scroll Lock makes it interactive:
   class-colored bars up to raid size, damage/DPS modes, this-fight or
   last-5-fights segments; closes itself when the game exits
 
+## Get it
+
+Two ways to run it, and **the .exe is the one to pick if you just want to
+play**.
+
+| | Single .exe | Source install |
+|---|---|---|
+| You must already have | nothing | Python 3.11+ and Node 18+ |
+| Setup | download, double-click | run `install_companion.bat` |
+| HUD, War Ledger, encounters, timers, alerts | yes | yes |
+| In-game overlay | yes | yes |
+| Atlas — charts, true walls, textured 3D | yes | yes |
+| Advisor + gear counsel | deterministic **or** an LLM | same |
+| Screen-OCR position tracking | no | yes |
+| Download | ~59 MB, one file | a repo plus its dependencies |
+
+**[Download EQLCompanion.exe →](https://github.com/EKirschmann/eql_companion/releases/latest)**
+
+It needs nothing installed, finds your game through the Windows registry,
+and keeps its data in a `data` folder beside itself. First launch takes a
+few seconds (a one-file build unpacks itself each time); after that it is
+the same app as the source install.
+
+Windows **will** warn you that it does not recognise the publisher — the
+file is unsigned. [INSTALL.md](INSTALL.md#option-a--the-single-exe) shows
+exactly which button to press, and how to check the download yourself if
+you would rather not take my word for it.
+
+Paste an API key into the gear panel if you want LLM-backed counsel; leave
+it empty and the built-in deterministic advisor does the job.
+
+Everything below this point is about the **source install**, which you want
+for OCR position tracking or to hack on the code.
+
 ## Requirements
+
+*(For the .exe you need none of this — just Windows and the game.)*
 
 - **Windows 10/11** (log tailing works anywhere, but OCR position tracking
   and the overlay are Windows-only)
@@ -147,7 +183,12 @@ Then press **check exports** and **Consult** in the Advisor tab.
 
 ## Updating
 
-Click the version badge in the app header to check for a newer release.
+**Using the .exe?** Download the new one and replace the old file. Your
+`data` folder beside it is untouched, so sessions, settings, and mined
+geometry all survive. The in-app version badge tells you when a newer
+release exists.
+
+**Source install:** click the version badge in the app header to check for a newer release.
 To update: close the companion, run `update_companion.bat`, start it again —
 works for both git clones (pull) and ZIP installs (a built-in downloader;
 git is never required). What changed is in [CHANGELOG.md](CHANGELOG.md).

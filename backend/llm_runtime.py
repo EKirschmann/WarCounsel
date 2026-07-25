@@ -99,6 +99,33 @@ def _build(provider: str, model: str):
         or "unset")
 
 
+def available() -> dict:
+    """Which providers THIS BUILD can actually run.
+
+    The packaged executable ships without langchain on purpose (it is the
+    deterministic build), so every LLM provider is unavailable there. The
+    advisor would degrade gracefully anyway, but a settings panel that
+    offers a model it will silently ignore is worse than one that says so.
+    """
+    from importlib.util import find_spec
+
+    def has(module: str) -> bool:
+        try:
+            return find_spec(module) is not None
+        except (ImportError, ValueError):
+            return False
+
+    openai_stack = has("langchain_openai")
+    return {
+        "none": True,                    # the built-in advisor, always there
+        "lmstudio": openai_stack,        # LM Studio speaks the OpenAI API
+        "openai": openai_stack,
+        "custom": openai_stack,
+        "anthropic": has("langchain_anthropic"),
+        "local": has("langchain_ollama"),
+    }
+
+
 def clear_cache() -> None:
     """Drop built chat models so the next consult picks up a new key."""
     with _lock:

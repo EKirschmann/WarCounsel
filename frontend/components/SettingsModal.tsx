@@ -35,6 +35,7 @@ type SettingsData = {
     custom_base_url: string;
     lmstudio_base_url: string;
     keys_set: Record<string, boolean>;
+    available: Record<string, boolean>;
   };
 };
 
@@ -213,11 +214,15 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
               >
-                {PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
+                {PROVIDERS.map((p) => {
+                  const usable = data.llm.available?.[p.id] !== false;
+                  return (
+                    <option key={p.id} value={p.id} disabled={!usable}>
+                      {p.label}
+                      {usable ? "" : " — not available in this build"}
+                    </option>
+                  );
+                })}
               </select>
 
               {(provider === "openai" || provider === "custom") && (
@@ -252,6 +257,14 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     from every other setting, and never shown again.
                   </p>
                 </>
+              )}
+              {data.llm.available?.[provider] === false && (
+                <p className="set-note" data-ok="0">
+                  This build does not include the libraries that model needs,
+                  so counsel would quietly fall back to the built-in advisor.
+                  The packaged .exe is deterministic by design — use the
+                  source install if you want an LLM.
+                </p>
               )}
               {provider === "none" && (
                 <p className="set-note">

@@ -1010,7 +1010,8 @@ async def api_settings_get():
     """Everything the settings panel needs. Secrets are reported as
     booleans ONLY -- a stored key is never sent back to the browser."""
     from backend.app_config import load as overrides
-    from backend.llm_runtime import active, custom_model, openai_model
+    from backend.llm_runtime import (active, available, custom_model,
+                                     openai_model)
     from backend.secrets_store import which_are_set
     return {
         "game": _describe_game_dir(settings.eql_game_dir),
@@ -1024,6 +1025,7 @@ async def api_settings_get():
             "custom_base_url": settings.custom_base_url,
             "lmstudio_base_url": settings.lmstudio_base_url,
             "keys_set": which_are_set(),
+            "available": available(),
         },
         "overrides": sorted(overrides().keys()),
         "version": APP_VERSION,

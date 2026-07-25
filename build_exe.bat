@@ -1,6 +1,7 @@
 @echo off
-rem Build the LITE single-file EQL Companion executable (deterministic mode:
-rem no OCR, no LLM). Produces dist\EQLCompanion.exe with no runtime deps.
+rem Build the single-file EQL Companion executable. No OCR (that would pull in
+rem onnxruntime + numpy); LLM counsel IS included so the settings panel's API
+rem key field works. Produces dist\EQLCompanion.exe with no runtime deps.
 rem Prereqs on the BUILD machine only: Python 3.11+, Node 18+.
 if not "%~1"=="stay" (cmd /k ""%~f0" stay" & exit /b)
 cd /d %~dp0
@@ -43,7 +44,7 @@ pyinstaller --noconfirm --onefile --windowed --name EQLCompanion ^
   --exclude-module numpy --exclude-module matplotlib ^
   --exclude-module rapidocr --exclude-module rapidocr_onnxruntime ^
   --exclude-module mss --exclude-module cv2 --exclude-module torch ^
-  --exclude-module langchain --exclude-module langgraph --exclude-module onnxruntime ^
+  --exclude-module langgraph --exclude-module onnxruntime ^
   run_companion.py || (echo PyInstaller failed & exit /b 1)
 
 echo [5/5] Done -^> dist\EQLCompanion.exe

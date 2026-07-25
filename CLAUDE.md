@@ -33,13 +33,40 @@ UI when any frontend source is newer than the last build (a stale
 mode — its `--reload` has occasionally wedged in production launches, and
 a lite deterministic mode powers a planned single .exe (see below).
 
-**Single-executable groundwork** (deterministic/no-OCR): all langchain/
-langgraph imports are guarded so the backend BOOTS without them;
-`requirements-lite.txt` is the core-only set; FastAPI serves the static
-`frontend/out` at `/` (same-origin, `api.ts` auto-detects); `next.config`
-`NEXT_EXPORT=1` static-exports; `run_companion.py` runs in-process uvicorn
-+ a native WebView2 window; `build_exe.bat` -> PyInstaller onefile. The
-final .exe must be built on Windows (not verifiable in this env).
+**Single executable** (`build_exe.bat` -> PyInstaller onefile, ~59MB,
+~4s cold start; BUILT AND VERIFIED on Windows 11). Everything works
+except screen OCR: HUD, overlay, Atlas 3D with textures, and LLM counsel.
+FastAPI serves the static `frontend/out` at `/` (same-origin, `api.ts`
+auto-detects; `next.config` `NEXT_EXPORT=1` static-exports — REBUILD IT or
+the exe ships a stale UI); `run_companion.py` is the only entrypoint and
+also dispatches the helper windows.
+
+Hard-won, all of it load-bearing:
+
+- **`backend/paths.py` owns the two roots.** `bundle_path()` = read-only
+  assets from `sys._MEIPASS` (a temp dir wiped on exit); `data_dir()` =
+  writable state beside the .exe, or `%LOCALAPPDATA%` when that is
+  read-only. NEVER write state under the bundle. Source mode is unchanged
+  (`./data`).
+- **Helper windows go through `child_command()`**: frozen, `sys.executable`
+  IS the app and `-m backend.overlay` would boot a second server, so the
+  overlay/OCR calibrator use `--overlay` / `--ocr-overlay` flags.
+- **Windowed builds have no console.** `sys.stdout` is None; uvicorn's
+  colour formatter calls `.isatty()` on it, so `run_companion` adopts the
+  streams onto `data/companion.log` and passes `log_config=None`. pywebview
+  demands the MAIN thread, so uvicorn runs on a worker and closing the
+  window shuts down through the normal lifespan.
+- **Optional deps must never abort startup.** `ocr_system` catches
+  `Exception`, not `ImportError` — a half-present rapidocr raises
+  `FileNotFoundError`. Texture export failures degrade the 3D view to
+  untextured rather than losing the zone.
+- **`requirements-lite.txt` decides what the exe can do**, because
+  PyInstaller only bundles what the BUILD MACHINE has installed. The LLM
+  clients are in it deliberately: the settings panel offers an API key
+  field. `llm_runtime.available()` probes at runtime and the panel greys
+  out what is missing.
+- The packaged updater cannot pull or rebuild a source tree, and the exe
+  cannot overwrite itself while running — it points at the releases page.
 
 - `--reload` restarts on .py changes and re-reads `.env`; editing `.env`
   alone does NOT trigger a reload — touch a backend file or restart.

@@ -1,9 +1,15 @@
-# Deterministic, no-OCR, no-LLM build — the lean set for a single executable.
+# The lean set for the single executable: no OCR, but LLM counsel included.
 # Everything runs: HUD, War Ledger, encounters, Atlas (charts/true-walls/3D),
-# spellbook/inventory/AA parsing, the DETERMINISTIC advisor & gear, spell-set
-# writing, update checks. Position comes from /loc lines (no screen OCR).
+# spellbook/inventory/AA parsing, the advisor & gear (deterministic OR an
+# LLM), spell-set writing, update checks. Position comes from /loc lines
+# (no screen OCR).
 # Omitted vs requirements.txt: rapidocr/onnxruntime/mss/numpy (OCR),
-# langchain*/langgraph/anthropic (LLM), mcp (unused — wiki uses plain HTTP).
+# langgraph (the tab-less chat agent), mcp (unused — wiki uses plain HTTP).
+#
+# The LLM clients are NOT optional here: the settings panel offers an API
+# key field, and PyInstaller only bundles what the build machine has
+# installed — leaving them out produced an exe whose key field could never
+# do anything, depending on who built it.
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 sqlalchemy>=2.0.0
@@ -16,3 +22,7 @@ certifi>=2024.0
 # Atlas 3D texture export (BMP->PNG). Without it the 3D view still
 # renders, just untextured.
 pillow>=10.0
+# Advisor models. Without these the gear panel greys the LLM options out
+# and counsel falls back to the deterministic advisor.
+langchain-openai>=0.2
+langchain-anthropic>=0.3
