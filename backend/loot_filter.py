@@ -18,6 +18,15 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
+# 3=merge and 4=sell are confirmed: items marked 4 in a real filter are
+# auto-sold in the log ("...and sold it for 1 gold"). 1 vs 2 is CONTESTED --
+# terry-wilkerson/EQL-Loot-Filter-Manager, a dedicated editor for this file,
+# documents 1=loot 2=store, the reverse of this table. Both are "keep"
+# actions, so the log cannot separate them after the fact (the game rewrites
+# this file live, so history does not line up with current settings either).
+# Only the label is affected: filter_action is informational on merge
+# notices and nothing branches on it. Settle it by opening the game's own
+# loot filter UI and reading the dropdown order.
 ACTIONS = {1: "store", 2: "loot", 3: "merge", 4: "sell"}
 
 _cache: dict = {}

@@ -588,9 +588,13 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v1.14.1**. MCP server clone at `MCP_SERVER_DIR` is on ArtSabintsev
-**v1.3.4** (data snapshot refreshed twice weekly; stay on release tags, not
-main — post-1.3.4 has an unreleased TypeScript 6->7 bump). Update the MCP
+Latest: **v1.15.0**. MCP server clone at `MCP_SERVER_DIR` is
+**ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
+name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
+builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**
+is out (dependency bumps incl. the TypeScript 6->7 one previously unreleased,
+plus an atomic-release CI fix) and is safe to take. Data snapshot refreshed
+twice weekly; stay on release tags, not main. Update the MCP
 with `git merge --ff-only <tag> && npm install && npm run build` in its
 clone. Benign `eql_wiki_page returned isError` lines (pages that don't
 exist; HTTP fallback covers them) log at DEBUG.

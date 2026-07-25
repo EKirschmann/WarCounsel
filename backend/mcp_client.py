@@ -5,7 +5,7 @@ alive, guard calls with a lock, and fail soft: helpers return None when the
 server, Node, or the wiki is unavailable so callers can degrade gracefully.
 
 Server setup (one-time):
-    git clone https://github.com/Sergeantfirstclassvincetoxicumnegrum35/everquest-legends-mcp
+    git clone https://github.com/ArtSabintsev/everquest-legends-mcp
     cd everquest-legends-mcp && npm install    # builds dist/ via prepare
 Then point settings.mcp_server_dir at the clone (see .env).
 """
