@@ -486,14 +486,17 @@ class CharacterTracker:
                     self.overheal += e.potential - e.amount
                 if e.crit:
                     self.crits += 1
-                self._encounter_heal(e.ts, f"{e.spell} — You", e.amount,
-                                     crit=e.crit)
+                # unattributed heals still count; they just group under a
+                # generic row rather than a spell name
+                self._encounter_heal(e.ts, f"{e.spell or 'Direct heal'} — You",
+                                     e.amount, crit=e.crit)
             elif isinstance(e, ev.OtherHeal):
                 if e.target.lower() == (self.name or "").lower():
                     self.healing_received += e.amount
                 healer = self.pet_owners.get(e.healer, e.healer)
-                self._encounter_heal(e.ts, f"{e.spell} — {healer}", e.amount,
-                                     crit=e.crit)
+                self._encounter_heal(e.ts,
+                                     f"{e.spell or 'Direct heal'} — {healer}",
+                                     e.amount, crit=e.crit)
             elif isinstance(e, ev.Kill):
                 self.kills += 1
                 self._fire_alerts("kill", e.target, e.ts)

@@ -182,7 +182,7 @@ class OtherHeal(LogEvent):
     healer: str
     target: str
     amount: int
-    spell: str
+    spell: Optional[str] = None
     over_time: bool = False
     crit: bool = False  # heal crits log since the 2026-07-07 patch
     potential: Optional[int] = None
@@ -264,7 +264,9 @@ class HealOut(LogEvent):
     type: str = "heal_out"
     target: str
     amount: int
-    spell: str
+    # None when the game logs no "by <Spell>" (direct heals often do not);
+    # the heal still counts, it just cannot be attributed to a spell row.
+    spell: Optional[str] = None
     over_time: bool = False
     crit: bool = False
     potential: Optional[int] = None

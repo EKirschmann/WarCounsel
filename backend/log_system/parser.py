@@ -149,12 +149,21 @@ RE_SNEAK_FAIL = re.compile(
 RE_COMPOSITION = re.compile(r"^Your active classes are[: ]+(.+?)\.?$")
 RE_HEAL = re.compile(r"^You have been healed for (\d+) (?:hit )?points")
 # "You healed Zizoo over time for 92 hit points by Blooming Heal."
+# The trailing " by <Spell>" is OPTIONAL: direct heals log without it
+# ("You healed Scoots for 28 hit points."), and requiring it silently
+# dropped every one of them.
 RE_HEAL_OUT = re.compile(
-    r"^You healed (.+?)( over time)? for (\d+)(?: \((\d+)\))? hit points by (.+?)\.")
+    r"^You healed (.+?)( over time)? for (\d+)(?: \((\d+)\))? hit points"
+    r"(?: by (.+?))?\.")
 # "Bosh healed itself for 159 (210) hit points by Spirit Tap." — group
-# members, pets, and mobs: the healer IS named; parens = pre-cap value
+# members, pets, and mobs: the healer IS named; parens = pre-cap value.
+# The healer is NOT player-shaped in general: mobs heal too, with lowercase
+# multi-word names ("a froglok gaz shaman healed itself"), and a mob healing
+# itself is often the reason a fight will not end. The lookahead keeps our
+# own heals on the RE_HEAL_OUT path above.
 RE_OTHER_HEAL = re.compile(
-    rf"^({_PC}) healed (.+?)( over time)? for (\d+)(?: \((\d+)\))? hit points by (.+?)\.")
+    r"^(?!You )(.+?) healed (.+?)( over time)? for (\d+)(?: \((\d+)\))?"
+    r" hit points(?: by (.+?))?\.")
 # [13 Monk] Gentso (Iksar)   /   [65 Transcendent (Monk)] Gentso (Iksar) <Guild>
 RE_WHO = re.compile(r"^(?:AFK +)?\[(\d+) (.+?)\] (\w+) \((.+?)\)")
 # "/pet leader": Gobaner says, 'My leader is Gentso.' — charm pets have
