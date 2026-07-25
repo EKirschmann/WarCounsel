@@ -598,7 +598,30 @@ exist; HTTP fallback covers them) log at DEBUG.
 
 Bump `APP_VERSION` in backend/main.py AND frontend/lib/version.ts (same
 string), add a CHANGELOG.md section, commit, then `git tag vX.Y.Z` and push
-with `--tags`. Untagged pushes are invisible to users: the in-app check
+with `--tags`. **Pushing the tag is now the whole release**:
+`.github/workflows/release.yml` builds the .exe on a clean windows-latest
+runner and attaches it (plus a .sha256) to that tag's release, creating the
+release if it does not exist. `gh` is installed and authenticated locally if
+you need to do it by hand.
+
+Build the exe on a CLEAN runner, never a laptop: PyInstaller bundles what
+the build machine has installed, so a dev box with extra packages produces
+something `requirements-lite.txt` does not describe. That already shipped
+once. The workflow fails the build if `frontend/out` lacks the current
+version (a stale export once shipped a UI eight versions old) or if the
+built exe cannot serve `/api/settings` in 120s with the right version —
+a windowed build that cannot boot fails silently otherwise.
+
+**If a release gets flagged by antivirus** (likely eventually; packed
+PyInstaller one-file builds trip heuristics): first REPRODUCE it —
+`MpCmdRun.exe -Scan -ScanType 3 -File <exe>` for Defender, or VirusTotal for
+a multi-engine view. v1.15.0 scanned clean on Defender, so there was nothing
+to report. Only submit to <https://www.microsoft.com/wdsi/filesubmission>
+when a detection actually exists: choose "Software developer", give the
+detection name, the release download URL, and the published SHA256. Code
+signing does NOT remove the SmartScreen prompt — since 2024 Microsoft treats
+OV and EV alike and reputation accrues per file hash — so signing is worth
+pursuing for the publisher name and fewer AV flags, not for that warning. Untagged pushes are invisible to users: the in-app check
 (badge click + 6-hourly poll; API with tags-page fallback for rate-limited
 IPs) compares against the newest tag, and update_companion.py downloads
 THAT TAG's ZIP (git clones pull main instead). The updater preserves
