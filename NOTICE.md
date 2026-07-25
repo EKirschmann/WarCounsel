@@ -1,6 +1,6 @@
 # Notices and credits
 
-The EQL Companion is MIT licensed (see [LICENSE](LICENSE)). This file
+WarCounsel is MIT licensed (see [LICENSE](LICENSE)). This file
 records the third-party material bundled or vendored here, and the
 project's relationship to the game.
 

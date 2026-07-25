@@ -10,11 +10,17 @@ in-game `/memspellset companion` loads the whole advised bar.
 
 ## In action
 
-**The HUD** — live vitals with per-hour rates and countdown timers, the
-fight breakdown with per-ability crits, your pet's contribution, and
-observed drop rates per mob:
+**The HUD and the 3D Atlas** — live vitals and countdown timers on the left,
+Najena mined from your own game files in the middle (drag to orbit; the dot
+is you), and the fight breakdown on the right with per-ability crits, your
+pet's line, and every group member's damage:
 
 ![Live HUD: vitals, timers, encounter breakdown](docs/screenshots/hud-overview.jpg)
+
+The 3D view tracks you as you move — the dot is your `/loc`, and the
+camera follows it through geometry mined from your own game files:
+
+<p align="center"><img src="docs/screenshots/atlas-3d-tracking.gif" width="420" alt="3D Atlas following the player through Najena"></p>
 
 **The Advisor** — a wiki-grounded spell loadout for your exact trio and
 level, with one-click write-back into the game's saved spell sets, and
@@ -22,15 +28,17 @@ permanent pre-buffs called out so you never waste a slot:
 
 ![Advisor: tiered loadout counsel](docs/screenshots/advisor-loadout.jpg)
 
-**Gear counsel** — every recommendation shows real stats scaled to your
-items' upgrade ranks (a +75 HP swap is framed as a percentage of YOUR
-hit points), above a community-rated leveling chart:
+**Where to hunt** — zones ranked against the community level table, above a
+Gantt of the bands around you so you can see what you are about to outgrow.
+Then the full 24-slot gear table, with every stat scaled to your items'
+actual upgrade ranks:
 
-![Gear advisor and leveling chart](docs/screenshots/gear-and-leveling.jpg)
+![Where to hunt and the leveling chart](docs/screenshots/hunting-and-leveling.jpg)
 
-**Exaltations** — every stone you own: what it grants, whether it's
-active or dormant, and exactly which of your items it can legally
-socket into — plus where to farm your next upgrades:
+**Exaltations and farming** — every stone you own: what it grants, whether
+it is active or dormant until a later level, and exactly which of your items
+it can legally socket into — then where to farm your next upgrades, and
+per-class notes for your trio:
 
 ![Exaltation tracking and farming targets](docs/screenshots/exaltations-and-farming.jpg)
 

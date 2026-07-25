@@ -146,7 +146,7 @@ export default function Home() {
       <header className="hud-header">
         <div>
           <div className="eyebrow">
-            EQL Companion{" "}
+            WarCounsel{" "}
             <button
               type="button"
               className="app-version"
