@@ -22,7 +22,7 @@ There are two. Pick one.
 
 | | **The single .exe** | **The full install** |
 |---|---|---|
-| What you download | one file, about 59 MB | a ZIP you unpack and set up |
+| What you download | one file, about 42 MB | a ZIP you unpack and set up |
 | Do I need anything else first? | **no** | Python and Node (the installer offers to fetch them) |
 | How long | under a minute | about ten minutes |
 | Live HUD, damage meter, overlay, maps | yes | yes |

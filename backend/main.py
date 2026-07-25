@@ -553,7 +553,7 @@ async def lifespan(app: FastAPI):
         t.cancel()
 
 
-APP_VERSION = "1.15.1"  # bump together with frontend/lib/version.ts
+APP_VERSION = "1.15.2"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/eql_companion"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 
@@ -1010,6 +1010,7 @@ async def api_settings_get():
     """Everything the settings panel needs. Secrets are reported as
     booleans ONLY -- a stored key is never sent back to the browser."""
     from backend.app_config import load as overrides
+    from backend import spell_lines
     from backend.llm_runtime import (active, available, custom_model,
                                      openai_model)
     from backend.secrets_store import which_are_set
@@ -1028,6 +1029,10 @@ async def api_settings_get():
             "available": available(),
         },
         "overrides": sorted(overrides().keys()),
+        # Bundled-data health. Packaged builds resolve these out of the
+        # PyInstaller bundle, where a missing --add-data entry fails soft;
+        # surfacing the counts lets the release build assert they arrived.
+        "data": {"spell_lines": spell_lines.stats()},
         "version": APP_VERSION,
     }
 

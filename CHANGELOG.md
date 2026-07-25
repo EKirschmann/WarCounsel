@@ -4,6 +4,25 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v1.15.2 — 2026-07-25
+
+Fixes v1.15.1's headline feature in the build most people actually download.
+
+- **The spell-line table was never bundled into the .exe.** PyInstaller's
+  `--collect-submodules` gathers Python modules; a `.json` sitting beside
+  them is not code and has to be declared. So `backend/spell_lines.json` was
+  missing from the packaged build, and because a missing data file fails
+  soft by design, the buff-slot stacking gate silently did nothing there.
+  Source installs were unaffected. Now declared in both `build_exe.bat` and
+  the release workflow.
+- **The release build now asserts its own data arrived.** The smoke test
+  already proved the exe boots; it now also checks the spell-line count is
+  non-zero, so a bundled file that goes missing fails the build instead of
+  shipping a feature that quietly does nothing. `GET /api/settings` reports
+  the counts under `data`.
+- Corrected the download size in the docs: a clean-runner build is ~42 MB,
+  not the ~59 MB a developer machine produced.
+
 ## v1.15.1 — 2026-07-25
 
 **The advisor now knows about buff slots.** EverQuest buffs occupy effect

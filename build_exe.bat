@@ -33,6 +33,7 @@ pyinstaller --noconfirm --onefile --windowed --name EQLCompanion ^
   --add-data "frontend/out;frontend/out" ^
   --add-data "data/eqlbuilds;data/eqlbuilds" ^
   --add-data "class_guides;class_guides" ^
+  --add-data "backend/spell_lines.json;backend" ^
   --collect-submodules backend ^
   --hidden-import uvicorn.logging --hidden-import uvicorn.protocols ^
   --hidden-import uvicorn.protocols.http.auto ^

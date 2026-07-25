@@ -94,6 +94,7 @@ jobs:
           --add-data "frontend/out;frontend/out"
           --add-data "data/eqlbuilds;data/eqlbuilds"
           --add-data "class_guides;class_guides"
+          --add-data "backend/spell_lines.json;backend"
           --collect-submodules backend
           --hidden-import uvicorn.logging --hidden-import uvicorn.protocols
           --hidden-import uvicorn.protocols.http.auto
@@ -134,6 +135,13 @@ jobs:
           Get-Process -Name EQLCompanion -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $info.packaged) { throw "not reporting itself as a packaged build" }
           if ($info.version -ne $want) { throw "exe reports $($info.version), expected $want" }
+          # Bundled data files fail SOFT at runtime, so a missing one is
+          # invisible unless asserted. v1.15.1 shipped with the spell-line
+          # table absent and the stacking gate silently disabled.
+          if ($info.data.spell_lines.lines -lt 1) {
+            throw "spell line table missing from the bundle (stacking gate would no-op)"
+          }
+          "spell lines aboard: $($info.data.spell_lines.lines)" | Write-Host
           "started in $([int]$sw.Elapsed.TotalSeconds)s, reports $($info.version), packaged=$($info.packaged)" | Write-Host
 
       - name: Record the hash

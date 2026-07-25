@@ -78,7 +78,7 @@ play**.
 | Atlas — charts, true walls, textured 3D | yes | yes |
 | Advisor + gear counsel | deterministic **or** an LLM | same |
 | Screen-OCR position tracking | no | yes |
-| Download | ~59 MB, one file | a repo plus its dependencies |
+| Download | ~42 MB, one file | a repo plus its dependencies |
 
 **[Download EQLCompanion.exe →](https://github.com/EKirschmann/eql_companion/releases/latest)**
 
