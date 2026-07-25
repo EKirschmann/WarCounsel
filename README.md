@@ -43,9 +43,17 @@ per-class notes for your trio:
 ![Exaltation tracking and farming targets](docs/screenshots/exaltations-and-farming.jpg)
 
 **The in-game overlay** — a compact always-on-top meter that lives
-over the game: ranked damage bars, spell/cooldown timers, session
-rates, drop tracking, and loot/kill alerts with an attention banner.
-Click-through by default; Scroll Lock makes it interactive:
+over the game: ranked damage bars, draining spell/cooldown timers,
+session rates, drop tracking, and loot/kill alerts with an attention
+banner. Click-through by default; Scroll Lock makes it interactive.
+
+You choose what it shows. Under **Settings ▸ Overlay** every section
+switches off, and so does every field inside one — keep the kill count
+but drop the coin, keep cooldowns but not every buff you refreshed.
+Start from **Combat focus** (the meter and your timers) or **Meter
+only**, then adjust. Changes reach a running overlay in about half a
+second, so you can watch it shrink while you tune it. Anything you
+turn off is still in the web view, which has room for it:
 
 <p align="center"><img src="docs/screenshots/overlay.png" width="340" alt="Overlay: damage meter, timers, session rates, alert banner"></p>
 

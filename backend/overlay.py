@@ -31,6 +31,7 @@ from pathlib import Path
 
 API_CHAR = "http://localhost:8000/api/character"
 API_ENCS = "http://localhost:8000/api/encounters?limit=5"
+from backend import overlay_prefs
 from backend.paths import data_path
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,8 @@ INK = "#e6dEca"
 MUTED = "#8b8577"
 HEAL = "#1fb38c"
 RED = "#d4574a"
+CAST = "#b07cc6"      # the frontend semantic cast color
+TRACK = "#1e2228"     # unfilled remainder of a timer track
 
 W = 300
 HEADER_H = 22
@@ -140,22 +143,33 @@ def compute_rows(snap, history, segment):
     return rows[:8], label
 
 
-def timer_rows(snap):
-    """TIMERS section: live countdowns, soonest first, red when short."""
+def timer_rows(snap, prefs=None):
+    """TIMERS: (name, clock, color, fraction remaining, urgent).
+
+    `kind` doubles as the visibility switch -- "cooldowns yes, every buff
+    I refreshed no" is the distinction that actually matters here, so the
+    toggles are the kinds rather than columns of a row.
+    """
     rows = []
-    for t in ((snap or {}).get("timers") or [])[:6]:
+    for t in ((snap or {}).get("timers") or []):
+        kind = t.get("kind")
+        field = ("raid" if kind == "raid" else
+                 "cooldown" if kind == "cooldown" else "spell")
+        if prefs is not None and not overlay_prefs.on(prefs, "timers", field):
+            continue
         rem = t.get("remaining", 0)
         mins, secs = divmod(max(0, int(rem)), 60)
         clock = f"{mins}:{secs:02d}" if mins else f"{secs}s"
-        kind = t.get("kind")
-        color = (RED if rem <= 5 else
-                 GOLD if kind == "raid" else
-                 HEAL if kind == "cooldown" else INK)
-        rows.append((t.get("name", "?")[:30], clock, color))
-    return rows or [("no active timers", "", MUTED)]
+        total = t.get("seconds") or 0
+        frac = max(0.0, min(1.0, rem / total)) if total > 0 else 0.0
+        color = (GOLD if kind == "raid" else
+                 HEAL if kind == "cooldown" else CAST)
+        rows.append((t.get("name", "?")[:30], clock, color, frac, rem <= 5))
+        if len(rows) >= 6:
+            break
+    return rows
 
-
-def session_rows(snap):
+def session_rows(snap, prefs=None):
     """SESSION section: [(left, right, color)]."""
     s = (snap or {}).get("session") or {}
     r = (snap or {}).get("rates") or {}
@@ -163,37 +177,52 @@ def session_rows(snap):
     def act(key):
         return (r.get(key) or {}).get("active_hr", 0)
 
-    return [
-        (f"kills {s.get('kills', 0)} · deaths {s.get('deaths', 0)}",
-         f"{act('kills'):g}/hr", INK),
-        (f"xp +{s.get('xp_percent', 0):g}%", f"{act('xp'):g}%/hr", INK),
-        (f"coin {_fmt_coin(s.get('coin_copper', 0))}",
-         f"{_fmt_coin(act('coin'))}/hr", INK),
-        (f"crits {s.get('crits', 0)} · hit {s.get('hit_rate', 0):g}%",
-         f"rune {_fmt(s.get('rune_absorbed', 0))}", MUTED),
-    ] + ([(f"motes {sum((s.get('motes') or {}).values())} · "
-           + " ".join(f"{k[:5]} {v}" for k, v in
-                      sorted((s.get('motes') or {}).items())[:3]),
-           "", MUTED)] if s.get("motes") else [])
+    def want(field):
+        return prefs is None or overlay_prefs.on(prefs, "session", field)
 
+    rows = []
+    if want("kills"):
+        rows.append((f"kills {s.get('kills', 0)} · deaths {s.get('deaths', 0)}",
+                     f"{act('kills'):g}/hr", INK))
+    if want("xp"):
+        rows.append((f"xp +{s.get('xp_percent', 0):g}%",
+                     f"{act('xp'):g}%/hr", INK))
+    if want("coin"):
+        rows.append((f"coin {_fmt_coin(s.get('coin_copper', 0))}",
+                     f"{_fmt_coin(act('coin'))}/hr", INK))
+    if want("crits"):
+        rows.append((f"crits {s.get('crits', 0)} · hit {s.get('hit_rate', 0):g}%",
+                     f"rune {_fmt(s.get('rune_absorbed', 0))}", MUTED))
+    if want("motes") and s.get("motes"):
+        rows.append((f"motes {sum((s.get('motes') or {}).values())} · "
+                     + " ".join(f"{k[:5]} {v}" for k, v in
+                                sorted((s.get('motes') or {}).items())[:3]),
+                     "", MUTED))
+    return rows
 
-def loot_rows(snap):
+def loot_rows(snap, prefs=None):
     """LOOT section: recent drops + best observed drop-rate mobs."""
     s = (snap or {}).get("session") or {}
-    rows = [((" " + item)[:42], "", INK)
-            for item in (s.get("loots") or [])[:4]]
-    best = []
-    for m in (snap or {}).get("mob_stats") or []:
-        kills, drops = m.get("kills") or 0, m.get("loot_drops") or 0
-        if kills > 0 and drops > 0:
-            best.append((m.get("name") or "?", round(100 * drops / kills)))
-    best.sort(key=lambda x: -x[1])
-    for name, pct in best[:2]:
-        rows.append((name[:28], f"{pct}% drops", MUTED))
+
+    def want(field):
+        return prefs is None or overlay_prefs.on(prefs, "loot", field)
+
+    rows = []
+    if want("recent"):
+        rows += [((" " + item)[:42], "", INK)
+                 for item in (s.get("loots") or [])[:4]]
+    if want("rates"):
+        best = []
+        for m in (snap or {}).get("mob_stats") or []:
+            kills, drops = m.get("kills") or 0, m.get("loot_drops") or 0
+            if kills > 0 and drops > 0:
+                best.append((m.get("name") or "?", round(100 * drops / kills)))
+        best.sort(key=lambda x: -x[1])
+        for name, pct in best[:2]:
+            rows.append((name[:28], f"{pct}% drops", MUTED))
     return rows or [("no loot yet", "", MUTED)]
 
-
-def progress_rows(snap):
+def progress_rows(snap, prefs=None):
     """PROGRESS section: level, ding estimate, session clocks."""
     r = (snap or {}).get("rates") or {}
     lvl = (snap or {}).get("level")
@@ -203,12 +232,13 @@ def progress_rows(snap):
         right = f"ding in ~{htl:g}h"
         if not r.get("hours_to_level_exact"):
             right += " (max)"
-    return [
-        (f"level {lvl if lvl is not None else '?'}", right, INK),
-        (f"session {r.get('elapsed_hours', 0):g}h · "
-         f"active {r.get('active_hours', 0):g}h", "", MUTED),
-    ]
-
+    rows = []
+    if prefs is None or overlay_prefs.on(prefs, "progress", "ding"):
+        rows.append((f"level {lvl if lvl is not None else '?'}", right, INK))
+    if prefs is None or overlay_prefs.on(prefs, "progress", "clocks"):
+        rows.append((f"session {r.get('elapsed_hours', 0):g}h · "
+                     f"active {r.get('active_hours', 0):g}h", "", MUTED))
+    return rows
 
 def section_summary(key, snap, history, segment):
     """One-liner shown on a COLLAPSED section header."""
@@ -238,6 +268,7 @@ class OverlayMeter:
     def __init__(self) -> None:
         self.snap = None
         self.history = []
+        self.prefs = overlay_prefs.load()
         st = self._load_state()
         self.mode = st.get("mode", "damage")          # damage | dps
         self.segment = st.get("segment", "current")   # current | last5
@@ -496,6 +527,41 @@ class OverlayMeter:
             y += TROW_H
         return y
 
+    def _timer_tracks(self, c, y, rows) -> int:
+        """Timers as depleting tracks rather than a list of numbers.
+
+        This is the one place in the overlay where a sub-second read
+        changes what you do next, so it is the one place that gets a bar
+        outside the damage meter. The fill drains on its own as the clock
+        runs, which means the motion carries the information -- a timer
+        about to expire looks different across the room, and nothing has
+        to animate for decoration.
+        """
+        if not rows:
+            c.create_text(8, y + TROW_H // 2, anchor="w", fill=MUTED,
+                          font=("Consolas", 8), text="no active timers")
+            return y + TROW_H
+        for name, clock, color, frac, urgent in rows:
+            # An expiring timer has almost no fill left, so it cannot rely
+            # on the bar to carry the warning -- the whole row washes red
+            # instead, and the text stays bright enough to read on it.
+            base = RED if urgent else TRACK
+            c.create_rectangle(0, y + 1, W, y + TROW_H - 1, fill=base,
+                               width=0, stipple="gray25" if urgent else "")
+            if frac > 0:
+                c.create_rectangle(0, y + 1, max(2, int(W * frac)),
+                                   y + TROW_H - 1,
+                                   fill=RED if urgent else color, width=0,
+                                   stipple="" if urgent else "gray50")
+            fg = BRIGHT if urgent else INK
+            c.create_text(8, y + TROW_H // 2, anchor="w", fill=fg,
+                          font=("Consolas", 8, "bold" if urgent else "normal"),
+                          text=name)
+            c.create_text(W - 6, y + TROW_H // 2, anchor="e", fill=fg,
+                          font=("Consolas", 8, "bold" if urgent else "normal"),
+                          text=clock)
+            y += TROW_H
+        return y
     # Ctrl+Alt+<key>, polled rather than RegisterHotKey'd: the overlay is
     # click-through and usually unfocused, so it receives no key events, and
     # polling is what already worked for Ctrl+Alt+X. Ctrl+Alt is used because
@@ -528,6 +594,7 @@ class OverlayMeter:
 
     def _render(self) -> None:
         self._poll_hotkeys()
+        self.prefs = overlay_prefs.load()
         interactive = (bool(ctypes.windll.user32.GetKeyState(VK_SCROLL) & 1)
                        or self.force_interactive)
         self._set_click_through(not interactive)
@@ -545,19 +612,30 @@ class OverlayMeter:
         y = HEADER_H
         c.create_rectangle(0, 0, W, HEADER_H, fill=HEADER_BG, width=0)
         if self.compact:
-            pinned = [k for k in SECTIONS if self.pinned.get(k)]
+            pinned = [k for k in SECTIONS if self.pinned.get(k)
+                      and overlay_prefs.on(self.prefs, k)]
             if pinned:
                 header = " | ".join(
                     section_summary(k, self.snap, self.history, self.segment)
                     for k in pinned)
             else:
-                xp_act = (r.get("xp") or {}).get("active_hr", 0)
-                coin_act = (r.get("coin") or {}).get("active_hr", 0)
-                header = (f"{my_dps:g}dps · {s.get('kills', 0)}k · "
-                          f"{xp_act:g}%/hr · {_fmt_coin(coin_act)}/hr")
+                # Built from what is switched on, so the one-line strip
+                # never advertises a number the player chose to hide.
+                bits = []
+                if overlay_prefs.on(self.prefs, "combat"):
+                    bits.append(f"{my_dps:g}dps")
+                if overlay_prefs.on(self.prefs, "session", "kills"):
+                    bits.append(f"{s.get('kills', 0)}k")
+                if overlay_prefs.on(self.prefs, "session", "xp"):
+                    xp_act = (r.get("xp") or {}).get("active_hr", 0)
+                    bits.append(f"{xp_act:g}%/hr")
+                if overlay_prefs.on(self.prefs, "session", "coin"):
+                    coin_act = (r.get("coin") or {}).get("active_hr", 0)
+                    bits.append(f"{_fmt_coin(coin_act)}/hr")
+                header = " · ".join(bits) or "WarCounsel"
             c.create_text(6, HEADER_H // 2, anchor="w", fill=GOLD,
                           font=("Consolas", 9, "bold"),
-                          text=f"EQL {header}"[:46])
+                          text=header[:46])
         else:
             mode_label = "Damage" if self.mode == "damage" else "DPS"
             c.create_text(8, HEADER_H // 2, anchor="w", fill=GOLD,
@@ -594,48 +672,69 @@ class OverlayMeter:
                           text="companion offline (:8000)")
             y += TROW_H
         elif not self.compact:
-            y = self._hero_band(c, y)
-            # ---- COMBAT ----
-            y = self._sec_header(c, y, "combat", "COMBAT")
-            if not self.collapsed["combat"]:
-                if not rows:
-                    c.create_text(8, y + TROW_H // 2, anchor="w", fill=MUTED,
-                                  font=("Consolas", 9),
-                                  text="waiting for combat…")
-                    y += TROW_H
-                total = sum(x[2] for x in rows) or 1
-                top = rows[0][2] if rows else 1
-                for i, (name, classes, dmg, dps) in enumerate(rows):
-                    y0 = y + i * ROW_H
-                    frac = (dmg / top) if top else 0
-                    color = _class_color(classes, name)
-                    c.create_rectangle(0, y0 + 1, max(2, int(W * frac)),
-                                       y0 + ROW_H - 1, fill=color, width=0,
-                                       stipple="gray50")
-                    share = 100 * dmg / total
-                    val = _fmt(dmg) if self.mode == "damage" else f"{dps:g}"
-                    fg = BRIGHT if name == "You" else INK
-                    c.create_text(6, y0 + ROW_H // 2, anchor="w", fill=fg,
-                                  font=("Consolas", 9),
-                                  text=f"{i + 1}. {name[:15]}")
-                    c.create_text(W - 6, y0 + ROW_H // 2, anchor="e", fill=fg,
-                                  font=("Consolas", 9),
-                                  text=f"{val} ({share:.0f}%)")
-                y += len(rows) * ROW_H
-            # ---- TIMERS / SESSION / LOOT / PROGRESS ----
-            y = self._sec_header(c, y, "timers", "TIMERS")
-            if not self.collapsed["timers"]:
-                y = self._text_rows(c, y, timer_rows(self.snap))
-            y = self._sec_header(c, y, "session", "SESSION")
-            if not self.collapsed["session"]:
-                y = self._text_rows(c, y, session_rows(self.snap))
-            y = self._sec_header(c, y, "loot", "LOOT")
-            if not self.collapsed["loot"]:
-                y = self._text_rows(c, y, loot_rows(self.snap))
-            y = self._sec_header(c, y, "progress", "PROGRESS")
-            if not self.collapsed["progress"]:
-                y = self._text_rows(c, y, progress_rows(self.snap))
+            prefs = self.prefs
+            shown = [k for k in SECTIONS if overlay_prefs.on(prefs, k)]
+            # A lone section needs no header: there is nothing to tell it
+            # apart from, and the 15px it costs buys another row of the one
+            # thing the player actually kept.
+            solo = len(shown) == 1
 
+            if not shown:
+                c.create_text(8, y + TROW_H // 2, anchor="w", fill=MUTED,
+                              font=("Consolas", 8),
+                              text="nothing to show — pick sections in Settings")
+                y += TROW_H
+
+            if "combat" in shown:
+                if overlay_prefs.on(prefs, "combat", "hero"):
+                    y = self._hero_band(c, y)
+                if not solo:
+                    y = self._sec_header(c, y, "combat", "COMBAT")
+                open_bars = ((solo or not self.collapsed["combat"])
+                             and overlay_prefs.on(prefs, "combat", "bars"))
+                if open_bars:
+                    if not rows:
+                        c.create_text(8, y + TROW_H // 2, anchor="w",
+                                      fill=MUTED, font=("Consolas", 9),
+                                      text="waiting for combat…")
+                        y += TROW_H
+                    total = sum(x[2] for x in rows) or 1
+                    top = rows[0][2] if rows else 1
+                    want_share = overlay_prefs.on(prefs, "combat", "share")
+                    for i, (name, classes, dmg, dps) in enumerate(rows):
+                        y0 = y + i * ROW_H
+                        frac = (dmg / top) if top else 0
+                        color = _class_color(classes, name)
+                        c.create_rectangle(0, y0 + 1, max(2, int(W * frac)),
+                                           y0 + ROW_H - 1, fill=color,
+                                           width=0, stipple="gray50")
+                        val = _fmt(dmg) if self.mode == "damage" else f"{dps:g}"
+                        if want_share:
+                            val = f"{val} ({100 * dmg / total:.0f}%)"
+                        fg = BRIGHT if name == "You" else INK
+                        c.create_text(6, y0 + ROW_H // 2, anchor="w", fill=fg,
+                                      font=("Consolas", 9),
+                                      text=f"{i + 1}. {name[:15]}")
+                        c.create_text(W - 6, y0 + ROW_H // 2, anchor="e",
+                                      fill=fg, font=("Consolas", 9), text=val)
+                    y += len(rows) * ROW_H
+
+            for key, title in (("timers", "TIMERS"), ("session", "SESSION"),
+                               ("loot", "LOOT"), ("progress", "PROGRESS")):
+                if key not in shown:
+                    continue
+                if not solo:
+                    y = self._sec_header(c, y, key, title)
+                if not solo and self.collapsed[key]:
+                    continue
+                if key == "timers":
+                    y = self._timer_tracks(c, y, timer_rows(self.snap, prefs))
+                elif key == "session":
+                    y = self._text_rows(c, y, session_rows(self.snap, prefs))
+                elif key == "loot":
+                    y = self._text_rows(c, y, loot_rows(self.snap, prefs))
+                else:
+                    y = self._text_rows(c, y, progress_rows(self.snap, prefs))
         hint_y = y + HINT_H // 2
         if interactive:
             c.create_text(6, hint_y, anchor="w", fill=GOLD,

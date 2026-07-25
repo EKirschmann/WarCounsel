@@ -1907,6 +1907,122 @@ button.app-version:hover { color: var(--gold-bright); }
   font-size: 0.72rem;
 }
 
+/* ---- Overlay switchboard (Settings) --------------------------------
+   Selectors are scoped .modal-card deep enough to beat the generic
+   .modal-card button / .modal-card input rules above, which would
+   otherwise pad the checkboxes and gild the disclosure buttons. */
+.ov-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 10px;
+  flex-wrap: wrap;
+}
+.modal-card .ov-preset {
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: #8b8577;
+  background: rgba(10, 12, 15, 0.7);
+  border: 1px solid rgba(200, 170, 110, 0.22);
+}
+.modal-card .ov-preset:hover:not(:disabled) {
+  color: #c8aa6e;
+  border-color: rgba(200, 170, 110, 0.55);
+}
+.modal-card .ov-preset[data-on="1"] {
+  color: #0e1013;
+  background: #c8aa6e;
+  border-color: #c8aa6e;
+}
+.ov-preset-state {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8b8577;
+}
+
+.ov-list { margin: 0; padding: 0; list-style: none; }
+.ov-item {
+  border-top: 1px solid rgba(200, 170, 110, 0.14);
+  padding: 1px 0;
+}
+.ov-item:last-child { border-bottom: 1px solid rgba(200, 170, 110, 0.14); }
+.ov-item[data-on="0"] .ov-label { color: #6f6a5f; }
+.ov-item[data-on="0"] .ov-hint { opacity: 0.5; }
+
+.ov-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+.ov-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.modal-card .ov-check input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: #c8aa6e;
+  cursor: pointer;
+}
+.modal-card .ov-check input[type="checkbox"]:disabled { cursor: default; }
+.ov-label {
+  font-size: 0.8rem;
+  color: #e8e2d4;
+  white-space: nowrap;
+}
+.ov-hint {
+  font-size: 0.72rem;
+  color: #8b8577;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal-card .ov-more {
+  padding: 2px 6px;
+  font-family: var(--font-mono, "IBM Plex Mono"), monospace;
+  font-size: 0.7rem;
+  color: #8b8577;
+  background: none;
+  border: 1px solid transparent;
+}
+.modal-card .ov-more:hover:not(:disabled) {
+  color: #c8aa6e;
+  border-color: rgba(200, 170, 110, 0.34);
+}
+
+.ov-fields {
+  margin: 0 0 8px;
+  padding: 2px 0 2px 21px;
+  list-style: none;
+  border-left: 1px solid rgba(200, 170, 110, 0.2);
+  margin-left: 6px;
+}
+.ov-fields li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 23px;
+}
+.ov-fields .ov-label { font-size: 0.76rem; }
+.ov-fields .ov-hint { font-size: 0.7rem; }
+
+@media (max-width: 520px) {
+  .ov-row { grid-template-columns: auto auto 1fr; }
+  .ov-row .ov-hint { display: none; }
+  .ov-fields li { grid-template-columns: 1fr; }
+  .ov-fields .ov-hint { display: none; }
+}
+
 .modal-foot {
   display: flex;
   justify-content: flex-end;

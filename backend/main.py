@@ -1437,6 +1437,34 @@ async def overlay_status():
     return {"running": _overlay_proc is not None and _overlay_proc.poll() is None}
 
 
+@app.get("/api/overlay/prefs")
+async def overlay_prefs_get():
+    """What the overlay shows, plus the schema the Settings panel renders
+    from — one source of truth, so the two cannot drift."""
+    from backend import overlay_prefs
+
+    prefs = overlay_prefs.load()
+    return {
+        "prefs": prefs,
+        "schema": overlay_prefs.SECTIONS,
+        "presets": overlay_prefs.PRESETS,
+        "preset": overlay_prefs.matches_preset(prefs),
+    }
+
+
+@app.post("/api/overlay/prefs")
+async def overlay_prefs_set(body: dict):
+    """Save section/field visibility. `preset` expands a named starting
+    point; otherwise the body is the prefs shape itself. A running overlay
+    picks the change up on its next repaint — no restart, no relaunch."""
+    from backend import overlay_prefs
+
+    name = body.get("preset")
+    prefs = overlay_prefs.save(
+        overlay_prefs.apply_preset(name) if name else body)
+    return {"prefs": prefs, "preset": overlay_prefs.matches_preset(prefs)}
+
+
 @app.post("/api/ocr/overlay")
 async def ocr_launch_overlay():
     """Launch the on-screen calibration box (backend/ocr_overlay.py)."""

@@ -3,8 +3,12 @@
 /* Settings — the gear in the header.
  *
  * Deliberately small: the two things a fresh install actually has to be
- * told (where the game is, and which model to counsel with) plus where its
- * data lives. Everything else stays discoverable in .env for source users.
+ * told (where the game is, and which model to counsel with), what the
+ * overlay shows, and where its data lives. Everything else stays
+ * discoverable in .env for source users.
+ *
+ * The overlay block saves on click through its own endpoint rather than on
+ * Save — see OverlaySettings.
  *
  * API keys are write-only here. The backend reports a boolean, never the
  * key, so a saved key shows as "saved" and can be replaced or cleared but
@@ -13,6 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet, apiSend } from "@/lib/api";
+import { OverlaySettings } from "./OverlaySettings";
 
 type GameVerdict = {
   path: string;
@@ -278,6 +283,15 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   <code>{data.llm.lmstudio_base_url}</code>. No key needed.
                 </p>
               )}
+            </section>
+
+            <section className="set-block">
+              <label>Overlay</label>
+              <p className="set-note">
+                Pick what the in-game overlay shows. The rest stays here in the
+                web view, where there is room for it.
+              </p>
+              <OverlaySettings />
             </section>
 
             <section className="set-block">

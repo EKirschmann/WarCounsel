@@ -96,6 +96,7 @@ backend/
 ├── geometry_system.py   # .s3d/.wld mesh extraction (2D floors/walls + 3D)
 ├── ocr_system.py        # screen OCR position feed (RapidOCR; Windows)
 ├── overlay.py           # sectioned session overlay (tkinter; Windows)
+├── overlay_prefs.py     # which overlay sections/fields are shown
 ├── log_system/          # events.py (pydantic), parser.py (ALL regex), watcher.py
 └── agent/               # advisor.py (LLM counsel + gates + builtin mode),
                          # graph.py (chat), prompts.py, tools.py, state.py
@@ -234,6 +235,37 @@ hours-to-level estimate (exact only after a same-session ding).
   pump. Ctrl+Alt+<key> because EQ binds bare and shifted keys but leaves that
   combination alone. Keyboard, hotkeys and the tray menu ALL route through the
   `act_*` methods so the three cannot drift.
+- **The overlay is a glance surface, not a small dashboard.** The webapp
+  already covers session analytics with room to breathe; the overlay's job
+  is answering "how am I doing right now?" without pulling your eyes off
+  the fight. So its contents are a CHOICE (`backend/overlay_prefs.py` ->
+  `data/overlay_prefs.json`, edited under Settings ▸ Overlay): every section
+  toggles, and every field WITHIN a section toggles, because "session line
+  but not the coin" is a real preference a section switch cannot express.
+  For TIMERS the fields are the KINDS (spell / cooldown / raid) — that is
+  the distinction that actually matters there.
+  - Defaults are ALL ON, so a missing file behaves exactly like before.
+  - The overlay re-reads the file on every repaint (mtime-cached, the same
+    shape as `alerts.load_rules()`) rather than over HTTP — it is a separate
+    process on the same box painting twice a second. Changes land in ~0.5s
+    with no relaunch, which is why the Settings block saves on click instead
+    of on the modal's Save button.
+  - `save()` merges onto CURRENT prefs, so an omitted key is left alone
+    rather than springing back on — the same rule the settings panel already
+    follows for API keys. Only the file-READ path falls back to defaults (a
+    section a newer version added).
+  - `SECTIONS`/`PRESETS` are the single source of truth: the panel renders
+    from them over the API, so the switchboard cannot drift from what the
+    overlay paints. Presets are `Everything`, `Combat focus`, `Meter only`.
+  - When exactly ONE section survives, its header is SUPPRESSED — there is
+    nothing to tell it apart from, and the 15px buys another row.
+- **Timers are depleting tracks, not a text list** — the one place besides
+  the damage meter that gets a bar, because it is the one place a
+  sub-second read changes what you do next. Fill = `remaining/seconds`
+  (both already in the snapshot), colored by kind. Under 5s the WHOLE row
+  washes red with bright text: an expiring timer has almost no fill left,
+  so it cannot use bar length to carry the warning. Do not "fix" that back
+  to dark-on-fill — the most urgent row becomes the least readable.
 - **Tray icon** (`backend/overlay_tray.py`, pystray): the way back to an
   overlay that is hidden or dragged off-screen — it has no title bar and is
   usually click-through, so otherwise there is nothing to click. Runs
@@ -296,6 +328,8 @@ throttled `state` pushes. REST highlights (see main.py for all):
   own console window)
 - `GET /api/map|zones|route|geometry|geometry3d|texture/{short}/{name}`
 - `POST /api/overlay` — toggle (launches or kills; `GET` reports state)
+- `GET/POST /api/overlay/prefs` — section/field visibility (below); the
+  GET also serves the SCHEMA and PRESETS the Settings panel renders from
 - `GET/POST /api/ocr/*` — screen-OCR position feed config
 
 ## Atlas invariants (hard-won — do not "fix")
