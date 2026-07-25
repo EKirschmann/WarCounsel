@@ -87,6 +87,11 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType Directory -Force data/eqlbuilds | Out-Null
 
+      - name: Stamp the version into the exe
+        # Filename stays stable (permalink + shortcuts); the version
+        # goes where Windows looks for it: Properties -> Details.
+        run: python scripts/make_version_file.py
+
       - name: PyInstaller
         # Kept in step with build_exe.bat -- change both together.
         run: >
@@ -95,6 +100,7 @@ jobs:
           --add-data "data/eqlbuilds;data/eqlbuilds"
           --add-data "class_guides;class_guides"
           --add-data "backend/spell_lines.json;backend"
+          --version-file build/version_info.txt
           --collect-submodules backend
           --hidden-import uvicorn.logging --hidden-import uvicorn.protocols
           --hidden-import uvicorn.protocols.http.auto

@@ -26,6 +26,10 @@ if exist "%MCP_SERVER_DIR%\dist\data\eqlbuilds\classes.json" (
 )
 
 echo [4/5] Running PyInstaller...
+rem Version lives INSIDE the exe (Properties -> Details), not in its
+rem filename: the download name has to stay stable for GitHub's
+rem /releases/latest/download/ permalink and for desktop shortcuts.
+python scripts\make_version_file.py || (echo version file failed & exit /b 1)
 rem --add-data entries are READ-ONLY assets resolved through paths.bundle_path().
 rem Writable state never lives here: a one-file bundle is a temp dir that is
 rem thrown away on exit (see backend/paths.py).
@@ -34,6 +38,7 @@ pyinstaller --noconfirm --onefile --windowed --name EQLCompanion ^
   --add-data "data/eqlbuilds;data/eqlbuilds" ^
   --add-data "class_guides;class_guides" ^
   --add-data "backend/spell_lines.json;backend" ^
+  --version-file build/version_info.txt ^
   --collect-submodules backend ^
   --hidden-import uvicorn.logging --hidden-import uvicorn.protocols ^
   --hidden-import uvicorn.protocols.http.auto ^
