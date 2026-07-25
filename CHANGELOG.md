@@ -4,6 +4,55 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v1.16.0 — 2026-07-25
+
+**Group numbers you can compare.** An ally's pet used to fold into its
+owner's damage row, while your own pet is shown apart from "You". So this
+app's view of a groupmate was them *plus* their pet, while that groupmate's
+own copy split the two — for any pet class the two readouts could never
+agree. Since comparing figures with someone else running the same tool is a
+main reason to have it open in a group, an ally's pet now gets its own row
+and the numbers reconcile.
+
+**Heals that were never counted.** Two forms were silently dropped: heals
+logged without a trailing `by <Spell>` (common for direct heals), and
+healers whose names are not player-shaped — mobs, with lowercase multi-word
+names. On the 90MB log this project is developed against, `other_heal` went
+from 26,730 to 45,638 events. Roughly nineteen thousand heals were
+happening and never counted, most of them mobs healing themselves, which is
+frequently the reason a fight is not ending. Unattributed heals still count;
+they group under a "Direct heal" row instead of a spell name.
+
+**Third-person casts.** "A froglok novice begins casting Inner Fire." is the
+only warning before a mob lands something, and only your own casts were
+parsed before. First person is "begin" and third is "begins", so the two
+cannot collide. They appear in the ledger and per-encounter, so you can see
+what is being cast at you and by whom. The vendored test fixture gained 14
+events from this alone.
+
+**Overlay: a tray icon and global hotkeys.** The overlay has no title bar
+and is click-through most of the time, so once hidden — or dragged
+off-screen — there was nothing left to click, and every control needed a
+window that is never focused while you play.
+
+| Keys | Does |
+|---|---|
+| `Ctrl+Alt+O` | show / hide |
+| `Ctrl+Alt+C` | compact mode |
+| `Ctrl+Alt+↑ / ↓` | opacity |
+| `Ctrl+Alt+X` | force interactive (no Scroll Lock needed) |
+
+The tray icon offers the same plus **Reset position**, the rescue for an
+overlay dragged off the edge. Windows 11 tucks new tray icons into the `^`
+overflow until you drag one out.
+
+**Also**
+
+- The release build now self-checks the overlay's own dependencies. The
+  overlay is a child process the server smoke test never reaches and its
+  tray fails soft, so a missing packaged import would have shipped silently
+  — the way the spell-line table did in 1.15.1.
+
 ## v1.15.2 — 2026-07-25
 
 Fixes v1.15.1's headline feature in the build most people actually download.
