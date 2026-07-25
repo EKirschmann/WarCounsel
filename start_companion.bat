@@ -8,7 +8,7 @@ if /i "%~1"=="dev" goto devmode
 
 rem --- rebuild the production UI only if source is newer than the last build
 set NEED=0
-if not exist frontend\next-prod\BUILD_ID set NEED=1
+if not exist frontend\.next-prod\BUILD_ID set NEED=1
 if "%NEED%"=="0" (
   powershell -NoProfile -Command "$b=(Get-Item 'frontend/.next-prod/BUILD_ID').LastWriteTime; $n=Get-ChildItem -Recurse frontend/app,frontend/components,frontend/lib,frontend/next.config.js -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $b } | Select-Object -First 1; if($n){exit 1}else{exit 0}"
   if errorlevel 1 set NEED=1
