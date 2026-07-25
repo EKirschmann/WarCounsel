@@ -216,6 +216,21 @@ hours-to-level estimate (exact only after a same-session ding).
   plays the winsound chime (nothing else beeps). GET /api/tracked-rules
   shows the parsed rules. TTS deliberately omitted — point users at
   the standalone eql-alerts app for voice callouts.
+- **Overlay hotkeys are POLLED, not registered** (`_poll_hotkeys`, extending
+  what Ctrl+Alt+X already did): the overlay is click-through and unfocused, so
+  it receives no key events, and `RegisterHotKey` would need its own message
+  pump. Ctrl+Alt+<key> because EQ binds bare and shifted keys but leaves that
+  combination alone. Keyboard, hotkeys and the tray menu ALL route through the
+  `act_*` methods so the three cannot drift.
+- **Tray icon** (`backend/overlay_tray.py`, pystray): the way back to an
+  overlay that is hidden or dragged off-screen — it has no title bar and is
+  usually click-through, so otherwise there is nothing to click. Runs
+  `run_detached` (its own thread + message pump) and marshals every callback
+  through `root.after`, because Tk calls must happen on the thread owning the
+  window. Fails soft. pystray imports its backend lazily, so packaged builds
+  need `--hidden-import pystray._win32`; the release build runs
+  `--overlay-check` to prove it, since the overlay is a child process the
+  server smoke test never reaches.
 - **Ability cooldowns**: cast/activation of ABILITY_COOLDOWNS entries
   (LoH 900s, Harm Touch 1200s, Quick Buff 600s) starts a "cooldown"
   timer under the TIER-STRIPPED canonical name; a landed Smite/Reave

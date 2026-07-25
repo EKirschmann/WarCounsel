@@ -170,9 +170,18 @@ def main() -> None:
                         help="run the combat overlay window only")
     parser.add_argument("--ocr-overlay", action="store_true",
                         help="run the OCR region calibrator only")
+    parser.add_argument("--overlay-check", action="store_true",
+                        help="verify the overlay's imports, then exit "
+                             "(0 = usable) — used by the release build")
     args, _unknown = parser.parse_known_args()
     _adopt_dead_streams()
     try:
+        if args.overlay_check:
+            # No window: just prove the pieces are present. The overlay is a
+            # child process, so nothing else in the build exercises them.
+            from backend import overlay          # noqa: F401
+            from backend import overlay_tray
+            raise SystemExit(0 if overlay_tray.available() else 1)
         if args.overlay:
             from backend.overlay import main as overlay_main
             overlay_main()

@@ -26,3 +26,6 @@ pillow>=10.0
 # and counsel falls back to the deterministic advisor.
 langchain-openai>=0.2
 langchain-anthropic>=0.3
+# Overlay tray icon. pystray imports its platform backend lazily, so a
+# packaged build also needs --hidden-import pystray._win32.
+pystray>=0.19

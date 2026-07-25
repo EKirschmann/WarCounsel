@@ -231,6 +231,20 @@ the War Ledger within a second.
 - **The overlay** (in-game meter): press the **Overlay** button in the
   app header. Scroll Lock ON lets you move/adjust it; OFF makes clicks
   pass through to the game.
+- **Overlay shortcuts** work from inside the game — you never have to click
+  the overlay or alt-tab:
+
+  | Keys | Does |
+  |---|---|
+  | `Ctrl+Alt+O` | Show / hide the overlay |
+  | `Ctrl+Alt+C` | Compact mode (one small line) |
+  | `Ctrl+Alt+↑ / ↓` | More / less see-through |
+  | `Ctrl+Alt+X` | Make it clickable without touching Scroll Lock |
+
+- **Tray icon:** the overlay adds an icon near the clock — right-click it for
+  the same options plus **Reset position**, which rescues an overlay dragged
+  off-screen. Windows 11 hides new tray icons in the `^` overflow by default;
+  drag it onto the taskbar to keep it visible.
 - **Updates:** the version number in the app header shows a badge when a
   new version exists. Using the .exe, download the new one and replace the
   old file. Using the full install, double-click

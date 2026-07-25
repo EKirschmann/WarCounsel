@@ -42,6 +42,7 @@ pyinstaller --noconfirm --onefile --windowed --name EQLCompanion ^
   --hidden-import uvicorn.protocols.websockets.websockets_impl ^
   --hidden-import uvicorn.lifespan.on ^
   --hidden-import uvicorn.loops.asyncio ^
+  --hidden-import pystray._win32 ^
   --exclude-module numpy --exclude-module matplotlib ^
   --exclude-module rapidocr --exclude-module rapidocr_onnxruntime ^
   --exclude-module mss --exclude-module cv2 --exclude-module torch ^

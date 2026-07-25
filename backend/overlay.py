@@ -22,6 +22,7 @@ Run: python -m backend.overlay   (or the Overlay button in the web header)
 import colorsys
 import ctypes
 import json
+import logging
 import threading
 import time
 import tkinter as tk
@@ -31,6 +32,8 @@ from pathlib import Path
 API_CHAR = "http://localhost:8000/api/character"
 API_ENCS = "http://localhost:8000/api/encounters?limit=5"
 from backend.paths import data_path
+
+logger = logging.getLogger(__name__)
 
 STATE_FILE = data_path("overlay_ui.json")
 
@@ -59,6 +62,10 @@ HINT_H = 13
 VK_CONTROL = 0x11
 VK_MENU = 0x12
 VK_X = 0x58
+VK_C = 0x43
+VK_O = 0x4F
+VK_UP = 0x26
+VK_DOWN = 0x28
 
 SECTIONS = ("combat", "timers", "session", "loot", "progress")
 ALERT_BANNER_SECS = 6.0
@@ -241,7 +248,7 @@ class OverlayMeter:
         self.pinned = {k: bool(st.get("pinned", {}).get(k, False))
                        for k in SECTIONS}
         self.force_interactive = False  # Ctrl+Alt+X toggle (not persisted)
-        self._hot_prev = False
+        self._hot_prev: dict = {}
         self.root = tk.Tk()
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
@@ -325,19 +332,62 @@ class OverlayMeter:
         self._drag = None
         self._save_state()
 
+    # ---- named actions ---------------------------------------------------
+    # Keyboard, global hotkeys and the tray menu all route through these, so
+    # the three never drift apart.
+
+    def act_compact(self) -> None:
+        self.compact = not self.compact
+        self._save_state()
+
+    def act_opacity_up(self) -> None:
+        self.alpha = min(1.0, self.alpha + 0.05)
+        self.root.attributes("-alpha", self.alpha)
+        self._save_state()
+
+    def act_opacity_down(self) -> None:
+        self.alpha = max(0.35, self.alpha - 0.05)
+        self.root.attributes("-alpha", self.alpha)
+        self._save_state()
+
+    def act_hide(self) -> None:
+        self.root.withdraw()
+
+    def act_show(self) -> None:
+        self.root.deiconify()
+        self.root.attributes("-topmost", True)
+
+    def act_toggle_visible(self) -> None:
+        if self.is_hidden():
+            self.act_show()
+        else:
+            self.act_hide()
+
+    def is_hidden(self) -> bool:
+        try:
+            return self.root.state() == "withdrawn"
+        except Exception:
+            return False
+
+    def act_reset_position(self) -> None:
+        """Rescue for an overlay dragged off-screen — with no title bar and
+        click-through on, there is otherwise no way to grab it back."""
+        self.x, self.y = 120, 120
+        self.root.geometry(f"+{self.x}+{self.y}")
+        self.act_show()
+        self._save_state()
+
+    def act_quit(self) -> None:
+        self.root.destroy()
+
     def _key(self, e) -> None:
         ch = (e.char or "").lower()
         if ch == "c":
-            self.compact = not self.compact
+            self.act_compact()
         elif ch in ("+", "="):
-            self.alpha = min(1.0, self.alpha + 0.05)
-            self.root.attributes("-alpha", self.alpha)
+            self.act_opacity_up()
         elif ch in ("-", "_"):
-            self.alpha = max(0.35, self.alpha - 0.05)
-            self.root.attributes("-alpha", self.alpha)
-        else:
-            return
-        self._save_state()
+            self.act_opacity_down()
 
     def _set_click_through(self, enable: bool) -> None:
         if enable == self._transparent:
@@ -446,14 +496,38 @@ class OverlayMeter:
             y += TROW_H
         return y
 
+    # Ctrl+Alt+<key>, polled rather than RegisterHotKey'd: the overlay is
+    # click-through and usually unfocused, so it receives no key events, and
+    # polling is what already worked for Ctrl+Alt+X. Ctrl+Alt is used because
+    # EQ binds bare and shifted keys but leaves that combination alone.
+    HOTKEYS = (
+        (VK_X, "interactive"),
+        (VK_O, "toggle_visible"),
+        (VK_C, "compact"),
+        (VK_UP, "opacity_up"),
+        (VK_DOWN, "opacity_down"),
+    )
+
+    def _poll_hotkeys(self) -> None:
+        down = ctypes.windll.user32.GetAsyncKeyState
+        mods = bool(down(VK_CONTROL) & 0x8000 and down(VK_MENU) & 0x8000)
+        for vk, action in self.HOTKEYS:
+            pressed = mods and bool(down(vk) & 0x8000)
+            if pressed and not self._hot_prev.get(vk):
+                if action == "interactive":
+                    self.force_interactive = not self.force_interactive
+                elif action == "toggle_visible":
+                    self.act_toggle_visible()
+                elif action == "compact":
+                    self.act_compact()
+                elif action == "opacity_up":
+                    self.act_opacity_up()
+                elif action == "opacity_down":
+                    self.act_opacity_down()
+            self._hot_prev[vk] = pressed
+
     def _render(self) -> None:
-        # Ctrl+Alt+X toggles interactivity even while click-through
-        hot = bool(ctypes.windll.user32.GetAsyncKeyState(VK_CONTROL) & 0x8000
-                   and ctypes.windll.user32.GetAsyncKeyState(VK_MENU) & 0x8000
-                   and ctypes.windll.user32.GetAsyncKeyState(VK_X) & 0x8000)
-        if hot and not self._hot_prev:
-            self.force_interactive = not self.force_interactive
-        self._hot_prev = hot
+        self._poll_hotkeys()
         interactive = (bool(ctypes.windll.user32.GetKeyState(VK_SCROLL) & 1)
                        or self.force_interactive)
         self._set_click_through(not interactive)
@@ -591,7 +665,27 @@ def main() -> None:
     either way."""
     if _already_running():
         raise SystemExit(0)
-    OverlayMeter().root.mainloop()
+    meter = OverlayMeter()
+    tray = None
+    try:
+        from backend.overlay_tray import OverlayTray
+        tray = OverlayTray(meter.root, {
+            "show": meter.act_show,
+            "hide": meter.act_hide,
+            "compact": meter.act_compact,
+            "opacity_up": meter.act_opacity_up,
+            "opacity_down": meter.act_opacity_down,
+            "reset_position": meter.act_reset_position,
+            "quit": meter.act_quit,
+        }, is_hidden=meter.is_hidden)
+        tray.start()
+    except Exception:
+        logger.warning("Tray unavailable", exc_info=True)
+    try:
+        meter.root.mainloop()
+    finally:
+        if tray is not None:
+            tray.stop()
 
 
 if __name__ == "__main__":

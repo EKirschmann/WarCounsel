@@ -193,6 +193,21 @@ To update: close the companion, run `update_companion.bat`, start it again —
 works for both git clones (pull) and ZIP installs (a built-in downloader;
 git is never required). What changed is in [CHANGELOG.md](CHANGELOG.md).
 
+## Overlay shortcuts
+
+Global, so they work while the game has focus:
+
+| Keys | Does |
+|---|---|
+| `Ctrl+Alt+O` | show / hide |
+| `Ctrl+Alt+C` | compact mode |
+| `Ctrl+Alt+↑ / ↓` | opacity |
+| `Ctrl+Alt+X` | force interactive (no Scroll Lock needed) |
+
+A tray icon near the clock offers the same, plus **Reset position** for an
+overlay dragged off-screen. Windows 11 tucks new tray icons into the `^`
+overflow until you drag one out.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Credits for the community projects whose

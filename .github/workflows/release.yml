@@ -103,6 +103,7 @@ jobs:
           --hidden-import uvicorn.protocols.websockets.websockets_impl
           --hidden-import uvicorn.lifespan.on
           --hidden-import uvicorn.loops.asyncio
+          --hidden-import pystray._win32
           --exclude-module numpy --exclude-module matplotlib
           --exclude-module rapidocr --exclude-module rapidocr_onnxruntime
           --exclude-module mss --exclude-module cv2 --exclude-module torch
@@ -142,6 +143,15 @@ jobs:
             throw "spell line table missing from the bundle (stacking gate would no-op)"
           }
           "spell lines aboard: $($info.data.spell_lines.lines)" | Write-Host
+
+      - name: Verify the overlay's own dependencies survived packaging
+        # The overlay is a separate process the server test never reaches, and
+        # its tray fails soft -- so a missing hidden import would ship silently.
+        shell: pwsh
+        run: |
+          & (Resolve-Path dist/EQLCompanion.exe) --overlay-check
+          if ($LASTEXITCODE -ne 0) { throw "overlay self-check failed (exit $LASTEXITCODE)" }
+          "overlay imports + tray backend OK" | Write-Host
           "started in $([int]$sw.Elapsed.TotalSeconds)s, reports $($info.version), packaged=$($info.packaged)" | Write-Host
 
       - name: Record the hash
