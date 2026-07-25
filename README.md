@@ -195,8 +195,8 @@ git is never required). What changed is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE), which also credits the community
-projects whose data and techniques are vendored here.
+MIT — see [LICENSE](LICENSE). Credits for the community projects whose
+data and techniques are vendored here are in [NOTICE.md](NOTICE.md).
 
 ## Notes
 
