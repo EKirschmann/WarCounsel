@@ -193,7 +193,7 @@ export interface Snapshot {
   loadout_hint: string | null;
   owned_aas: { distinct: number; ranks: number; synced: string | null };
   spellbook: { file: string; updated: string; age_hours: number; count: number } | null;
-  sync_hints: { command: string; reason: string }[];
+  sync_hints: { command: string; reason: string; urgent?: boolean }[];
   last_death: DeathRecap | null;
   mob_stats: MobStat[];
   zone: string | null;

@@ -1016,7 +1016,20 @@ class CharacterTracker:
     def _sync_hints(self, book: Optional[dict]) -> list:
         """In-game commands worth running, with why. Rendered in Vitals."""
         hints = []
-        if not self.has_log:
+        # Distinguish "logging was never turned on" from "logging is on but
+        # quiet": both look like no data, and only one is the user's to fix.
+        try:
+            from backend import eqclient
+            log_off_now = eqclient.logging_off_in_game()
+        except Exception:
+            log_off_now = False
+        if log_off_now:
+            hints.append({"command": "/log on",
+                          "urgent": True,
+                          "reason": "The game is running but its own settings "
+                                    "have logging OFF — nothing you do is "
+                                    "being recorded"})
+        elif not self.has_log:
             hints.append({"command": "/log on",
                           "reason": "No log file found — the companion is blind without one"})
         if self.pet_hint:

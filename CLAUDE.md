@@ -291,6 +291,14 @@ throttled `state` pushes. REST highlights (see main.py for all):
   (?ports= overrides the trio-based default — rituals persist once
   leveled). Data per rari/eqltools (CC0). `path` stays a plain zone list
   for old clients; `steps` carries {zone, via} labels.
+- **`backend/eqclient.py` reads eqclient.ini to tell two failure modes
+  apart**: logging never switched on (user must type `/log on`) vs logging on
+  but quiet (just wait). Both look like "no data" otherwise. When the game is
+  RUNNING and its own `Log=` is 0, `_sync_hints` raises an `urgent` hint that
+  the UI renders as a banner. Deliberately READ-ONLY — other companions flip
+  `Log=1` themselves; this one does not write a game file it was not asked to
+  write. Both the ini read and the process scan are cached (the hint runs on
+  every snapshot, ~6/s).
 - Position feeds: `/loc` lines always; optional screen OCR (RapidOCR — the
   Windows OCR engine silently drops short lines like "Z: 4").
 - **Position is INTERPOLATED, linearly, over the feed's measured cadence**
@@ -333,6 +341,19 @@ display**; failing entries are dropped and logged, never shown. The gates
   says to strongly prefer EFFICIENT zones. At most ONE stretch pick
   survives; deterministic backfill if the model under-picks. Same data
   feeds `GET /api/hunting` and the Leveling-chart Gantt.
+- **Buff SLOTS are checked (`backend/spell_lines.py`)**: EQ buffs occupy
+  effect slots and two spells in one slot OVERWRITE each other, so a loadout
+  holding both Center and Bravery (`ac-slot-1`) has wasted a gem. The
+  SPA-based `supersedes_for_slots` cannot see this — slot occupancy is not in
+  the effect data. `_gate_stacking` keeps the STRONGEST spell per slot
+  (curated lines run weakest to strongest) across must_have+should_have
+  together, runs BEFORE the promote step so a freed gem refills, and gates
+  prebuffs too (worst place to stack: the second cast silently wastes the
+  first's mana). Data is rari/eqlfinest's curated `paths` table (CC0),
+  vendored as `backend/spell_lines.json` — 112 lines, 344 spells. Coverage is
+  PARTIAL (~66k spell records exist), so every helper answers "don't know"
+  rather than guessing, and a spell outside the table is never dropped:
+  absence of data is not evidence of compatibility.
 - **Permanent buffs** (self-target + zero durationTicks, minus
   travel/summon/pet/FD/res SPAs) are listed in the prompt with a
   never-say-"refresh" instruction — Instrument of Nife-class buffs last

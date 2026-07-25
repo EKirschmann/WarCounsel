@@ -740,6 +740,65 @@ def _owned_rank(desc: str, meta: dict) -> Optional[int]:
     return None
 
 
+def _gate_stacking(picks: List[dict]) -> tuple:
+    """Drop buffs that would overwrite each other.
+
+    EQ buffs occupy effect SLOTS; two spells in the same slot do not add, the
+    second simply replaces the first. A loadout holding both Center and
+    Bravery (both ac-slot-1) has therefore spent a gem on nothing, and the
+    SPA-based supersession check cannot see it — slot occupancy is not in the
+    effect data.
+
+    Keeps the STRONGEST spell per slot (curated lines run weakest to
+    strongest) regardless of the order the model proposed them, since that is
+    what the player would actually end up with. Spells outside the curated
+    table are always kept: absence of data is not evidence of a conflict.
+
+    Returns (kept, dropped) where each dropped entry carries the slot and the
+    spell that displaced it.
+    """
+    from backend import spell_lines
+
+    kept: List[dict] = []
+    dropped: List[dict] = []
+    claimed: dict = {}   # slot -> (position, index into kept)
+    for pick in picks:
+        name = str(pick.get("name") or "")
+        slots = spell_lines.slots_for(name)
+        if not slots:
+            kept.append(pick)
+            continue
+        loser = None
+        for slot, position in slots.items():
+            held = claimed.get(slot)
+            if held is None:
+                continue
+            held_pos, held_idx = held
+            if position > held_pos:
+                loser = (slot, held_idx)       # incoming is the upgrade
+                break
+            loser = (slot, None)               # incoming is the weaker one
+            break
+        if loser and loser[1] is None:
+            slot = loser[0]
+            dropped.append({**pick, "conflict_slot": slot,
+                            "conflict_with": kept[claimed[slot][1]]["name"]})
+            continue
+        if loser:
+            slot, idx = loser
+            displaced = kept[idx]
+            dropped.append({**displaced, "conflict_slot": slot,
+                            "conflict_with": name})
+            kept[idx] = pick
+            for sl_, pos_ in slots.items():
+                claimed[sl_] = (pos_, idx)
+            continue
+        kept.append(pick)
+        for sl_, pos_ in slots.items():
+            claimed[sl_] = (pos_, len(kept) - 1)
+    return kept, dropped
+
+
 def _gate_aas(items: List[dict], owned: dict, meta: dict) -> List[dict]:
     """Drop AA recs the character can't act on. Owned rank is RECOVERED from
     the eqlbuilds ladder (the log's rank counter is unreliable — it just
@@ -902,12 +961,36 @@ async def generate_advice(ctx: dict) -> dict:
         nice_to_have = await _gate_picks(
             _clean_list(data.get("nice_to_have"), ("name", "cls", "reason"), cap=16),
             "nice_to_have")
+        # Buff SLOTS: drop picks that would overwrite each other. Run across
+        # must_have + should_have together (they are one slot fill) and
+        # BEFORE the promote step, so a freed gem refills from alternatives.
+        from backend import spell_lines as _lines
+        _fill, _clashes = _gate_stacking(must_have + should_have)
+        for d in _clashes:
+            logger.info("Dropped %s — same buff slot (%s) as %s, which would "
+                        "overwrite it", d["name"], d["conflict_slot"],
+                        d["conflict_with"])
+        if _clashes:
+            _keep = {str(x["name"]).lower() for x in _fill}
+            must_have = [x for x in must_have if str(x["name"]).lower() in _keep]
+            should_have = [x for x in should_have
+                           if str(x["name"]).lower() in _keep]
+            # anything promoted back in must not re-create the same clash
+            _promoted = [x for x in _fill
+                         if str(x["name"]).lower()
+                         not in {str(y["name"]).lower()
+                                 for y in must_have + should_have}]
+            should_have.extend(_promoted)
         # auto-promote: gates may have removed picks — refill the slots from
         # the nice-to-have alternatives (they passed the same gates)
         slots_n = ctx.get("spell_slots")
         if slots_n:
             while len(must_have) + len(should_have) < slots_n and nice_to_have:
                 promoted = nice_to_have.pop(0)
+                if _lines.find_conflicts(
+                        [str(x["name"]) for x in must_have + should_have]
+                        + [str(promoted.get("name"))]):
+                    continue  # would overwrite something already picked
                 promoted = {**promoted,
                             "reason": "(promoted alternative) " + str(promoted.get("reason", ""))}
                 should_have.append(promoted)
@@ -921,6 +1004,12 @@ async def generate_advice(ctx: dict) -> dict:
         prebuffs = await _gate_picks(
             _clean_list(data.get("prebuffs"), ("name", "cls", "reason"), cap=8),
             "prebuffs")
+        # Long-duration buffs are the worst place to stack two of a slot: the
+        # second cast silently wastes the first one's mana and duration.
+        prebuffs, _pre_clashes = _gate_stacking(prebuffs)
+        for d in _pre_clashes:
+            logger.info("Dropped prebuff %s — %s occupies the same slot (%s)",
+                        d["name"], d["conflict_with"], d["conflict_slot"])
         for s in prebuffs:
             s["level"] = level_by_name.get(str(s["name"]).lower())
         replace = _clean_list(data.get("replace"), ("using", "upgrade", "why"),

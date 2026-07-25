@@ -153,7 +153,11 @@ export const CharacterPanel = memo(function CharacterPanel({
         {snap.sync_hints.length > 0 && (
           <div className="sync-hints" role="status">
             {snap.sync_hints.map((h) => (
-              <p key={h.command + h.reason} className="sync-hint">
+              <p
+                key={h.command + h.reason}
+                className="sync-hint"
+                data-urgent={h.urgent ? "1" : undefined}
+              >
                 {h.reason} — type <code>{h.command}</code> in-game.
               </p>
             ))}

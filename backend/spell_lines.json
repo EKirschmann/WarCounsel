@@ -1,0 +1,663 @@
+{
+ "_source": "rari/eqlfinest data/spells.json (CC0) — curated spell lines",
+ "_source_url": "https://github.com/rari/eqlfinest",
+ "_version": 13,
+ "_updated": "2026-07-25",
+ "paths": {
+  "ac-layer-2-slot-4": [
+   "Purifying Rhythms",
+   "Psalm of Vitality",
+   "Psalm of Warmth",
+   "Elemental Rhythms"
+  ],
+  "ac-slot-1": [
+   "Inner Fire",
+   "Skin like Wood",
+   "Center",
+   "Bravery",
+   "Skin like Steel",
+   "Resolution"
+  ],
+  "ac-slot-2": [
+   "Minor Shielding",
+   "Thistlecoat",
+   "Barbcoat",
+   "Armor of Protection",
+   "Shielding",
+   "Greater Shielding",
+   "Thorncoat"
+  ],
+  "ac-slot-3": [
+   "Augmentation",
+   "Frenzy"
+  ],
+  "ac-slot-4": [
+   "Haze",
+   "Holy Armor",
+   "Mist",
+   "Phantom Leather",
+   "Protect",
+   "Phantom Chain",
+   "Obscure",
+   "Shade"
+  ],
+  "agility-primary": [
+   "Feet like Cat",
+   "Spirit of Cat",
+   "Nimble",
+   "Agility"
+  ],
+  "attack-atk-attack-slot-3": [
+   "Wolf Form",
+   "Boon of the Garou",
+   "Form of the Great Wolf"
+  ],
+  "charisma-primary": [
+   "Spirit of Snake",
+   "Sympathetic Aura",
+   "Alluring Aura",
+   "Radiant Visage",
+   "Glamour",
+   "Adorning Grace",
+   "Charisma"
+  ],
+  "cold-resistance-primary": [
+   "Endure Cold",
+   "Resist Cold"
+  ],
+  "damage-absorption-berserker": [
+   "Berserker Strength",
+   "Berserker Spirit"
+  ],
+  "damage-absorption-primary": [
+   "Shieldskin",
+   "Rune I",
+   "Leatherskin",
+   "Rune II",
+   "Steelskin",
+   "Rune III",
+   "Rune IV"
+  ],
+  "damage-shield-stacking-damage-shield-layer-2-slot-1": [
+   "Psalm of Warmth",
+   "Psalm of Cooling"
+  ],
+  "damage-shield-stacking-damage-shield-slot-1": [
+   "Shield of Fire",
+   "Shield of Barbs",
+   "Banshee Aura",
+   "Shield of Spikes",
+   "Barrier of Combustion"
+  ],
+  "damage-shield-stacking-damage-shield-slot-3": [
+   "Thistlecoat",
+   "Barbcoat",
+   "Thorncoat"
+  ],
+  "dexterity-primary": [
+   "Dexterous Aura",
+   "Spirit of Monkey",
+   "Rising Dexterity",
+   "Deftness",
+   "Dexterity"
+  ],
+  "disease-resistance-primary": [
+   "Resistant Skin",
+   "Endure Disease",
+   "Resist Disease"
+  ],
+  "druid-spell-lines-ae-cold-rain": [
+   "Cascade of Hail",
+   "Pogonip",
+   "Avalanche"
+  ],
+  "druid-spell-lines-cancel-magic": [
+   "Cancel Magic",
+   "Nullify Magic"
+  ],
+  "druid-spell-lines-charm-animals": [
+   "Befriend Animal",
+   "Charm Animals",
+   "Beguile Animals",
+   "Allure of the Wild"
+  ],
+  "druid-spell-lines-damage-shield-single": [
+   "Shield of Thistles",
+   "Shield of Barbs",
+   "Shield of Brambles",
+   "Shield of Spikes",
+   "Shield of Thorns"
+  ],
+  "druid-spell-lines-dd-vs-summoned": [
+   "Ward Summoned",
+   "Expulse Summoned",
+   "Dismiss Summoned",
+   "Expel Summoned",
+   "Banish Summoned"
+  ],
+  "druid-spell-lines-direct-heals": [
+   "Minor Healing",
+   "Light Healing",
+   "Healing",
+   "Greater Healing",
+   "Superior Healing"
+  ],
+  "druid-spell-lines-fear-animals": [
+   "Panic Animal",
+   "Terrorize Animal"
+  ],
+  "druid-spell-lines-fire-dd": [
+   "Burst of Flame",
+   "Burst of Fire",
+   "Ignite",
+   "Combust",
+   "Firestrike",
+   "Starfire"
+  ],
+  "druid-spell-lines-fire-dot": [
+   "Flame Lick",
+   "Immolate"
+  ],
+  "druid-spell-lines-hp-ac": [
+   "Skin like Wood",
+   "Skin like Rock",
+   "Skin like Steel",
+   "Skin like Diamond",
+   "Skin like Nature"
+  ],
+  "druid-spell-lines-camouflage": [
+   "Camouflage",
+   "Superior Camouflage",
+   "Improved Superior Camouflage"
+  ],
+  "druid-spell-lines-lull-animals": [
+   "Lull Animal",
+   "Calm Animal"
+  ],
+  "druid-spell-lines-magic-dd-stun": [
+   "Whirling Wind",
+   "Dizzying Wind",
+   "Fury of Air"
+  ],
+  "druid-spell-lines-magic-dot": [
+   "Stinging Swarm",
+   "Creeping Crud",
+   "Drones of Doom",
+   "Drifting Death"
+  ],
+  "druid-spell-lines-movement-speed-single-self": [
+   "Spirit of Wolf",
+   "Scale of Wolf",
+   "Spirit of Cheetah"
+  ],
+  "druid-spell-lines-pbae-mr-dd": [
+   "Tremor",
+   "Earthquake"
+  ],
+  "druid-spell-lines-pet-buffs": [
+   "Feral Spirit",
+   "Savage Spirit"
+  ],
+  "druid-spell-lines-quad-ae-magic-dd": [
+   "Invoke Lightning",
+   "Lightning Strike",
+   "Lightning Blast"
+  ],
+  "druid-spell-lines-regen-group": [
+   "Pack Regeneration",
+   "Pack Chloroplast"
+  ],
+  "druid-spell-lines-regen-single": [
+   "Regeneration",
+   "Chloroplast"
+  ],
+  "druid-spell-lines-root-dd": [
+   "Grasping Roots",
+   "Ensnaring Roots",
+   "Enveloping Roots",
+   "Engulfing Roots"
+  ],
+  "druid-spell-lines-self-ac-ds": [
+   "Thistlecoat",
+   "Barbcoat",
+   "Bramblecoat",
+   "Spikecoat",
+   "Thorncoat"
+  ],
+  "druid-spell-lines-snare": [
+   "Snare",
+   "Ensnare"
+  ],
+  "druid-spell-lines-strength": [
+   "Strength of Earth",
+   "Strength of Stone",
+   "Storm Strength"
+  ],
+  "druid-spell-lines-wolf-form-self": [
+   "Wolf Form",
+   "Greater Wolf Form",
+   "Form of the Great Wolf"
+  ],
+  "fire-resistance-layer-2-slot-2-3": [
+   "Elemental Rhythms",
+   "Psalm of Cooling"
+  ],
+  "fire-resistance-slot-1": [
+   "Endure Fire",
+   "Resist Fire"
+  ],
+  "fire-resistance-slot-2": [
+   "Shield of Fire",
+   "Barrier of Combustion"
+  ],
+  "haste-primary": [
+   "Anthem de Arms",
+   "Vilia's Verses of Celerity"
+  ],
+  "heal-direct": [
+   "Minor Healing",
+   "Light Healing",
+   "Healing",
+   "Greater Healing",
+   "Superior Healing"
+  ],
+  "heal-group": [
+   "Word of Health",
+   "Word of Healing"
+  ],
+  "heal-hp-buff": [
+   "Courage",
+   "Inner Fire",
+   "Center"
+  ],
+  "hp-hit-points-hp-primary": [
+   "Symbol of Transal",
+   "Symbol of Ryltan",
+   "Symbol of Pinzarn"
+  ],
+  "hp-hit-points-hp-shielding-talisman": [
+   "Minor Shielding",
+   "Lesser Shielding",
+   "Shielding",
+   "Greater Shielding",
+   "Talisman of Tnarg",
+   "Talisman of Altuna"
+  ],
+  "hp-regeneration-slot-1": [
+   "Pack Regeneration",
+   "Pack Chloroplast"
+  ],
+  "hp-regeneration-slot-2": [
+   "Phantom Leather",
+   "Phantom Chain"
+  ],
+  "intelligence-primary": [
+   "Insight",
+   "Brilliance"
+  ],
+  "magic-resistance-magic-shield": [
+   "Shielding",
+   "Major Shielding",
+   "Greater Shielding",
+   "Arch Shielding"
+  ],
+  "magic-resistance-primary": [
+   "Endure Magic",
+   "Resist Magic",
+   "Group Resist Magic"
+  ],
+  "magic-resistance-psalm": [
+   "Purifying Rhythms",
+   "Guardian Rhythms",
+   "Elemental Rhythms",
+   "Psalm of Mystic Shielding"
+  ],
+  "magician-spell-lines-ac-hp-regen": [
+   "Phantom Leather",
+   "Phantom Chain",
+   "Phantom Plate"
+  ],
+  "magician-spell-lines-cancel-magic": [
+   "Cancel Magic",
+   "Nullify Magic"
+  ],
+  "magician-spell-lines-damage-shield-single-target": [
+   "Shield of Fire",
+   "Shield of Flame",
+   "Inferno Shield",
+   "Barrier of Combustion",
+   "Shield of Lava"
+  ],
+  "magician-spell-lines-fire-ae-rain": [
+   "Rain of Fire",
+   "Rain of Lava"
+  ],
+  "magician-spell-lines-fire-dd": [
+   "Burst of Flame",
+   "Burn",
+   "Shock of Flame",
+   "Blaze"
+  ],
+  "magician-spell-lines-fire-projectile-dd": [
+   "Flame Bolt",
+   "Bolt of Flame",
+   "Cinder Bolt",
+   "Lava Bolt"
+  ],
+  "magician-spell-lines-magic-ae-rain": [
+   "Rain of Blades",
+   "Rain of Spikes",
+   "Rain of Swords"
+  ],
+  "magician-spell-lines-mr-dd": [
+   "Shock of Blades",
+   "Shock of Spikes",
+   "Shock of Swords"
+  ],
+  "magician-spell-lines-mr-dd-vs-summoned": [
+   "Ward Summoned",
+   "Expulse Summoned",
+   "Dismiss Summoned",
+   "Expel Summoned",
+   "Banish Summoned"
+  ],
+  "magician-spell-lines-pbae": [
+   "Fire Flux",
+   "Flame Flux",
+   "Flame Arc"
+  ],
+  "magician-spell-lines-pet-haste": [
+   "Burnout",
+   "Burnout II",
+   "Burnout III"
+  ],
+  "magician-spell-lines-pet-heals": [
+   "Renew Elements",
+   "Renew Summoning"
+  ],
+  "magician-spell-lines-shielding": [
+   "Minor Shielding",
+   "Lesser Shielding",
+   "Shielding",
+   "Major Shielding",
+   "Greater Shielding",
+   "Arch Shielding"
+  ],
+  "mana-regeneration-chorus": [
+   "Cassindra's Chant of Clarity",
+   "Cassindra's Chorus of Clarity"
+  ],
+  "mana-regeneration-clarity": [
+   "Breeze",
+   "Clarity"
+  ],
+  "mana-regeneration-lich": [
+   "Dark Pact",
+   "Allure of Death",
+   "Call of Bones",
+   "Lich"
+  ],
+  "necromancer-spell-lines-darkness-magic": [
+   "Clinging Darkness",
+   "Engulfing Darkness",
+   "Dooming Darkness",
+   "Cascading Darkness"
+  ],
+  "necromancer-spell-lines-fear-spells-magic": [
+   "Fear",
+   "Spook the Dead",
+   "Panic the Dead",
+   "Invoke Fear"
+  ],
+  "necromancer-spell-lines-fire": [
+   "Heat Blood",
+   "Boil Blood",
+   "Ignite Blood"
+  ],
+  "necromancer-spell-lines-lifetaps": [
+   "Lifetap",
+   "Lifespike",
+   "Lifedraw",
+   "Siphon Life",
+   "Spirit Tap",
+   "Drain Spirit",
+   "Drain Soul"
+  ],
+  "necromancer-spell-lines-point-blank-area-effect": [
+   "Word of Shadow",
+   "Word of Spirit",
+   "Word of Souls"
+  ],
+  "necromancer-spell-lines-root-spells-magic": [
+   "Hungry Earth",
+   "Root"
+  ],
+  "pet-air-pets": [
+   "Elementalkin: Air",
+   "Elementaling: Air",
+   "Elemental: Air",
+   "Minor Summoning: Air",
+   "Lesser Summoning: Air",
+   "Summoning: Air",
+   "Greater Summoning: Air",
+   "Minor Conjuration: Air",
+   "Lesser Conjuration: Air",
+   "Conjuration: Air",
+   "Greater Conjuration: Air"
+  ],
+  "pet-earth-pets": [
+   "Elementalkin: Earth",
+   "Elementaling: Earth",
+   "Elemental: Earth",
+   "Minor Summoning: Earth",
+   "Lesser Summoning: Earth",
+   "Summoning: Earth",
+   "Greater Summoning: Earth",
+   "Minor Conjuration: Earth",
+   "Lesser Conjuration: Earth",
+   "Conjuration: Earth",
+   "Greater Conjuration: Earth"
+  ],
+  "pet-fire-pets": [
+   "Elementalkin: Fire",
+   "Elementaling: Fire",
+   "Elemental: Fire",
+   "Minor Summoning: Fire",
+   "Lesser Summoning: Fire",
+   "Summoning: Fire",
+   "Greater Summoning: Fire",
+   "Minor Conjuration: Fire",
+   "Lesser Conjuration: Fire",
+   "Conjuration: Fire",
+   "Greater Conjuration: Fire"
+  ],
+  "pet-monster-pets": [
+   "Monster Summoning I",
+   "Monster Summoning II"
+  ],
+  "pet-necromancer-summons": [
+   "Cavorting Bones",
+   "Leering Corpse",
+   "Bone Walk",
+   "Convoke Shadow",
+   "Restless Bones",
+   "Animate Dead",
+   "Haunting Corpse",
+   "Summon Dead",
+   "Invoke Shadow",
+   "Malignant Dead",
+   "Cackling Bones",
+   "Invoke Death"
+  ],
+  "pet-enchanter-pets": [
+   "Pendril's Animation",
+   "Juli's Animation",
+   "Mircyl's Animation",
+   "Kilan's Animation",
+   "Shalee's Animation",
+   "Sisna's Animation",
+   "Sagar's Animation",
+   "Uleen's Animation",
+   "Boltran's Animation",
+   "Aanya's Animation",
+   "Yegoreff's Animation",
+   "Kintaz's Animation"
+  ],
+  "pet-shadow-knight-pets": [
+   "Leering Corpse",
+   "Bone Walk",
+   "Convoke Shadow",
+   "Restless Bones",
+   "Animate Dead",
+   "Summon Dead"
+  ],
+  "pet-shaman-pets": [
+   "Companion Spirit",
+   "Vigilant Spirit",
+   "Guardian Spirit",
+   "Frenzied Spirit"
+  ],
+  "pet-water-pets": [
+   "Elementalkin: Water",
+   "Elementaling: Water",
+   "Elemental: Water",
+   "Minor Summoning: Water",
+   "Lesser Summoning: Water",
+   "Summoning: Water",
+   "Greater Summoning: Water",
+   "Minor Conjuration: Water",
+   "Lesser Conjuration: Water",
+   "Conjuration: Water",
+   "Greater Conjuration: Water"
+  ],
+  "poison-resistance-primary": [
+   "Resistant Skin",
+   "Endure Poison",
+   "Resist Poison"
+  ],
+  "poison-resistance-speed-primary": [
+   "Wolf Form",
+   "Greater Wolf Form",
+   "Share Wolf Form",
+   "Form of the Great Wolf"
+  ],
+  "rank-cannibalize": [
+   "Cannibalize"
+  ],
+  "rank-yaulp": [
+   "Yaulp",
+   "Yaulp II",
+   "Yaulp III"
+  ],
+  "stamina-primary": [
+   "Spirit of Bear",
+   "Spirit of Ox",
+   "Health",
+   "Stamina"
+  ],
+  "strength-primary": [
+   "Strengthen",
+   "Strength of Earth",
+   "Spirit Strength",
+   "Strength of Stone",
+   "Raging Strength"
+  ],
+  "enchanter-tash": [
+   "Tashina",
+   "Tashani",
+   "Tashania"
+  ],
+  "wisdom-enchanter": [
+   "Brilliance",
+   "Insight"
+  ],
+  "wizard-spell-lines-ae-rains": [
+   "Icestrike",
+   "Firestorm",
+   "Lightning Storm",
+   "Energy Storm",
+   "Lava Storm",
+   "Frost Storm"
+  ],
+  "wizard-spell-lines-bind-sight": [
+   "Bind Sight",
+   "Shifting Sight"
+  ],
+  "wizard-spell-lines-cancel-magic": [
+   "Cancel Magic",
+   "Nullify Magic"
+  ],
+  "wizard-spell-lines-dd-standard": [
+   "Shock of Fire",
+   "Shock of Ice",
+   "Shock of Lightning",
+   "Flame Shock",
+   "Frost Shock",
+   "Lightning Shock",
+   "Inferno Shock",
+   "Ice Shock"
+  ],
+  "wizard-spell-lines-dd-lure": [
+   "Enticement of Flame"
+  ],
+  "wizard-spell-lines-damage-absorption": [
+   "Shieldskin",
+   "Leatherskin",
+   "Steelskin",
+   "Diamondskin"
+  ],
+  "wizard-spell-lines-infra-ultravision": [
+   "Heat Sight",
+   "Chill Sight"
+  ],
+  "wizard-spell-lines-magic-damage-stun-clash": [
+   "Tishan's Clash",
+   "Markar's Clash"
+  ],
+  "wizard-spell-lines-magic-damage-stun-strike": [
+   "Thunder Strike",
+   "Force Strike"
+  ],
+  "wizard-spell-lines-magnification": [
+   "Glimpse",
+   "Gaze",
+   "Sight",
+   "Magnify"
+  ],
+  "wizard-spell-lines-pbae-elemental": [
+   "Numbing Cold",
+   "Fingers of Fire",
+   "Supernova"
+  ],
+  "wizard-spell-lines-pbae-magic": [
+   "Project Lightning",
+   "Cast Force",
+   "Thunderclap"
+  ],
+  "wizard-spell-lines-targeted-ae-elemental": [
+   "Column of Frost",
+   "Pillar of Fire"
+  ],
+  "wizard-spell-lines-targeted-ae-magic": [
+   "Shock Spiral of Al`Kabor",
+   "Force Spiral of Al`Kabor",
+   "Gravity Flux"
+  ],
+  "wizard-spell-lines-roots": [
+   "Root",
+   "Immobilize"
+  ],
+  "wizard-spell-lines-shielding": [
+   "Minor Shielding",
+   "Lesser Shielding",
+   "Shielding",
+   "Major Shielding",
+   "Greater Shielding",
+   "Arch Shielding"
+  ],
+  "wizard-spell-lines-travel-planar-portals": [
+   "Alter Plane: Hate",
+   "Alter Plane: Sky"
+  ]
+ }
+}

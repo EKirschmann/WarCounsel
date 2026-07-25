@@ -1921,3 +1921,19 @@ button.app-version:hover { color: var(--gold-bright); }
   .modal-card { transition: none; }
 }
 
+/* An urgent sync hint is the one case where the app is being actively
+   useless (the game is running and writing nothing), so it gets banner
+   weight rather than sitting in the quiet advisory colour. */
+.sync-hint[data-urgent="1"] {
+  color: #f0d9a0;
+  background: rgba(212, 87, 74, 0.14);
+  border-left: 3px solid #d4574a;
+  padding: 7px 10px;
+  font-weight: 500;
+}
+.sync-hint[data-urgent="1"] code {
+  color: #fff1cf;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0 4px;
+}
+
