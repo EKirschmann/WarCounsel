@@ -227,7 +227,12 @@ the War Ledger within a second.
   **start_companion.bat** (Option B). Right-click → Send to → Desktop to
   make a shortcut either way.
 - **Settings:** the **gear** in the top-right corner — game folder, and
-  which advisor model to use.
+  which advisor model to use. The **Test** button next to the game folder
+  tells you exactly what it found, instead of leaving you guessing.
+- **Playing in a group?** Everyone's damage shows in the encounter panel,
+  pets on their own line. If a groupmate runs this too, their "You" number
+  and your number for them should agree — handy for working out who needs
+  what.
 - **The overlay** (in-game meter): press the **Overlay** button in the
   app header. Scroll Lock ON lets you move/adjust it; OFF makes clicks
   pass through to the game.

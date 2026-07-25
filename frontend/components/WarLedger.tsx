@@ -34,6 +34,8 @@ function classify(r: LedgerRow): {
       return { kind: "heal", text: `Healed ${r.target} (${r.spell})`, value: `+${r.amount}` };
     case "cast":
       return { kind: "cast", text: `Casting ${r.spell}…` };
+    case "other_cast":
+      return { kind: "cast", text: `${r.caster} casts ${r.spell}…` };
     case "interrupt":
       return { kind: "cast", text: "Spell interrupted" };
     case "fizzle":

@@ -46,6 +46,12 @@ Click-through by default; Scroll Lock makes it interactive:
 - **Vitals & War Ledger** — live DPS, session stats, hit rate, XP, loot
   (with sold tags), a streaming combat feed, per-pull encounter breakdowns
   with group/raid DPS and a defense line (dodge/parry/block/riposte)
+- **Group numbers you can actually compare** — everyone in the group gets a
+  damage and DPS row, with pets on their own row rather than folded into
+  their owner. That means if two people in the group both run this, one
+  person's "You" matches what the other sees for them, so the figures are
+  worth arguing over. Mob casts land in the encounter too, so you can see
+  what is being cast at you and by whom
 - **Combat dashboard** — hide the Atlas/Advisor panel and the encounter view
   spreads across the freed width; the ledger collapses to a strip;
   encounter text size is adjustable
@@ -56,7 +62,9 @@ Click-through by default; Scroll Lock makes it interactive:
   upgrade warnings, a vendor shopping list, gear-slot recommendations,
   exaltation tracking (typed sockets), and where-to-hunt picks — grounded in
   your actual spellbook/inventory exports and the EQL wiki, with every
-  suggestion machine-verified (owned, level-legal, not superseded).
+  suggestion machine-verified (owned, level-legal, not superseded, and not
+  fighting another pick for the same buff slot — two buffs in one slot
+  overwrite each other, so recommending both wastes a gem).
   One click writes the picks as in-game spell sets — a combat loadout
   (gems auto-ordered: DD, DoTs, AoE, heals at gem 8, utility, pets) and a
   pre-buff set (permanent buffs first, then longest-duration)

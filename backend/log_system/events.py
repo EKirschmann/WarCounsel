@@ -72,6 +72,14 @@ class CastBegin(LogEvent):
     spell: str
 
 
+class OtherCast(LogEvent):
+    """<Someone> begins casting <Spell>. — a groupmate or, more usefully, a
+    mob: this line is the only warning before it lands."""
+    type: str = "other_cast"
+    caster: str
+    spell: str
+
+
 class CastInterrupted(LogEvent):
     type: str = "interrupt"
     spell: Optional[str] = None  # "Your Force Snap spell is interrupted."

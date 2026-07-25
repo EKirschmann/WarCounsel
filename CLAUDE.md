@@ -129,6 +129,18 @@ All styling is CSS custom properties in `app/globals.css` — **no Tailwind**.
   A CHAT GUARD drops speech lines before combat matching (players quote
   combat text); pet tells parse before it. PC-name patterns allow
   backticks/apostrophes (Asaka L`Rei).
+- **Third-person casts** parse as `other_cast` ("A froglok novice begins
+  casting Inner Fire."). First person is "begin", third is "begins", so the
+  two never collide. Mob casts are the only warning before something lands;
+  they surface per-encounter as `other_casts`.
+- **Heals: the trailing " by <Spell>" is OPTIONAL and the healer is NOT
+  player-shaped.** Requiring both silently dropped ~19k mob self-heals in a
+  90MB log — a mob healing itself is often why a fight will not end.
+  Unattributed heals group under a "Direct heal" row.
+- **An ally's pet gets its OWN row**, mirroring how ours is split from
+  "You". Folded in, this app's view of a groupmate would be them PLUS their
+  pet while their own copy shows the two apart — the numbers could never be
+  compared, which is the main reason a group runs this side by side.
 - Other players' hits parse as `other_out` but are never broadcast — they
   only feed per-encounter group DPS. Own pets fold into the player
   ("Pet: <source>" rows, incl. pet DoTs via the "by <caster>" form);

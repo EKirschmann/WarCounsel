@@ -68,6 +68,9 @@ RE_OUT_MELEE = re.compile(r"^You (\w+)(?: on)? (.+?) for (\d+) points? of damage
 RE_IN_MELEE = re.compile(r"^(.+?) (\w+)(?: on)? YOU for (\d+) points? of damage[.!]")
 RE_NON_MELEE = re.compile(r"^(.+?) was hit by non-melee for (\d+) points? of damage[.!]")
 RE_CAST = re.compile(r"^You begin (?:casting|singing) (.+?)\.")
+# Third person: "A froglok novice begins casting Inner Fire." First person
+# uses "begin", third "begins", so this cannot swallow our own casts.
+RE_OTHER_CAST = re.compile(r"^(.+?) begins (?:casting|singing) (.+?)\.")
 RE_INTERRUPT = re.compile(r"^Your (?:(.+?) )?spell is interrupted\.")
 RE_INTERRUPT2 = re.compile(r"^Your (?:casting|melody) has been interrupted!")
 RE_FIZZLE = re.compile(r"^Your (?:(.+?) )?spell fizzles!")
@@ -342,6 +345,8 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
 
     if c := RE_CAST.match(body):
         return ev.CastBegin(spell=c.group(1), **base)
+    if oc := RE_OTHER_CAST.match(body):
+        return ev.OtherCast(caster=oc.group(1), spell=oc.group(2), **base)
     if i := RE_INTERRUPT.match(body):
         return ev.CastInterrupted(spell=i.group(1), **base)
     if RE_INTERRUPT2.match(body):

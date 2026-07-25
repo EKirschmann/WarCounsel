@@ -450,10 +450,20 @@ class CharacterTracker:
                     if (enc is not None
                             and (e.ts - enc["last"]).total_seconds() <= COMBAT_TIMEOUT_SECONDS
                             and _foe_key(e.target) in enc.get("foes", {})):
-                        # another player's pet folds into its owner's row
-                        who = owner or e.attacker
-                        allies = enc.setdefault("allies", {})
-                        allies[who] = allies.get(who, 0) + e.damage
+                        if owner:
+                            # An ally's pet gets its OWN row, mirroring the
+                            # way our pet is split out of "You". Folded in,
+                            # our view of that player would be them PLUS
+                            # their pet while their own companion shows the
+                            # two apart — the numbers could never be
+                            # compared, which is the main reason a group
+                            # runs this side by side.
+                            pets = enc.setdefault("ally_pets", {})
+                            pets[owner] = pets.get(owner, 0) + e.damage
+                        else:
+                            allies = enc.setdefault("allies", {})
+                            allies[e.attacker] = (
+                                allies.get(e.attacker, 0) + e.damage)
             elif isinstance(e, (ev.MeleeIn, ev.SpellDamageIn)):
                 self.damage_taken += e.damage
                 thr = alerts.bighit_threshold()
@@ -497,6 +507,13 @@ class CharacterTracker:
                 self._encounter_heal(e.ts,
                                      f"{e.spell or 'Direct heal'} — {healer}",
                                      e.amount, crit=e.crit)
+            elif isinstance(e, ev.OtherCast):
+                enc = self.encounter
+                if (enc is not None and (e.ts - enc["last"]).total_seconds()
+                        <= COMBAT_TIMEOUT_SECONDS):
+                    casts = enc.setdefault("other_casts", {})
+                    key = f"{e.spell} — {e.caster}"
+                    casts[key] = casts.get(key, 0) + 1
             elif isinstance(e, ev.Kill):
                 self.kills += 1
                 self._fire_alerts("kill", e.target, e.ts)
@@ -844,6 +861,10 @@ class CharacterTracker:
                            "dps": round(dmg / duration, 1),
                            "level": who.get("level"),
                            "classes": who.get("classes")})
+        for owner, dmg in (enc.get("ally_pets") or {}).items():
+            allies.append({"name": f"{owner} (pet)", "damage": dmg,
+                           "dps": round(dmg / duration, 1),
+                           "level": None, "classes": None, "is_pet": True})
         own_pet = enc.get("own_pet", {})
         pet_total = sum(own_pet.values())
         for pname, pdmg in own_pet.items():
@@ -877,6 +898,11 @@ class CharacterTracker:
             "resists": dict(enc.get("resists") or {}),
             "dps": round(enc["total_out"] / duration, 1),
             "peak_dps": round(peak / 3.0, 1),
+            "other_casts": [
+                {"name": k, "count": v}
+                for k, v in sorted((enc.get("other_casts") or {}).items(),
+                                   key=lambda kv: -kv[1])[:12]
+            ],
             "trio": enc.get("trio"),
             "timeline": timeline,
             "abilities": abilities,
