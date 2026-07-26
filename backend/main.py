@@ -1011,6 +1011,7 @@ async def api_settings_get():
     booleans ONLY -- a stored key is never sent back to the browser."""
     from backend.app_config import load as overrides
     from backend import spell_lines
+    from backend.game_data import _vendored_zem
     from backend.llm_runtime import (active, available, custom_model,
                                      openai_model)
     from backend.secrets_store import which_are_set
@@ -1032,7 +1033,8 @@ async def api_settings_get():
         # Bundled-data health. Packaged builds resolve these out of the
         # PyInstaller bundle, where a missing --add-data entry fails soft;
         # surfacing the counts lets the release build assert they arrived.
-        "data": {"spell_lines": spell_lines.stats()},
+        "data": {"spell_lines": spell_lines.stats(),
+                 "zem_zones": len(_vendored_zem())},
         "version": APP_VERSION,
     }
 

@@ -1,0 +1,492 @@
+==== Community Contribution ====
+Because the specific modifiers used by Game Jawn may differ from other server iterations, we encourage players to:
+* Share Observations: Discuss your leveling experiences and "hot spots" on community forums or Discord.
+* Collaborative Testing: Work with fellow adventurers to compare experience gains across different zones.
+* Update with Verified Data: Should the developers choose to release official modifiers in the future, we will promptly update this page to reflect that information.
+
+We are excited to see what the community uncovers as we explore these lands together!
+
+= Recommended Hunting Levels =
+==== Legend ====
+<div style="display: flex; gap: 20px; align-items: flex-start;">
+  <div style="flex: 1;">
+    [[file:lightblueCircle.png]] - Can efficiently hunt here for exp
+  </div>
+  <div style="border-left: 2px solid #ccc; padding-left: 20px; flex: 1;">
+    [[file:goldCircle.png]] - Hunting here can be done, but inefficiently 
+  </div>
+  <div style="border-left: 2px solid #ccc; padding-left: 20px; flex: 1;">
+    [[file:lightpinkCircle.png]] - Hunting is possible, but not recommended 
+  </div>
+  <div style="border-left: 2px solid #ccc; padding-left: 20px; flex: 1;">
+    [[file:orangeRing.png]] - Hunting only for specific reasons 
+  </div>
+</div>
+
+== Antonica ==
+
+{| class="wikitable sortable sticky-header" style="width: 100%; table-layout: fixed; text-align: center;"
+|- style="position: sticky; top: 0; background-color: #eaecf0; z-index: 2;"
+! style="width: 15%;"| Zone 
+! style="width: 5%;" | Type 
+! style="width: 5%;" | Lvl Range 
+! style=" min-width: 45px;" | 1  
+! style=" min-width: 45px;" | 5 
+! style=" min-width: 45px;" | 10 
+! style=" min-width: 45px;" | 15 
+! style=" min-width: 45px;" | 20 
+! style=" min-width: 45px;" | 25 
+! style=" min-width: 45px;" | 30 
+! style=" min-width: 45px;" | 35 
+! style=" min-width: 45px;" | 40 
+! style=" min-width: 45px;" | 45 
+! style=" min-width: 45px;" | 50
+|-
+| [[North Qeynos]] || City || 1 - 5 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || || || || || ||
+|-
+| [[South Qeynos]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Qeynos Aqueducts]] || Dungeon || 1 - 10 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || || || || || ||
+|-
+| [[Qeynos Hills]] || Open  || 1 - 10 || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || || || || || || ||
+|-
+| [[Surefall Glade]] || City  || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Blackburrow]] || Dungeon || 5 - 15 || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || || || ||
+|-
+| [[Halas]] || City || 1 - 5 ||  || || || || || || || || || ||
+|-
+| [[Everfrost Peaks]] || Open || 1 - 12 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || ||
+|-
+| [[Permafrost]] || Dungeon || 15 - 50 || || || || || || || || || || ||
+|-
+| [[Western Karana|Western Plains of Karana]] || Open || 7 - 15 || || || || || || || || || || ||
+|-
+| [[Northern Karana|Northern Plains of Karana]] || Open || 7 - 15 || || || || || || || || || || ||
+|-
+| [[Eastern Karana|Eastern Plains of Karana]] || Open || 10 - 25 || || || || || || || || || || ||
+|-
+| [[Southern Karana|Southern Plains of Karana]] || Open || 17 - 35 || || || || || || || || || || ||
+|-
+| [[Splitpaw Lair|The Lair of Splitpaw]] || Dungeon || 30 - 45 || || || || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || || ||
+|-
+| [[Lake Rathetear]] || Open || 15 - 25 || || || || || || || || || || ||
+|-
+| [[Rathe Mountains]] || City || 1 - 25 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || || || || || ||
+|-
+| [[Gorge of King Xorbb]] || Dungeon || 10 - 25 || || || || || || || || || || ||
+|-
+| [[Runnyeye|The Liberated Citadel of Runnyeye]] || Dungeon || 10 - 35 || || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || || || ||
+|-
+| [[Misty Thicket]] || Open || 1 - 10 || || || || || || || || || || ||
+|-
+| [[Rivervale]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Kithicor Forest]] || Open || 1 - 40 || || || || || || || || || || ||
+|-
+| [[Highpass Hold]] || Open || 20 - 30 || || || || || || || || || || ||
+|-
+| [[High Keep]] || City || 20 - 30 || || || || || || || || || || ||
+|-
+| [[Oggok]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[The Feerrott]] || Open || 1 - 10 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || || || || || ||
+|-
+| [[Cazic Thule|Temple of Cazic-Thule]] || Dungeon || 35 - 50 || || || || || || || || || || ||
+|-
+| [[Innothule Swamp]] || Open || 1 - 5 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || || || || || ||
+|-
+| [[Grobb]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Upper Guk|The City of Guk]] || Dungeon || 5 - 30 || || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || ||
+|-
+| [[Lower Guk|The Ruins of Old Guk]] || Dungeon || 30 - 50 || || || || || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] ||
+|-
+| [[South Ro|Southern Desert of Ro]] || Open || 5 - 15 || || || || || || || || || || ||
+|-
+| [[Oasis of Marr]] || Open || 10 - 20 || || || || || || || || || || ||
+|-
+| [[North Ro|Northern Desert of Ro]] || Open || 1 - 15 || || || || || || || || || || ||
+|-
+| [[Ocean of Tears]] || Open || 10 - 45 || || || || || || || || || || ||
+|-
+| [[East Freeport]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[West Freeport]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[North Freeport]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[East Commonlands]] || Open || 1 - 15 || || || || || || || || || || ||
+|-
+| [[West Commonlands]] || Open || 5 - 15 || || || || || || || || || || ||
+|-
+| [[Befallen]] || Dungeon || 5 - 20 || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || || ||
+|-
+| [[Nektulos Forest]] || Open || 1 - 20 || || || || || || || || || || ||
+|-
+| [[Neriak Foreign Quarter]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Neriak Commons]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Neriak Third Gate]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Lavastorm Mountains]] || Open || 10 - 25 || || || || || || || || || || ||
+|-
+| [[Najena]] || Dungeon || 20 - 35 || || || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || ||
+|-
+| [[Solusek's Eye]] || Dungeon || 25 - 45 || || || || || || || || || || ||
+|-
+| [[Temple of Solusek Ro]] || City || 50 - 50 || || || || || || || || || || ||
+|-
+| [[Nagafen's Lair]] || Dungeon || 40 - 50 || || || || || || || || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]]
+|-
+| [[New Sebilis Expedition]] || City || 1 - 5 || || || || || || || || || || ||
+|}
+
+== Odus ==
+
+{| class="wikitable sortable sticky-header" style="width: 100%; table-layout: fixed;"
+|- style="position: sticky; top: 0; background-color: #eaecf0; z-index: 2;"
+! style="width: 15%;"| Zone 
+! style="width: 5%;" | Type 
+! style="width: 5%;" | Lvl Range 
+! style=" min-width: 45px;" | 1  
+! style=" min-width: 45px;" | 5 
+! style=" min-width: 45px;" | 10 
+! style=" min-width: 45px;" | 15 
+! style=" min-width: 45px;" | 20 
+! style=" min-width: 45px;" | 25 
+! style=" min-width: 45px;" | 30 
+! style=" min-width: 45px;" | 35 
+! style=" min-width: 45px;" | 40 
+! style=" min-width: 45px;" | 45 
+! style=" min-width: 45px;" | 50
+|-
+| [[Erud's Crossing]] || Open || 5 - 15 || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || || || || || || ||
+|-
+| [[Erudin]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Erudin|Erudin Palace]] || City || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Toxxulia Forest]] || Open || 1 - 7 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] ||  [[file:lightpinkCircle.png]] || || || || ||  [[file:orangeRing.png]] || [[file:orangeRing.png]] || [[file:orangeRing.png]]
+|-
+| [[Kerra Island]] || Unknown || 10 - 25 || || || || || || || || || || ||
+|-
+| [[Paineel]] || City || 1 - 5 || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:goldCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || [[file:lightpinkCircle.png]] || [[file:lightpinkCircle.png]]
+|-
+| [[The Warrens]] || Dungeon || 5 - 30 || [[file:lightpinkCircle.png]] || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:lightpinkCircle.png]] || || ||
+|-
+| [[Stonebrunt Mountains]] || Open || 15 - 40 || || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || [[file:goldCircle.png]] ||  [[file:lightpinkCircle.png]] || [[file:orangeRing.png]] ||
+|-
+| [[The Hole]] || Dungeon || 40 - 60 || || || || || ||  [[file:lightpinkCircle.png]]  || [[file:goldCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]]
+|}
+
+== Faydwer ==
+
+{| class="wikitable sortable sticky-header" style="width: 100%; table-layout: fixed;"
+|- style="position: sticky; top: 0; background-color: #eaecf0; z-index: 2;"
+! style="width: 15%;"| Zone 
+! style="width: 5%;" | Lvl Range 
+! style=" min-width: 45px;" | 1  
+! style=" min-width: 45px;" | 5 
+! style=" min-width: 45px;" | 10 
+! style=" min-width: 45px;" | 15 
+! style=" min-width: 45px;" | 20 
+! style=" min-width: 45px;" | 25 
+! style=" min-width: 45px;" | 30 
+! style=" min-width: 45px;" | 35 
+! style=" min-width: 45px;" | 40 
+! style=" min-width: 45px;" | 45 
+! style=" min-width: 45px;" | 50
+|-
+| [[Butcherblock Mountains]] || 1 - 15 || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || || || || || || || || ||
+|-
+| [[North Kaladim]] || 1 - 5 || || || || || || || || || || ||
+|-
+| [[South Kaladim]] || 1 - 5 || || || || || || || || || || ||
+|-
+| [[Dagnor's Cauldron]] || 10 - 20 || || || || || || || || || || ||
+|-
+| [[The Estate of Unrest]] || 10 - 35 || || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || || ||
+|-
+| [[Kedge Keep]] || 35 - 50 || || || || || || || || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]]
+|-
+| [[Crushbone]] || 5 - 20 || [[file:lightpinkCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || || || || 
+|-
+| [[Northern Felwithe]] || 1 - 5 || || || || || || || || || || || 
+|-
+| [[Southern Felwithe]] || 1 - 5 || || || || || || || || || || || 
+|-
+| [[Greater Faydark]] || 1 - 10 || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || || || || || || || || || 
+|-
+| [[Lesser Faydark]] || 5 - 15 || || || || || || || || || || ||
+|-
+| [[Mistmoore Castle|The Castle of Mistmoore]] || 15 - 40 || || || || || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]] || || || || 
+|-
+| [[Steamfont Mountains]] || 1 - 15 || [[file:lightblueCircle.png]] || [[file:goldCircle.png]] || || || || || || || || || 
+|-
+| [[Ak'Anon]] || 1 - 5 || || || || || || || || || || || 
+|-
+| [[The Arena]] || 50 - 50 || || || || || || || || || || ||
+|}
+
+== Planes ==
+{| class="wikitable sortable sticky-header" style="width: 100%;"
+|- style="position: sticky; top: 0; background-color: #eaecf0; z-index: 2;"
+! style="width: 15%;"| Zone 
+! style="width: 5%;" | Lvl Range 
+! style=" min-width: 45px;" | 1  
+! style=" min-width: 45px;" | 5 
+! style=" min-width: 45px;" | 10 
+! style=" min-width: 45px;" | 15 
+! style=" min-width: 45px;" | 20 
+! style=" min-width: 45px;" | 25 
+! style=" min-width: 45px;" | 30 
+! style=" min-width: 45px;" | 35 
+! style=" min-width: 45px;" | 40 
+! style=" min-width: 45px;" | 45 
+! style=" min-width: 45px;" | 50
+|-
+| [[Plane of Fear]] * || 45 - 55 ||  ||  ||  ||  ||  ||  ||  ||  || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]]
+|-
+| [[Plane of Hate]] * || 45 - 55 ||  ||  ||  ||  ||  ||  ||  ||  || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]]
+|-
+| [[Plane of Sky]] * || 45 - 55 ||  ||  ||  ||  ||  ||  ||  ||  || || [[file:lightblueCircle.png]] || [[file:lightblueCircle.png]]
+|-
+| [[Plane of Growth]] || ||  ||  ||  ||  ||  ||  ||  ||  ||  || ||
+|-
+| [[Plane of Mischief]] ||  ||  ||  ||  ||  ||  ||  ||  ||  || ||
+|}
+*Cannot enter before level 46
+
+== Kunark ==
+
+{| class="wikitable sortable sticky-header" style="width: 100%; table-layout: fixed;"
+|- style="position: sticky; top: 0; background-color: #eaecf0; z-index: 2;"
+! style="width: 15%;"| Zone
+! style="width: 12%;" | Lvl Range
+! style=" min-width: 45px;" | 1
+! style=" min-width: 45px;" | 5
+! style=" min-width: 45px;" | 10
+! style=" min-width: 45px;" | 15
+! style=" min-width: 45px;" | 20
+! style=" min-width: 45px;" | 25
+! style=" min-width: 45px;" | 30
+! style=" min-width: 45px;" | 35
+! style=" min-width: 45px;" | 40
+! style=" min-width: 45px;" | 45
+! style=" min-width: 45px;" | 50
+! style=" min-width: 45px;" | 55
+! style=" min-width: 45px;" | 60
+|-
+| [[Field of Bone]] || 1 - 25 || || || || || || || || || || || || ||
+|-
+| [[Swamp of No Hope]] || 1 - 25 || || || || || || || || || || || || ||
+|-
+| [[Lake of Ill Omen]] || 1 - 30 || || || || || || || || || || || || ||
+|-
+| [[East Cabilis]] || 1 - 75 || || || || || || || || || || || || ||
+|-
+| [[West Cabilis]] || 1 - 75 || || || || || || || || || || || || ||
+|-
+| [[Kurn's Tower]] || 5 - 30 || || || || || || || || || || || || ||
+|-
+| [[Warsliks Woods]] || 5 - 30 || || || || || || || || || || || || ||
+|-
+| [[Timorous Deep]] || 1 - 20 || || || || || || || || || || || || ||
+|-
+| [[Firiona Vie]] || 20 - 35 || || || || || || || || || || || || ||
+|-
+| [[Frontier Mountains]] || 20 - 45 || || || || || || || || || || || || ||
+|-
+| [[Dalnir]] || 25 - 35 || || || || || || || || || || || || ||
+|-
+| [[The Overthere]] || 15 - 40 || || || || || || || || || || || || ||
+|-
+| [[Kaesora]] || 30 - 50 || || || || || || || || || || || || ||
+|-
+| [[Trakanon's Teeth]] || 30 - 50 || || || || || || || || || || || || ||
+|-
+| [[Emerald Jungle]] || 30 - 45 || || || || || || || || || || || || ||
+|-
+| [[Mines of Nurga]] || 40 - 55 || || || || || || || || || || || || ||
+|-
+| [[Temple of Droga]] || 45 - 60 || || || || || || || || || || || || ||
+|-
+| [[Dreadlands]] || 35 - 50 || || || || || || || || || || || || ||
+|-
+| [[City of Mist]] || 35 - 50 || || || || || || || || || || || || ||
+|-
+| [[Burning Woods]] || 35 - 50 || || || || || || || || || || || || ||
+|-
+| [[Karnor's Castle]] || 40 - 55 || || || || || || || || || || || || ||
+|-
+| [[Skyfire Mountains]] || 45 - 60 || || || || || || || || || || || || ||
+|-
+| [[Howling Stones]] || 40 - 60 || || || || || || || || || || || || ||
+|-
+| [[Chardok]] || 40 - 60 || || || || || || || || || || || || ||
+|-
+| [[Old Sebilis]] || 40 - 60 || || || || || || || || || || || || ||
+|-
+| [[Veeshan's Peak]] || 60 - 75 || || || || || || || || || || || || ||
+|}
+
+== Velious ==
+
+{| class="wikitable sortable sticky-header" style="width: 100%; table-layout: fixed;"
+|- style="position: sticky; top: 0; background-color: #eaecf0; z-index: 2;"
+! style="width: 15%;" | Zone
+! style="width: 12%;" | Lvl Range
+! style=" min-width: 45px;" | 1
+! style=" min-width: 45px;" | 5
+! style=" min-width: 45px;" | 10
+! style=" min-width: 45px;" | 15
+! style=" min-width: 45px;" | 20
+! style=" min-width: 45px;" | 25
+! style=" min-width: 45px;" | 30
+! style=" min-width: 45px;" | 35
+! style=" min-width: 45px;" | 40
+! style=" min-width: 45px;" | 45
+! style=" min-width: 45px;" | 50
+! style=" min-width: 45px;" | 55
+! style=" min-width: 45px;" | 60
+|-
+| [[Crystal Caverns]] || 30-45 || || || || || || || || || || || || ||
+|-
+| [[Eastern Wastes]] || 30-50 || || || || || || || || || || || || ||
+|-
+| [[Iceclad Ocean]] || 25-35 || || || || || || || || || || || || ||
+|-
+| [[Thurgadin]] || 1-60 || || || || || || || || || || || || ||
+|-
+| [[Great Divide]] || 30-50 || || || || || || || || || || || || ||
+|-
+| [[Tower of Frozen Shadow]] || 28-56 || || || || || || || || || || || || ||
+|-
+| [[Kael Drakkel]] || 40-60 || || || || || || || || || || || || ||
+|-
+| [[Cobalt Scar]] || 40-55 || || || || || || || || || || || || ||
+|-
+| [[Skyshrine]] || 35-60 || || || || || || || || || || || || ||
+|-
+| [[The Wakening Land]] || 40-55 || || || || || || || || || || || || ||
+|-
+| [[Icewell Keep]] || 50-60 || || || || || || || || || || || || ||
+|-
+| [[Velketor's Labyrinth]] || 50-65 || || || || || || || || || || || || ||
+|-
+| [[Dragon Necropolis]] || 50-60 || || || || || || || || || || || || ||
+|-
+| [[Siren's Grotto]] || 50-60 || || || || || || || || || || || || ||
+|-
+| [[Western Wastes]] || 50-60 || || || || || || || || || || || || ||
+|-
+| [[Temple of Veeshan]] || 55-60 || || || || || || || || || || || || ||
+|-
+| [[Sleeper's Tomb]] || 60+ || || || || || || || || || || || || ||
+|}
+
+==== Legend ====
+<div style="display: flex; gap: 20px; align-items: flex-start;">
+  <div style="flex: 1;">
+    [[file:lightblueCircle.png]] - Can efficiently hunt here for exp
+  </div>
+  <div style="border-left: 2px solid #ccc; padding-left: 20px; flex: 1;">
+    [[file:goldCircle.png]] - Hunting here can be done, but inefficiently 
+  </div>
+  <div style="border-left: 2px solid #ccc; padding-left: 20px; flex: 1;">
+    [[file:lightpinkCircle.png]] - Hunting is possible, but not recommended 
+  </div>
+  <div style="border-left: 2px solid #ccc; padding-left: 20px; flex: 1;">
+    [[file:orangeRing.png]] - Hunting only for specific reasons 
+  </div>
+</div>
+
+<!--
+ZEM chart editing notes:
+
+Each row defines the ZEM once, immediately after the zone name.
+
+Unknown ZEM:
+  {{#vardefine:zem|?}}
+
+Known ZEM:
+  {{#vardefine:zem|119}}
+
+Only edit the value inside {{#vardefine:zem|...}} when updating a row's ZEM.
+
+-->
+
+== Zone Experience Multiplier (ZEM) ==
+
+Welcome to the ZEM guide for EverQuest Legends!
+
+At this time, we have opted not to publish specific Zone Experience Multipliers. Our goal is to preserve the classic spirit of exploration and discovery that makes the world of Norrath so rewarding. We believe that identifying the most efficient adventuring spots is a journey best undertaken by the players through shared testing and community discussion.
+
+
+=== Improving ZEM Accuracy ===
+This wiki is full of data collected by players, and in theory it should be possible for the player base to determine ZEMs through experimentation. But ...
+
+==== Measuring ZEM is Challenging ====
+Let's say zone A has a ZEM of 100%, zone B has a ZEM of 120%, and at your level it takes 900 XP to measure anything (ie. to see your XP % change). In both zones you kill mobs of the same level, worth 360 XP each.
+
+(This assumes of course that the mob always spawns at the same exact level, and that you know what that level is. If it just "cons blue", it could be several different levels.
+
+If you kill six of the same level mob in both A and B, your visible XP % will increase like so:
+{| class="wikitable"
+!Zone
+!Kill #1
+!Kill #2
+!Kill #3
+!Kill #4
+!Kill #5
+!Kill #6
+|-
+|A (100%) XP
+|300
+|600
+|900
+|1200
+|1500
+|1800
+|-
+|'''A (100%) XP %'''
+|'''1'''
+|'''2'''
+|'''4'''
+|'''6'''
+|'''8'''
+|'''10'''
+|-
+|B (120%) XP
+|360
+|720
+|1080
+|1440
+|1800
+|2160
+|-
+|'''B (120%) XP %'''
+|'''1'''
+|'''2'''
+|'''4'''
+|'''6'''
+|'''7'''
+|'''9'''
+|}
+Notice that both zones have the ''exact'' same number of XP increases, and the two are identical for the first six kills! Even when they differ, they're only one kill apart.
+
+If you're just casually observing, the two zones (with a 20%) would appear indistinguishable.
+
+==== How to Measure ZEM Properly ====
+First, you need to find a zone that can serve as your reference point, ie. as your "ZEM 100%" zone (even though you won't know which zone truly has "100%" until you're done).  This should be the zone in the game with the most variety of fixed-level mobs (perhaps a city?)
+
+Next, you need to find a mob in another zone with the same (fixed) level as a mob in the reference zone.  Go kill both mobs ___ times, recording your XP percentage both before and after.
+
+(Perhaps a mathematician could chime in here on how many ____ needs to be, based on the numbers in [[Experience]]?)
+
+At this point it's just basic math: if zone A gave 20% XP, and zone B gave 25%, you now know B gives 25% more XP (20 * 1.25 = 25).  Since we're calling the first zone our reference (ie. 100% ZEM), that makes zone B's ZEM 125%.
+
+Congratulations, you've now successfully measured a ZEM!  Now you just have to repeat the process for every zone in the game.  Whenever the reference zone and the zone your testing don't have mobs of the same level you can kill, you'll have to find another zone that does (but which also overlaps the reference zone), and then do a bit more math.
+[[Category:Technical]]

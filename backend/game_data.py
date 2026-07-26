@@ -951,12 +951,43 @@ def _parse_zem_wikitext(text: str) -> dict:
     return zones
 
 
+_VENDORED_ZEM: dict | None = None
+
+
+def _vendored_zem() -> dict:
+    """The snapshot shipped beside the code (backend/zem_levels.wiki).
+
+    Same raw wikitext the live URL serves, so the tested parser reads it
+    unchanged -- no second format, nothing to keep in step. Refresh it with
+    scripts/refresh_zem.py.
+    """
+    global _VENDORED_ZEM
+    if _VENDORED_ZEM is None:
+        try:
+            _VENDORED_ZEM = _parse_zem_wikitext(
+                bundle_path("backend", "zem_levels.wiki").read_text(
+                    encoding="utf-8"))
+        except Exception:
+            logger.exception("vendored ZEM snapshot unreadable")
+            _VENDORED_ZEM = {}
+    return _VENDORED_ZEM
+
+
 async def zem_zone_levels() -> dict:
-    """In-era zone -> {type, lo, hi, tiers} (cached 24h; {} offline)."""
+    """In-era zone -> {type, lo, hi, tiers}. Live wiki, else the snapshot.
+
+    The fallback matters more than it looks. _gate_locations() reads an
+    EMPTY table as "no table" and passes the model's zone picks through
+    UNGATED, so a failed fetch silently switches the location verifier off
+    -- and a packaged .exe on a machine with no network hit that on every
+    single consult. Falling back to the snapshot keeps the table
+    authoritative for WHERE even offline.
+    """
     cached = wiki_page_cache.get("zem_levels_wt2")
     if cached is not None:
         return cached
     import aiohttp
+    text = ""
     try:
         async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=20)) as s:
@@ -964,10 +995,13 @@ async def zem_zone_levels() -> dict:
                 r.raise_for_status()
                 text = await r.text()
     except Exception:
-        return {}
-    zones = _parse_zem_wikitext(text)
-    if zones:
-        wiki_page_cache.set(zones, WIKI_TTL, "zem_levels_wt2")
+        logger.info("ZEM table fetch failed; using the vendored snapshot")
+    zones = _parse_zem_wikitext(text) if text else {}
+    if not zones:
+        # deliberately NOT cached: caching the snapshot under the live key
+        # would suppress the next real fetch for a full day
+        return _vendored_zem()
+    wiki_page_cache.set(zones, WIKI_TTL, "zem_levels_wt2")
     return zones
 
 

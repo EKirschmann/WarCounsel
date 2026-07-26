@@ -100,6 +100,7 @@ jobs:
           --add-data "data/eqlbuilds;data/eqlbuilds"
           --add-data "class_guides;class_guides"
           --add-data "backend/spell_lines.json;backend"
+          --add-data "backend/zem_levels.wiki;backend"
           --version-file build/version_info.txt
           --icon docs/warcounsel.ico
           --collect-submodules backend
@@ -150,6 +151,12 @@ jobs:
             throw "spell line table missing from the bundle (stacking gate would no-op)"
           }
           "spell lines aboard: $($info.data.spell_lines.lines)" | Write-Host
+          # Same trap: with no snapshot AND no network, _gate_locations sees an
+          # empty table and passes the model's zone picks through UNGATED.
+          if ($info.data.zem_zones -lt 1) {
+            throw "ZEM snapshot missing from the bundle (location gate would be bypassed offline)"
+          }
+          "ZEM snapshot zones: $($info.data.zem_zones)" | Write-Host
 
       - name: Verify the overlay's own dependencies survived packaging
         # The overlay is a separate process the server test never reaches, and

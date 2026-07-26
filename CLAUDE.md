@@ -394,7 +394,19 @@ display**; failing entries are dropped and logged, never shown. The gates
 - **Locations are gated against the community Recommended-Levels table**:
   the raw WIKITEXT is parsed (the rendered page collapses empty cells) from
   in-era sections only (Antonica/Odus/Faydwer + Planes of Fear/Hate/Sky —
-  Kunark/Velious never parsed). The 2026-07 redesign carries per-level
+  Kunark/Velious never parsed). Live wiki first, then the VENDORED snapshot
+  `backend/zem_levels.wiki` (same raw wikitext, so one tested parser reads
+  both — refresh with `scripts/refresh_zem.py`, which refuses a fetch that
+  parses to zero or loses a quarter of its zones). The fallback is not
+  cosmetic: `_gate_locations()` reads an EMPTY table as "no table" and lets
+  the model's zone picks through UNGATED, so before this a failed fetch —
+  or any packaged .exe with no network — silently disarmed the location
+  verifier. The snapshot is never cached under the live key, or it would
+  suppress the next real fetch for a day. `/api/settings` reports its zone
+  count and CI fails the build if it did not survive packaging.
+  **ZEM multipliers remain deliberately unpublished** by the wiki ("we have
+  opted not to publish specific Zone Experience Multipliers") — that
+  section is measurement methodology only, so there is nothing to mine. The 2026-07 redesign carries per-level
   QUALITY circles (efficient/ok/poor/special), explicit level ranges, and
   a zone Type column: candidates rank efficient > ok > stretch, cities
   exclude themselves by Type (efficient-marked rows exempt — the sheet is
@@ -671,8 +683,8 @@ model selection itself is runtime-switchable in the UI.
 - The chat agent (backend/agent/graph.py) still exists server-side but has
   no tab — the Advisor is the grounded path.
 - The community hunting sheet is mid-edit: Type/range/circle data can
-  disagree (parser merges and tolerates); ZEM multipliers still
-  unpublished.
+  disagree (parser merges and tolerates); ZEM multipliers are withheld
+  by the wiki on purpose, not merely missing.
 
 ## Releasing
 
