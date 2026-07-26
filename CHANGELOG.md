@@ -17,7 +17,17 @@ screen-OCR stay Windows-only; play windowed with the browser beside the
 game. Everything else is the same build.
 
 Untested on real hardware — verified against each bottle layout by
-construction. If yours is not found, an issue with the path fixes it.
+construction, then confirmed end to end on a real Ubuntu 25.10 box: the
+probe found a bottle on a case-sensitive filesystem, the backend booted
+and tailed a log, and the UI built and served. If yours is not found, an
+issue with the path fixes it.
+
+**New Sebilis Expedition draws its map now.** v2.0.1 left it unmapped
+rather than guess, since its name suggests the Kunark dungeon but it is
+an EQL-only Iksar city. It turns out to ship its own assets —
+`newsebexp.s3d` and `newsebexp.txt` — so the 3D view works out of the
+box, and the 2D chart works once that .txt is in your `<game>/maps`
+folder. Every zone name in a 90MB log now resolves.
 
 ## v2.0.1 — 2026-07-26
 

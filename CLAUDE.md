@@ -372,14 +372,20 @@ throttled `state` pushes. REST highlights (see main.py for all):
     Guk, North vs South Karana, New vs Old Sebilis — so a close-enough
     match silently draws the WRONG dungeon. Anything past decorator
     stripping goes in ZONE_ALIASES by hand.
-  - **An alias needs EVIDENCE, not name resemblance.** "New Sebilis
+  - **A mapping needs EVIDENCE, not name resemblance.** "New Sebilis
     Expedition" is an EQL-only Iksar city off Northern Desert of Ro (the
-    community table types it City 1-5; Old Sebilis is 40-60), so aliasing
-    it to Old Sebilis drew a Kunark dungeon for a starting city — the same
-    wrong-map failure the no-fuzzy rule exists to prevent, just reached by
-    hand. It stays unresolved until someone supplies real in-zone /loc
-    fixes; one fix cannot choose between candidates, because every large
-    zone's bounding box contains it.
+    community table types it City 1-5; Old Sebilis is 40-60). Aliasing it
+    to Old Sebilis on the strength of the name drew a Kunark dungeon for a
+    starting city — the same wrong-map failure the no-fuzzy rule exists to
+    prevent, just reached by hand. It has its OWN assets, `newsebexp.s3d`
+    and `newsebexp.txt`, which is what finally settled it. The `.s3d`
+    ships with the game so 3D works for everyone; the chart does NOT ship
+    in the stock maps folder, so the 2D view needs the .txt dropped into
+    `<game>/maps` (it is a community file, not vendored here).
+  - An earlier version stripped a trailing "Expedition" from zone names,
+    guessing it was an instance wrapper like the difficulty tier. It is
+    not — the one zone it applied to is a real zone — so that rule is
+    gone. Do not reintroduce it.
   - An alias must point at a key that EXISTS and is spelled the way
     `normalize_zone()` leaves it. "estate of unrest" → "The Estate of
     Unrest" pointed at a nonexistent key (the article is already stripped)

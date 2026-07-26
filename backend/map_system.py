@@ -83,6 +83,9 @@ ZONE_FILES: dict[str, list[str]] = {
     "Estate of Unrest": ["unrest"],
     "Kedge Keep": ["kedge"],
     "Old Sebilis": ["sebilis"],
+    # EQL-only Iksar city, NOT the Kunark dungeon: it ships its own
+    # newsebexp.s3d and chart rather than reusing sebilis.
+    "New Sebilis Expedition": ["newsebexp"],
     "Temple of Cazic-Thule": ["cazicthule"],
     "Najena": ["najena"],
     "Cazic-Thule": ["cazicthule"],
@@ -126,7 +129,10 @@ ZONE_GRAPH: dict[str, list[str]] = {
     "Lower Guk": ["Upper Guk"],
     "Southern Desert of Ro": ["Innothule Swamp", "Oasis of Marr"],
     "Oasis of Marr": ["Southern Desert of Ro", "Northern Desert of Ro"],
-    "Northern Desert of Ro": ["Oasis of Marr", "East Commonlands"],
+    "Northern Desert of Ro": ["Oasis of Marr", "East Commonlands",
+                              "New Sebilis Expedition"],
+    # its wiki page: one entrance, in the northwest of Northern Ro
+    "New Sebilis Expedition": ["Northern Desert of Ro"],
     "East Commonlands": ["Northern Desert of Ro", "West Commonlands",
                          "West Freeport", "Nektulos Forest"],
     "West Commonlands": ["East Commonlands", "Kithicor Forest", "Befallen"],
@@ -174,24 +180,23 @@ ZONE_GRAPH: dict[str, list[str]] = {
 # Difficulty/instance suffixes -- "Befallen 2 (Adaptive)", "Befallen 4 (Refined)"
 # etc. Every difficulty tier uses the same chart as the base zone.
 RE_DIFFICULTY = re.compile(r"\s*\d*\s*\([a-z ]+\)\s*$", re.IGNORECASE)
-# EQL wraps instanced dungeons as "<Zone> Expedition".
-RE_INSTANCE = re.compile(r"\s+Expedition\s*$", re.IGNORECASE)
 
 
 def normalize_zone(name: str) -> str:
-    """'Befallen 4 (Refined)' -> 'Befallen'; 'The Feerrott' -> 'Feerrott';
-    'New Sebilis Expedition' -> 'New Sebilis'.
+    """'Befallen 4 (Refined)' -> 'Befallen'; 'The Feerrott' -> 'Feerrott'.
 
-    Only DECORATORS come off — difficulty suffix, article, and EQL's
-    "Expedition" instance wrapper. Deliberately no fuzzy/edit-distance
+    Only DECORATORS come off — the difficulty suffix and the article. An
+    earlier version also stripped a trailing "Expedition", guessing it was
+    an instance wrapper like the difficulty tier. It is not: "New Sebilis
+    Expedition" is a zone in its own right, with its own chart and .s3d, so
+    that rule served exactly one zone and served it wrongly.
+    Deliberately no fuzzy/edit-distance
     matching beyond that: the names most likely to be confused are exactly
     the near-identical pairs (Upper vs Lower Guk, North vs South Karana,
     New vs Old Sebilis), so a close-enough match would silently draw the
     wrong dungeon. Anything past decorators goes in ZONE_ALIASES, by hand.
     """
     n = RE_DIFFICULTY.sub("", name).strip()
-    n = RE_INSTANCE.sub("", n).strip()
-    n = RE_DIFFICULTY.sub("", n).strip()   # "X Expedition 4 (Refined)"
     if n.lower().startswith("the "):
         n = n[4:]
     return n
