@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 from backend.config import settings
+from backend.paths import bundle_path
 
 logger = logging.getLogger(__name__)
 
@@ -260,12 +261,22 @@ def _canonical(name: str) -> Optional[str]:
 
 
 def _maps_dirs() -> list[Path]:
-    """Search order: custom pack (e.g. Brewall) first, stock maps second."""
+    """Search order: custom pack (e.g. Brewall), stock maps, then ours.
+
+    The bundled folder is LAST on purpose — it only fills gaps the game
+    leaves, and anything the user installs themselves must win. It exists
+    because a zone can ship geometry but no chart (New Sebilis Expedition
+    has newsebexp.s3d but no newsebexp.txt), which left the 2D view blank
+    with nothing to tell the user why.
+    """
     dirs = []
     for d in (settings.eql_maps_custom_dir, settings.eql_maps_dir):
         p = Path(d)
         if p.is_dir():
             dirs.append(p)
+    bundled = bundle_path("maps")
+    if bundled.is_dir():
+        dirs.append(bundled)
     return dirs
 
 

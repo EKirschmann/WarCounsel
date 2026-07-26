@@ -26,8 +26,8 @@ issue with the path fixes it.
 rather than guess, since its name suggests the Kunark dungeon but it is
 an EQL-only Iksar city. It turns out to ship its own assets —
 `newsebexp.s3d` and `newsebexp.txt` — so the 3D view works out of the
-box, and the 2D chart works once that .txt is in your `<game>/maps`
-folder. Every zone name in a 90MB log now resolves.
+box, and the chart now ships with WarCounsel itself, so the 2D view
+works with no setup. Every zone name in a 90MB log now resolves.
 
 ## v2.0.1 — 2026-07-26
 

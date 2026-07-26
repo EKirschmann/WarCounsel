@@ -1034,7 +1034,8 @@ async def api_settings_get():
         # PyInstaller bundle, where a missing --add-data entry fails soft;
         # surfacing the counts lets the release build assert they arrived.
         "data": {"spell_lines": spell_lines.stats(),
-                 "zem_zones": len(_vendored_zem())},
+                 "zem_zones": len(_vendored_zem()),
+                 "bundled_maps": len(list(bundle_path("maps").glob("*.txt")))},
         "version": APP_VERSION,
     }
 

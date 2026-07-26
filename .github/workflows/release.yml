@@ -117,6 +117,7 @@ jobs:
           --add-data "class_guides;class_guides"
           --add-data "backend/spell_lines.json;backend"
           --add-data "backend/zem_levels.wiki;backend"
+          --add-data "maps;maps"
           --version-file build/version_info.txt
           --icon docs/warcounsel.ico
           --collect-submodules backend
@@ -173,6 +174,12 @@ jobs:
             throw "ZEM snapshot missing from the bundle (location gate would be bypassed offline)"
           }
           "ZEM snapshot zones: $($info.data.zem_zones)" | Write-Host
+          # A zone can ship geometry but no chart; the bundled map is the
+          # only thing that fills that gap, and it fails soft if absent.
+          if ($info.data.bundled_maps -lt 1) {
+            throw "bundled maps missing (New Sebilis Expedition would draw no 2D chart)"
+          }
+          "bundled maps: $($info.data.bundled_maps)" | Write-Host
 
       - name: Verify the overlay's own dependencies survived packaging
         # The overlay is a separate process the server test never reaches, and

@@ -379,9 +379,14 @@ throttled `state` pushes. REST highlights (see main.py for all):
     starting city — the same wrong-map failure the no-fuzzy rule exists to
     prevent, just reached by hand. It has its OWN assets, `newsebexp.s3d`
     and `newsebexp.txt`, which is what finally settled it. The `.s3d`
-    ships with the game so 3D works for everyone; the chart does NOT ship
-    in the stock maps folder, so the 2D view needs the .txt dropped into
-    `<game>/maps` (it is a community file, not vendored here).
+    ships with the game so 3D works for everyone; the chart does NOT, so
+    `newsebexp.txt` is VENDORED in the repo's `maps/` folder.
+  - **`_maps_dirs()` searches bundled maps LAST**, after the custom pack and
+    the stock `<game>/maps`, so a chart the user installs always wins. The
+    folder exists only to fill gaps where a zone ships geometry but no
+    chart — which reads to the user as a blank panel with no explanation.
+    `/api/settings` reports `bundled_maps` and CI fails the build at zero,
+    since a missing data file fails soft and would ship silently.
   - An earlier version stripped a trailing "Expedition" from zone names,
     guessing it was an instance wrapper like the difficulty tier. It is
     not — the one zone it applied to is a real zone — so that rule is
