@@ -4,7 +4,7 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
-## v2.0.1 — 2026-07-25
+## v2.0.1 — 2026-07-26
 
 **Zones that never drew a map.** An audit of every "You have entered"
 name in a real 90MB log found 9 of 38 resolved to nothing — the panel
