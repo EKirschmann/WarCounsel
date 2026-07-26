@@ -316,7 +316,7 @@ async def on_log_event(event: ev.LogEvent, live: bool) -> None:
 
     if event.type in ("other_out", "aa_list", "aa_meta", "who_other",
                       "pet_inv_header", "pet_gear", "pet_attack",
-                      "group_chat"):
+                      "group_chat", "staggered"):
         return  # aggregated into tracker state; raw broadcast would flood the WS
 
     if event.type == "cast":

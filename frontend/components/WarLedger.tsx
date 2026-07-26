@@ -38,6 +38,8 @@ function classify(r: LedgerRow): {
       return { kind: "cast", text: `${r.caster} casts ${r.spell}…` };
     case "interrupt":
       return { kind: "cast", text: "Spell interrupted" };
+    case "mesmerized":
+      return { kind: "cast", text: `${r.target} is mesmerized — do not break it` };
     case "fizzle":
       return { kind: "cast", text: "Fizzle!" };
     case "kill":

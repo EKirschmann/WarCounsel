@@ -8,8 +8,8 @@ The WebSocket payload is `event.model_dump(mode="json")` — the frontend
 switches on the `type` field.
 """
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 
 class LogEvent(BaseModel):
@@ -24,12 +24,19 @@ class ZoneChange(LogEvent):
 
 
 class MeleeOut(LogEvent):
-    """You <verb> <target> for N points of damage. [(Critical) ...]"""
+    """You <verb> <target> for N points of damage. [(Critical) ...]
+
+    `mods` keeps the peeled trailing tags verbatim. EQL prints more than
+    Critical -- Slay Undead, Finishing Blow, Crippling Blow, Strikethrough,
+    Flurry -- and collapsing them all to a crit bool threw away the only
+    record that a class proc fired.
+    """
     type: str = "melee_out"
     verb: str
     target: str
     damage: int
     crit: bool = False
+    mods: List[str] = Field(default_factory=list)
 
 
 class MeleeIn(LogEvent):
@@ -49,6 +56,7 @@ class SpellDamageOut(LogEvent):
     damage_kind: str
     spell: str
     crit: bool = False
+    mods: List[str] = Field(default_factory=list)
 
 
 class SpellDamageIn(LogEvent):
@@ -399,6 +407,23 @@ class Summoned(LogEvent):
 class Stunned(LogEvent):
     """You are stunned! — survivability stat."""
     type: str = "stunned"
+
+
+class Staggered(LogEvent):
+    """'<mob> staggers.' — a stun landing ON a mob, ~14k lines in a 90MB
+    log and previously unparsed. Evidence that it is a rider rather than a
+    standalone effect: the line before is our own damaging hit in the
+    overwhelming majority of cases, and "YOU" is never the subject."""
+    type: str = "staggered"
+    target: str
+
+
+class Mesmerized(LogEvent):
+    """'<mob> has been mesmerized.' — the APPLY half of mez. The fade half
+    already arrives as a buff-fade line; without this the pair was
+    half-tracked, and breaking a mez is the classic group mistake."""
+    type: str = "mesmerized"
+    target: str
 
 
 class Mend(LogEvent):

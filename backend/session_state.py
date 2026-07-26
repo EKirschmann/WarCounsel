@@ -37,6 +37,7 @@ PERSIST_FIELDS = [
     "spell_casts", "crits", "coin_copper", "rune_absorbed",
     "session_started", "_active_buckets", "_dinged", "loot_count",
     "pending_sessions", "stuns_taken", "overheal", "motes",
+    "stuns_landed", "mez_applied", "mods",
     "_last_aa_seen", "_last_aa_name",
 ]
 _DEQUES = {"loots": 20, "ledger": 300, "encounter_history": 5}

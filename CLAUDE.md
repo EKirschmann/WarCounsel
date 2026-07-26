@@ -178,6 +178,26 @@ All styling is CSS custom properties in `app/globals.css` — **no Tailwind**.
   effect that is also a scribed spell UNLESS spell_file.py marks it
   proc-granted and the session never saw it cast (mislabeling real casts
   is the worse error, so ambiguity still resolves toward no label).
+- **Trailing tags are KEPT, not just crit-folded** (`mods` on the outgoing
+  damage events → per-ability counts). EQL prints Slay Undead, Finishing
+  Blow, Crippling Blow, Strikethrough, Flurry and Double Bow Shot beside
+  Critical; collapsing them all to a bool threw away the only record that a
+  class proc fired. Stacked tags stay whole ("Riposte Slay Undead" is one
+  annotation in the log, not two).
+- **"<mob> staggers." is a stun landing on a mob** — ~14k lines in a 90MB
+  log, previously unparsed entirely. "YOU" is never the subject, and the
+  line names no attacker, so crediting it means remembering the last
+  ability WE landed *and on whom*: the gate requires the staggered target
+  to match, within 2s. Without the target check it credited whatever we
+  last swung, which produced obvious nonsense (Crush, Damage Shield
+  (thorns)). About HALF the staggers in a group log are other players'
+  strikes and are deliberately left uncredited. Attribution can still
+  over-credit when two people hit the same mob in the same second — the
+  log carries nothing that would resolve that.
+- **`staggered` is aggregate-only, never broadcast** (`PERSISTED_EVENTS`'
+  sibling list in main.py): 14k raw rows would bury the War Ledger.
+  `mesmerized` (~200) IS broadcast — the mez APPLY half, pairing with the
+  fade half we already had, and breaking a mez is the classic group error.
 - **Adding an event type**: model in `events.py` → regex + branch in
   `parser.py` → (optional) count in `state_tracker.apply()` → (optional) add
   to `PERSISTED_EVENTS` in main.py → `case` in WarLedger `classify()`.

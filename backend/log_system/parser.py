@@ -49,6 +49,10 @@ RE_CHAT = re.compile(
     r"[^,]{0,60}, '")
 
 RE_ZONE = re.compile(r"^You have entered (.+?)\.$")
+# "<mob> staggers." — a stun landing on a mob (never on you; the subject
+# is always a third party). "has been mesmerized" is the mez APPLY.
+RE_STAGGER = re.compile(r"^(?!You )(.+?) staggers\.$")
+RE_MEZ = re.compile(r"^(?!You )(.+?) (?:has been|is) mesmerized[.!]$")
 RE_SESSION_START = re.compile(r"^Welcome to EverQuest Legends!")
 RE_OUT_SPELL = re.compile(r"^You hit (.+?) for (\d+) points? of ([-\w\s]+?) damage by (.+?)[.!]")
 RE_IN_SPELL = re.compile(r"^(.+?) hit you for (\d+) points? of ([-\w\s]+?) damage by (.+?)[.!]")
@@ -290,6 +294,9 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
             body = t.group(1).rstrip()
             tags.append(t.group(2))
     crit = any("Critical" in t or t in CRIT_TAGS for t in tags)
+    # Keep the rest verbatim. A stacked tag like "(Riposte Slay Undead)"
+    # is ONE annotation in the log, so it is kept whole rather than split.
+    mods = [t for t in tags if t != "Critical"]
 
     if RE_SESSION_START.match(body):
         return ev.SessionStart(**base)
@@ -316,7 +323,8 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
     if s := RE_OUT_SPELL.match(body):
         return ev.SpellDamageOut(
             target=s.group(1), damage=int(s.group(2)),
-            damage_kind=s.group(3).strip(), spell=s.group(4), crit=crit, **base)
+            damage_kind=s.group(3).strip(), spell=s.group(4), crit=crit,
+            mods=mods, **base)
 
     if s := RE_IN_SPELL.match(body):
         return ev.SpellDamageIn(
@@ -326,7 +334,8 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
     if s := RE_OUT_NM.match(body):
         return ev.SpellDamageOut(
             target=s.group(1), damage=int(s.group(2)),
-            damage_kind="non-melee", spell="non-melee", crit=crit, **base)
+            damage_kind="non-melee", spell="non-melee", crit=crit,
+            mods=mods, **base)
 
     if d := RE_DS_OUT.match(body):
         return ev.DamageShieldOut(target=d.group(1), kind=d.group(3),
@@ -477,7 +486,8 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
         verb = _verb_root(om.group(1))
         if verb:
             return ev.MeleeOut(verb=verb, target=om.group(2),
-                               damage=int(om.group(3)), crit=crit, **base)
+                               damage=int(om.group(3)), crit=crit,
+                               mods=mods, **base)
 
     if im := RE_IN_MELEE.match(body):
         verb = _verb_root(im.group(2))
@@ -539,6 +549,11 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
         # other players feed the group roster (keep the game's abbreviations)
         return ev.OtherCharInfo(name=w.group(3), level=int(w.group(1)),
                                 classes=class_str, **base)
+
+    if sg := RE_STAGGER.match(body):
+        return ev.Staggered(target=sg.group(1), **base)
+    if mz := RE_MEZ.match(body):
+        return ev.Mesmerized(target=mz.group(1), **base)
 
     # raid-mechanic trigger battery — LAST, so it only ever scans lines
     # nothing above recognized (boss shouts carry no comma, so the chat

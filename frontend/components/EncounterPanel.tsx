@@ -16,7 +16,7 @@ function AbilityTable({ abilities, petSection }: { abilities: EncounterAbility[]
       <thead>
         <tr>
           <th scope="col">Ability</th>
-          <th scope="col" title="Successful hits / casts · ✦ = crits">×</th>
+          <th scope="col" title="Successful hits · ✦ crits · ◇ staggers · initials = Slay Undead / Finishing Blow etc">×</th>
           <th scope="col">Avg</th>
           <th scope="col">Total</th>
           <th scope="col">DPS</th>
@@ -37,6 +37,17 @@ function AbilityTable({ abilities, petSection }: { abilities: EncounterAbility[]
             <td className="enc-count">
               {a.hits}
               {(a.crits ?? 0) > 0 && <span className="enc-crit"> ✦{a.crits}</span>}
+              {(a.stuns ?? 0) > 0 && (
+                <span className="enc-stun" title={`${a.stuns} staggered`}> ◇{a.stuns}</span>
+              )}
+              {a.mods &&
+                Object.entries(a.mods).map(([m, n]) => (
+                  <span key={m} className="enc-mod" title={`${m} ×${n}`}>
+                    {" "}
+                    {modInitials(m)}
+                    {n}
+                  </span>
+                ))}
             </td>
             <td>{fmt(a.avg)}</td>
             <td>{fmt(a.total)}</td>
@@ -51,6 +62,12 @@ function AbilityTable({ abilities, petSection }: { abilities: EncounterAbility[]
 /** Damage breakdown for the last 5 pulls. The arrows step back through
  *  recent encounters; the aggregate below sums abilities across all of them
  *  to surface which abilities actually hit hardest over time. */
+/** "Slay Undead" -> "SU". A 300px-wide column cannot carry the full tag,
+ *  and the count already sits beside it; the title attribute spells it out. */
+function modInitials(mod: string) {
+  return mod.split(/\s+/).map((w) => w[0]).join("");
+}
+
 export const EncounterPanel = memo(function EncounterPanel({
   encounters,
   summary,

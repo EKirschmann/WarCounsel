@@ -145,6 +145,11 @@ class CharacterTracker:
         self._alert_seq = 0
         self._alert_cooldown: dict = {}
         self.stuns_taken = 0
+        self.stuns_landed = 0     # staggers pinned on OUR OWN hit; about
+                                  # half of a log's are other players'
+        self.mez_applied = 0
+        self.mods: dict = {}      # 'Slay Undead' -> times seen
+        self._last_ability: tuple = (None, None, None)
         self.overheal = 0          # attempted-minus-landed healing
         self.motes: dict = {}      # mote tier -> count looted
         # finished sessions awaiting DB persistence (login banner rolls
@@ -237,7 +242,8 @@ class CharacterTracker:
 
     def _encounter_ability(self, ts: datetime, name: str, kind: str, damage: int,
                            target: Optional[str] = None,
-                           crit: bool = False) -> None:
+                           crit: bool = False,
+                           mods: Optional[list] = None) -> None:
         self._touch_encounter(ts)
         enc = self.encounter
         ab = enc["abilities"].setdefault(
@@ -246,6 +252,14 @@ class CharacterTracker:
         ab["total"] += damage
         if crit:
             ab["crits"] = ab.get("crits", 0) + 1
+        for m in mods or ():
+            ab.setdefault("mods", {})[m] = ab.get("mods", {}).get(m, 0) + 1
+            self.mods[m] = self.mods.get(m, 0) + 1
+        # A stagger prints on the line AFTER the hit that caused it and names
+        # no attacker, so crediting it means remembering what we just landed
+        # -- and on WHOM, since other players' strikes stagger things too and
+        # time alone would credit our last swing for their stun.
+        self._last_ability = (ts, name, target)
         enc["total_out"] += damage
         sec = int(ts.timestamp())
         tl = enc.setdefault("secs", {})
@@ -403,11 +417,12 @@ class CharacterTracker:
                                         shave[0].lower())):
                                 t["ends"] -= timedelta(seconds=shave[1])
                     self._encounter_ability(e.ts, e.verb.capitalize(), "melee",
-                                            e.damage, e.target, crit=e.crit)
+                                            e.damage, e.target, crit=e.crit,
+                                            mods=e.mods)
                 elif isinstance(e, ev.SpellDamageOut):
                     self._encounter_ability(e.ts, self._fx_label(e.spell),
                                             "spell", e.damage, e.target,
-                                            crit=e.crit)
+                                            crit=e.crit, mods=e.mods)
                 else:  # DotDamage
                     self._encounter_ability(e.ts, self._fx_label(e.spell),
                                             "dot", e.damage, e.target,
@@ -555,6 +570,18 @@ class CharacterTracker:
                 self._push_alert("summon", "You have been summoned!", e.ts)
             elif isinstance(e, ev.Stunned):
                 self.stuns_taken += 1
+            elif isinstance(e, ev.Staggered):
+                # credit the ability that just landed, within 2s -- the same
+                # window the log's own ordering implies
+                lts, lname, ltarget = self._last_ability
+                same = (ltarget or "").lower() == (e.target or "").lower()
+                if lts and lname and same and (e.ts - lts).total_seconds() <= 2:
+                    ab = (self.encounter or {}).get("abilities", {}).get(lname)
+                    if ab is not None:
+                        ab["stuns"] = ab.get("stuns", 0) + 1
+                        self.stuns_landed += 1
+            elif isinstance(e, ev.Mesmerized):
+                self.mez_applied += 1
             elif isinstance(e, ev.Tell):
                 self._fire_alerts("tell", f"{e.sender}: {e.text}", e.ts)
             elif isinstance(e, ev.GroupChat):
@@ -759,6 +786,8 @@ class CharacterTracker:
         self.crits = self.coin_copper = self.rune_absorbed = 0
         self.loot_count = 0
         self.stuns_taken = self.overheal = 0
+        self.stuns_landed = self.mez_applied = 0
+        self.mods = {}
         self.motes = {}
         self.loots.clear()
         self.mob_stats = {}
@@ -833,6 +862,8 @@ class CharacterTracker:
                 "kind": ab["kind"],
                 "hits": ab["hits"],
                 "crits": ab.get("crits", 0),
+                "stuns": ab.get("stuns", 0),
+                "mods": ab.get("mods") or {},
                 "total": ab["total"],
                 "avg": round(ab["total"] / ab["hits"], 1),
                 "dps": round(ab["total"] / duration, 1),
@@ -937,13 +968,18 @@ class CharacterTracker:
         for e in encs:
             for name, ab in e["abilities"].items():
                 m = merged.setdefault(name, {"kind": ab["kind"], "hits": 0,
-                                             "total": 0, "crits": 0})
+                                             "total": 0, "crits": 0,
+                                             "stuns": 0, "mods": {}})
                 m["hits"] += ab["hits"]
                 m["total"] += ab["total"]
                 m["crits"] += ab.get("crits", 0)
+                m["stuns"] += ab.get("stuns", 0)
+                for k, v in (ab.get("mods") or {}).items():
+                    m["mods"][k] = m["mods"].get(k, 0) + v
         abilities = [
             {"name": n, "kind": m["kind"], "hits": m["hits"],
-             "crits": m["crits"], "total": m["total"],
+             "crits": m["crits"], "stuns": m["stuns"], "mods": m["mods"],
+             "total": m["total"],
              "avg": round(m["total"] / m["hits"], 1),
              "dps": round(m["total"] / total_dur, 1)}
             for n, m in merged.items()
@@ -1164,6 +1200,10 @@ class CharacterTracker:
                 "coin_copper": self.coin_copper,
                 "rune_absorbed": self.rune_absorbed,
                 "stuns_taken": self.stuns_taken,
+                "stuns_landed": self.stuns_landed,
+                "mez_applied": self.mez_applied,
+                "mods": dict(sorted(self.mods.items(),
+                                    key=lambda kv: -kv[1])),
                 "overheal": self.overheal,
                 "motes": dict(self.motes),
                 "hit_rate": round(

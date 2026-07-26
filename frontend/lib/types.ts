@@ -21,6 +21,12 @@ export interface EncounterAbility {
   kind: "melee" | "spell" | "dot" | "pet" | "heal" | "ds";
   hits: number;
   crits?: number;
+  /** Times this ability staggered its target — credited only when the
+   *  stagger names the same target we just hit (see state_tracker). */
+  stuns?: number;
+  /** Trailing tags EQL prints beyond Critical: Slay Undead, Finishing
+   *  Blow, Crippling Blow, Strikethrough, Flurry. */
+  mods?: Record<string, number>;
   total: number;
   avg: number;
   dps: number;

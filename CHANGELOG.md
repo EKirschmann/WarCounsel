@@ -46,6 +46,15 @@ achievement-granted ones.
 picks. The gear-farm list links to a wiki *search* instead, because
 those names are not gated against the zone table.
 
+**Three parsing gaps, found by reading two other EQL tools.** EQL prints
+`<mob> staggers.` when a stun lands — about 14,000 times in a 90MB log,
+and we parsed none of it. Abilities now carry a stagger count, credited
+only when the staggered target matches the one we just hit (roughly half
+of them are other players' strikes and stay uncredited). Mez application
+is tracked, pairing with the fade we already had. And the trailing tags
+beyond Critical — Slay Undead, Finishing Blow, Crippling Blow — are kept
+as per-ability counts instead of being collapsed into a crit flag.
+
 **The hunting table now ships with the app.** Previously fetched live
 only; when that failed the location verifier silently switched off and
 passed unchecked zone picks through. A packaged .exe with no network hit

@@ -2037,6 +2037,11 @@ button.app-version:hover { color: var(--gold-bright); }
   .ov-fields .ov-hint { display: none; }
 }
 
+/* Encounter ability annotations: crits already use .enc-crit; staggers and
+   class-proc tags sit beside it, quieter so the hit count still leads. */
+.enc-stun { color: #b07cc6; font-size: 0.86em; }
+.enc-mod { color: #8b8577; font-size: 0.82em; }
+
 .modal-foot {
   display: flex;
   justify-content: flex-end;
