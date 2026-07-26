@@ -69,6 +69,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const firstField = useRef<HTMLInputElement>(null);
+  const didFocus = useRef(false);
 
   useEffect(() => {
     apiGet<SettingsData>("/api/settings")
@@ -84,8 +85,22 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       .catch((e) => setError(String(e)));
   }, []);
 
+  // Focus the game folder EXACTLY ONCE, on the render where it first
+  // exists. Two traps here, both previously live:
+  //   * the panel shows "Loading…" until /api/settings answers, so a
+  //     mount-only effect finds a null ref and never focuses anything;
+  //   * page.tsx passes a fresh onClose arrow every render and the HUD
+  //     re-renders several times a second off the WebSocket, so keying
+  //     this to onClose (as it was) re-focused the field continuously
+  //     and stole the caret mid-click.
+  // The ref latch is what lets it wait for the field without repeating.
   useEffect(() => {
+    if (!data || didFocus.current) return;
+    didFocus.current = true;
     firstField.current?.focus();
+  }, [data]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
