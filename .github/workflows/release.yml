@@ -30,6 +30,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify the changelog documents this tag
+        # Runs BEFORE the ~10 minute build so a missing section costs seconds,
+        # not a whole run. v2.0.1 shipped with "Automated build for v2.0.1."
+        # as its entire release notes because nothing checked.
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF -replace '^refs/tags/',''
+          $ver = $tag -replace '^v',''
+          $md  = Get-Content CHANGELOG.md -Raw
+          $m = [regex]::Match($md, "(?ms)^## v$([regex]::Escape($ver))\b[^\r\n]*\r?\n(.*?)(?=^## |\z)")
+          if (-not $m.Success -or $m.Groups[1].Value.Trim().Length -lt 60) {
+            throw "CHANGELOG.md has no usable '## v$ver' section - the release would ship with placeholder notes"
+          }
+          "changelog section found: $($m.Groups[1].Value.Trim().Length) chars" | Write-Host
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
@@ -198,7 +214,15 @@ jobs:
           $tag = if ($env:GITHUB_REF -like 'refs/tags/*') { $env:GITHUB_REF -replace '^refs/tags/','' } else { '${{ inputs.tag }}' }
           gh release view $tag 2>$null | Out-Null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --title $tag --notes "Automated build for $tag."
+            # Body comes from CHANGELOG.md, not a placeholder. The section is
+            # already known to exist -- the checkout step refuses the build
+            # without it -- so this only has to re-extract it.
+            $ver = $tag -replace '^v',''
+            $md  = Get-Content CHANGELOG.md -Raw
+            $m = [regex]::Match($md, "(?ms)^## v$([regex]::Escape($ver))\b[^\r\n]*\r?\n(.*?)(?=^## |\z)")
+            $notes = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "Automated build for $tag." }
+            Set-Content -Path release-notes.md -Value $notes -Encoding utf8
+            gh release create $tag --title $tag --notes-file release-notes.md
           }
           gh release upload $tag dist/WarCounsel.exe dist/WarCounsel.exe.sha256 --clobber
           "attached to $tag" | Write-Host
