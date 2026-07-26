@@ -1,0 +1,23 @@
+# Line endings are not cosmetic here.
+#
+# start_companion.sh is the ONLY way to launch on macOS and Linux, and a
+# shell script checked out with CRLF fails at the shebang:
+#   ./start_companion.sh: bad interpreter: /usr/bin/env bash^M
+# Windows clones default to core.autocrlf=true, so without this a script
+# edited on Windows can carry CRLF into the blob and break the very
+# platforms it exists for.
+* text=auto
+
+*.sh    text eol=lf
+*.command text eol=lf
+
+# Batch files are the mirror image: cmd.exe wants CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Never touch binaries or the vendored wikitext snapshot.
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.ico   binary
+*.s3d   binary
