@@ -8,13 +8,17 @@ in the app header; update by closing the companion and running
 
 **Zones that never drew a map.** An audit of every "You have entered"
 name in a real 90MB log found 9 of 38 resolved to nothing — the panel
-just showed blank, with no error. New Sebilis Expedition was the worst:
-53 visits, no chart, though `sebilis.txt` and `sebilis.s3d` were sitting
-in the game folder the whole time. Also fixed: Temple of Cazic-Thule,
-the Karana plains under their EQL names, and the Estate of Unrest —
-whose alias pointed at a key that did not exist and so suppressed the
-direct hit that would otherwise have worked. All 38 names now resolve,
-in both the 2D chart and the 3D view.
+just showed blank, with no error. Fixed: Temple of Cazic-Thule, the
+Karana plains under their EQL names, and the Estate of Unrest — whose
+alias pointed at a key that did not exist and so suppressed the direct
+hit that would otherwise have worked. 8 of the 9 now resolve, in both
+the 2D chart and the 3D view.
+
+The ninth, New Sebilis Expedition, is deliberately left unmapped. It is
+not the Kunark dungeon its name suggests but an EQL-only Iksar
+underground city off The Northern Desert of Ro, so the obvious mapping
+would have drawn a level 40-60 dungeon for a starting city. No map
+beats the wrong map.
 
 EQL's `<Zone> Expedition` wrapper is now stripped like a difficulty
 suffix, so future instanced zones resolve without a code change, and an

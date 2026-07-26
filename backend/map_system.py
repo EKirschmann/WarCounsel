@@ -82,7 +82,7 @@ ZONE_FILES: dict[str, list[str]] = {
     "Castle Mistmoore": ["mistmoore"],
     "Estate of Unrest": ["unrest"],
     "Kedge Keep": ["kedge"],
-    "Sebilis": ["sebilis"],
+    "Old Sebilis": ["sebilis"],
     "Temple of Cazic-Thule": ["cazicthule"],
     "Najena": ["najena"],
     "Cazic-Thule": ["cazicthule"],
@@ -217,9 +217,17 @@ ZONE_ALIASES = {
     "southern plains of karana": "South Karana",
     "eastern plains of karana": "East Karana",
     "western plains of karana": "West Karana",
-    # one sebilis.s3d serves every Sebilis the game names
-    "new sebilis": "Sebilis",
-    "old sebilis": "Sebilis",
+    # "New Sebilis Expedition" is NOT Old Sebilis and gets no alias. It is an
+    # EQL-only Iksar underground city off The Northern Desert of Ro (guild
+    # halls, merchants; the community table types it City 1-5, against Old
+    # Sebilis at 40-60), possibly a temporary stand-in. Pointing it at
+    # sebilis.s3d drew a Kunark dungeon for a starting city -- the exact
+    # wrong-map failure the no-fuzzy-matching rule above exists to prevent,
+    # arrived at by hand instead of by edit distance. cabeast/cabwest are
+    # plausible hosts but the one /loc fix recorded in-zone sits inside all
+    # three bounding boxes, so there is no evidence to choose. It stays
+    # unresolved (and logged) until someone reports real coordinates.
+    "old sebilis": "Old Sebilis",
     "cazic thule": "Temple of Cazic-Thule",
 }
 
