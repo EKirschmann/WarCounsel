@@ -44,7 +44,8 @@ ADVISOR_PROMPT = """You are the advisor inside an EverQuest Legends (EQL) compan
 - Travel magic (rings, circles, zephyrs, gate, succor/evacuate) is cast via the RITUALS system, outside the spell bar — it never occupies a spell slot. Never put travel spells in the loadout or in replace pairs.
 - Reanimation / Reconstitution / Reparation are RESURRECTION spells: they return a DEAD group member to their corpse with experience. They heal nothing and provide zero sustain — never describe them as healing or self-sustain, and never slot them for a solo focus (you cannot cast while dead).
 - Spell slots are scarce: only __SLOTS_NOTE__ spells can be memorized at once.
-- AAs are available from level 1 (General / Archetype / Class / Special tabs) and persist across class swaps.
+- AAs are available from level 1 (General / Archetype / Class / Special tabs) and persist across class swaps: a rank bought once is owned in every combo that qualifies, so General and Archetype ranks are better value than a Class rank for a trio that swaps classes.
+- Special-tab AAs (e.g. Banestrike) and a class's free ranks are granted by achievements, not bought — never recommend spending points on them.
 
 __WIKI_HEADER__
 __WIKI__
@@ -1572,9 +1573,12 @@ async def generate_gear_advice(ctx: dict) -> dict:
             "slot. " + cur +
             "Recommend the BEST loadout of up to "
             f"{pet_slots} items total, following the pet auto-equip rules: "
-            "(1) up to TWO weapons — pick the best damage/delay ratios; at "
-            "high level a real weapon beats the pet's default attack, and "
-            "PROCCING weapons (lifetap/damage) are top DPS picks; (2) a "
+            "(1) up to TWO weapons — the pet keeps its OWN attack "
+            "delay, so weapon delay and damage/delay RATIO are irrelevant "
+            "to it; a weapon's damage counts only when it BEATS the pet's "
+            "innate hit, while procs and damage type apply either way — "
+            "so PROCCING weapons (lifetap/damage) are the top picks even "
+            "when their listed damage is low; (2) a "
             "HASTE belt (haste stacks with spell haste — a top pick); (3) "
             "armor prioritizing AC over HP, plus cleave/ferocity/attack "
             "gear; the two 'any' slots can hold a shield (big AC), rings, "

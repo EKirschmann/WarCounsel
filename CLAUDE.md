@@ -509,8 +509,14 @@ whenever the Inventory parse changes.
   the combo; `pet_slots` field overrides. `/pet inventory check` (in the
   outputs macro) is parsed as a burst -> `tracker.pet_inventory`; the gate
   drops items already on the pet / not class-usable / not spare. Priorities
-  in the prompt: up to 2 weapons by damage/delay (procs/lifetap top),
-  haste belt, AC over HP, no duplicate categories, 510 stat cap. Pet gear
+  in the prompt: up to 2 weapons — a pet keeps its OWN attack delay, so
+  weapon DELAY and the damage/delay RATIO mean nothing to it (we said
+  "by damage/delay" until 2026-07; wrong per eqltools/learn/pets). Its
+  damage counts only when it BEATS the pet's innate hit, while procs and
+  damage type apply either way — so a low-damage proccing weapon is a TOP
+  pick, not a poor one. Then haste belt, AC over HP, no duplicate
+  categories, 510 stat cap. Slot count caps at 12, which the 4+3+3+2
+  maximum reaches exactly, so the cap never binds. Pet gear
   PERSISTS through death/re-summon. `pet_slots`/`pet_classes` are user-set
   columns; controls live inline in the Equipment header.
 

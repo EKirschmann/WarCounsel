@@ -1350,6 +1350,12 @@ body {
   text-overflow: ellipsis;
 }
 .hg-picked .hg-label { color: var(--gold-bright); }
+/* The label is an <a> to the zone's eqlwiki page. Underline only on
+   hover/focus so eight stacked rows do not read as a wall of links. */
+a.hg-label { text-decoration: none; }
+a.hg-label:hover,
+a.hg-label:focus-visible { color: var(--gold-bright); text-decoration: underline; }
+a.hg-label:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .hg-track {
   position: relative;
   height: 16px;

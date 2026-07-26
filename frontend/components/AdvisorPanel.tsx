@@ -29,9 +29,19 @@ function hgSegments(levels: number[]): Array<[number, number]> {
   return out;
 }
 
+/** eqlwiki page for a zone. Titles are the plain zone name with underscores
+ *  ("Lower Guk" -> Lower_Guk), which is what the hunting table already
+ *  carries, so no mapping table is needed. */
+function wikiZoneUrl(zone: string) {
+  return `https://eqlwiki.com/index.php/${encodeURIComponent(zone.replace(/ /g, "_"))}`;
+}
+
 /** Gantt of hunting-zone level bands (community Recommended-Levels table):
  *  the advisor's picks highlighted, best remaining at-level zones as context,
- *  a green line at the character's level. */
+ *  a green line at the character's level. Zone names link out to the wiki.
+ *  Note the container is role="group", NOT role="img": an img role makes its
+ *  whole subtree presentational, which would hide those links from assistive
+ *  tech. */
 function HuntChart({ data, picked }: { data: HuntingData; picked: string[] }) {
   const lv = data.level ?? 0;
   const isPicked = (z: string) => picked.some((p) => p.startsWith(z));
@@ -42,7 +52,7 @@ function HuntChart({ data, picked }: { data: HuntingData; picked: string[] }) {
     .slice(0, 8)
     .sort((a, b) => Math.min(...a.levels) - Math.min(...b.levels));
   return (
-    <div className="hunt-gantt" role="img" aria-label={`Level bands of ${rows.length} hunting zones around level ${lv}`}>
+    <div className="hunt-gantt" role="group" aria-label={`Level bands of ${rows.length} hunting zones around level ${lv}`}>
       <div className="hg-row hg-head" aria-hidden="true">
         <span className="hg-label" />
         <div className="hg-track">
@@ -54,7 +64,15 @@ function HuntChart({ data, picked }: { data: HuntingData; picked: string[] }) {
       </div>
       {rows.map((z) => (
         <div key={z.zone} className={`hg-row${isPicked(z.zone) ? " hg-picked" : ""}`}>
-          <span className="hg-label" title={`${z.zone} (levels ${z.band})`}>{z.zone}</span>
+          <a
+            className="hg-label"
+            href={wikiZoneUrl(z.zone)}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`${z.zone} (levels ${z.band}) — open on eqlwiki`}
+          >
+            {z.zone}
+          </a>
           <div className="hg-track">
             {HG_TICKS.map((t) => (
               <i key={t} className="hg-grid" style={{ left: `${hgX(t)}%` }} />
