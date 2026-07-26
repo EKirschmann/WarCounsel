@@ -82,6 +82,8 @@ ZONE_FILES: dict[str, list[str]] = {
     "Castle Mistmoore": ["mistmoore"],
     "Estate of Unrest": ["unrest"],
     "Kedge Keep": ["kedge"],
+    "Sebilis": ["sebilis"],
+    "Temple of Cazic-Thule": ["cazicthule"],
     "Najena": ["najena"],
     "Cazic-Thule": ["cazicthule"],
 }
@@ -172,11 +174,24 @@ ZONE_GRAPH: dict[str, list[str]] = {
 # Difficulty/instance suffixes -- "Befallen 2 (Adaptive)", "Befallen 4 (Refined)"
 # etc. Every difficulty tier uses the same chart as the base zone.
 RE_DIFFICULTY = re.compile(r"\s*\d*\s*\([a-z ]+\)\s*$", re.IGNORECASE)
+# EQL wraps instanced dungeons as "<Zone> Expedition".
+RE_INSTANCE = re.compile(r"\s+Expedition\s*$", re.IGNORECASE)
 
 
 def normalize_zone(name: str) -> str:
-    """'Befallen 4 (Refined)' -> 'Befallen'; 'The Feerrott' -> 'Feerrott'."""
+    """'Befallen 4 (Refined)' -> 'Befallen'; 'The Feerrott' -> 'Feerrott';
+    'New Sebilis Expedition' -> 'New Sebilis'.
+
+    Only DECORATORS come off — difficulty suffix, article, and EQL's
+    "Expedition" instance wrapper. Deliberately no fuzzy/edit-distance
+    matching beyond that: the names most likely to be confused are exactly
+    the near-identical pairs (Upper vs Lower Guk, North vs South Karana,
+    New vs Old Sebilis), so a close-enough match would silently draw the
+    wrong dungeon. Anything past decorators goes in ZONE_ALIASES, by hand.
+    """
     n = RE_DIFFICULTY.sub("", name).strip()
+    n = RE_INSTANCE.sub("", n).strip()
+    n = RE_DIFFICULTY.sub("", n).strip()   # "X Expedition 4 (Refined)"
     if n.lower().startswith("the "):
         n = n[4:]
     return n
@@ -193,8 +208,23 @@ ZONE_ALIASES = {
     "clan crushbone": "Crushbone",
     "clan runnyeye": "Runnyeye",
     "castle mistmoore": "Mistmoore Castle",
-    "estate of unrest": "The Estate of Unrest",
+    # NOT "The Estate of Unrest": normalize_zone() has already dropped the
+    # article, and ZONE_FILES is keyed without it — aiming here at the
+    # "The" form pointed at a nonexistent key and broke the direct hit.
+    "estate of unrest": "Estate of Unrest",
+    # EQL renames the Karanas; the charts keep the classic compass keys
+    "northern plains of karana": "North Karana",
+    "southern plains of karana": "South Karana",
+    "eastern plains of karana": "East Karana",
+    "western plains of karana": "West Karana",
+    # one sebilis.s3d serves every Sebilis the game names
+    "new sebilis": "Sebilis",
+    "old sebilis": "Sebilis",
+    "cazic thule": "Temple of Cazic-Thule",
 }
+
+
+_UNRESOLVED: set = set()
 
 
 def _canonical(name: str) -> Optional[str]:
@@ -206,6 +236,13 @@ def _canonical(name: str) -> Optional[str]:
     for key in set(list(ZONE_FILES) + list(ZONE_GRAPH)):
         if key.lower() == lower:
             return key
+    # Log it once per name. An unresolved zone fails SILENTLY -- the panel
+    # just shows nothing -- so without this a rename ships unnoticed, which
+    # is how "New Sebilis Expedition" went 53 visits with no chart.
+    if lower not in _UNRESOLVED:
+        _UNRESOLVED.add(lower)
+        logger.info("No chart/graph key for zone %r (normalized %r) — "
+                    "add it to ZONE_FILES or ZONE_ALIASES", name, n)
     return None
 
 

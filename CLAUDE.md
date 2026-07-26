@@ -343,9 +343,24 @@ throttled `state` pushes. REST highlights (see main.py for all):
   (they read as phantom ceilings). Ceilings are never extracted.
 - 3D camera: follow mode translates camera + orbit target by the hero's
   delta (user angle/zoom preserved); panning off-target releases the lock.
-- Zone names: `normalize_zone()` strips EQL instance suffixes ("Befallen 4
-  (Refined)" → "Befallen"). New zone = `ZONE_FILES` (+ `ZONE_ALIASES`,
-  `ZONE_GRAPH` adjacency) in map_system.py.
+- Zone names: `normalize_zone()` strips DECORATORS only — difficulty suffix
+  ("Befallen 4 (Refined)"), leading article, and EQL's "Expedition" instance
+  wrapper ("New Sebilis Expedition" → "New Sebilis"). New zone = `ZONE_FILES`
+  (+ `ZONE_ALIASES`, `ZONE_GRAPH` adjacency) in map_system.py.
+  - **Deliberately NO fuzzy/edit-distance matching.** The names most likely
+    to be confused are exactly the near-identical pairs — Upper vs Lower
+    Guk, North vs South Karana, New vs Old Sebilis — so a close-enough
+    match silently draws the WRONG dungeon. Anything past decorator
+    stripping goes in ZONE_ALIASES by hand.
+  - An alias must point at a key that EXISTS and is spelled the way
+    `normalize_zone()` leaves it. "estate of unrest" → "The Estate of
+    Unrest" pointed at a nonexistent key (the article is already stripped)
+    and suppressed the direct hit that would otherwise have worked.
+  - `_canonical()` logs an unresolved zone once. A miss fails SILENTLY —
+    the panel just shows nothing — which is how New Sebilis Expedition went
+    53 visits with no chart while sebilis.txt/.s3d sat in the game folder.
+    Re-audit after a patch by counting "You have entered" names from a real
+    log through `load_map`.
 - Routing (`find_route_ex`, /api/route): walk edges + NAVAL TRANSLOCATOR
   dock cliques (any dock -> any dock on the route, one hop; boats do not
   exist on EQL) + druid/wizard PORT RITUALS as jump-from-anywhere edges
@@ -688,7 +703,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v1.15.0**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.0.1**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
 builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**

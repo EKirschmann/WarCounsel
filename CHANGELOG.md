@@ -4,6 +4,49 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.0.1 — 2026-07-25
+
+**Zones that never drew a map.** An audit of every "You have entered"
+name in a real 90MB log found 9 of 38 resolved to nothing — the panel
+just showed blank, with no error. New Sebilis Expedition was the worst:
+53 visits, no chart, though `sebilis.txt` and `sebilis.s3d` were sitting
+in the game folder the whole time. Also fixed: Temple of Cazic-Thule,
+the Karana plains under their EQL names, and the Estate of Unrest —
+whose alias pointed at a key that did not exist and so suppressed the
+direct hit that would otherwise have worked. All 38 names now resolve,
+in both the 2D chart and the 3D view.
+
+EQL's `<Zone> Expedition` wrapper is now stripped like a difficulty
+suffix, so future instanced zones resolve without a code change, and an
+unresolved zone logs itself once instead of failing silently.
+
+**The overlay shows what you choose.** Every section switches off, and
+every field inside one — keep the kill count, drop the coin; keep
+cooldowns, drop the buffs you refreshed. Presets: Everything, Combat
+focus, Meter only. Changes reach a running overlay in about half a
+second. Timers are now depleting tracks coloured by kind, and an
+expiring one washes the whole row red.
+
+**Settings no longer steals the caret.** The panel re-focused the game
+folder several times a second, so clicking anything else bounced you
+back to the path field.
+
+**Advisor corrections.** Pet weapons were ranked by damage/delay ratio;
+pets keep their own attack delay, so ratio means nothing to them — a
+weapon's damage counts only when it beats the pet's innate hit, while
+procs apply either way. AA counsel now prefers General/Archetype ranks
+(bought once, kept in every combo) and never spends points on
+achievement-granted ones.
+
+**Zone names link to the wiki** from the leveling chart and the hunting
+picks. The gear-farm list links to a wiki *search* instead, because
+those names are not gated against the zone table.
+
+**The hunting table now ships with the app.** Previously fetched live
+only; when that failed the location verifier silently switched off and
+passed unchecked zone picks through. A packaged .exe with no network hit
+that on every consult.
+
 ## v2.0.0 — 2026-07-25 — now **WarCounsel**
 
 Renamed, in time for EverQuest Legends' launch on July 28.
