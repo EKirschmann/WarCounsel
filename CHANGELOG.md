@@ -4,6 +4,21 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## Unreleased
+
+**Mac and Linux.** Neither has a native EQL client, so people play under
+Wine — CrossOver, Whisky or osxEQL on a Mac; Lutris, Bottles or plain
+Wine on Linux. From the host side a bottle is just a folder, so the
+combat log is a normal file and the tailer reads it directly.
+
+The game folder is found automatically across all of those layouts, and
+`start_companion.sh` runs the app on both platforms. The overlay and
+screen-OCR stay Windows-only; play windowed with the browser beside the
+game. Everything else is the same build.
+
+Untested on real hardware — verified against each bottle layout by
+construction. If yours is not found, an issue with the path fixes it.
+
 ## v2.0.1 — 2026-07-26
 
 **Zones that never drew a map.** An audit of every "You have entered"

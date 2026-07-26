@@ -639,6 +639,39 @@ MediaWiki api.php → text in the same line-per-cell shape) when it is absent
 failed fetches are not cached. Melee classes have no Spells section on
 their wiki page — expected, not a parser bug.
 
+## Mac and Linux (Wine)
+
+There is no native EQL client on either, so players run it under Wine —
+CrossOver/Whisky/osxEQL on macOS, Lutris/Bottles/plain wine on Linux. This
+costs less than it sounds: **a bottle is an ordinary directory from the
+host**, so the log is a normal file and the tailer, parser, byte offsets
+and cp1252 decode all work untouched. We never talk to Wine.
+
+- **The layout below the bottle is IDENTICAL to Windows.** Windows
+  `G:\Daybreak Game Company\Installed Games\EverQuest Legends` vs macOS
+  `<prefix>/drive_c/users/Public/Daybreak Game Company/Installed Games/
+  EverQuest Legends` — same tail, so `Logs/` and `maps/` derive exactly as
+  before and only the ROOT has to be found.
+- `config.detect_game_dir()` = registry (Windows) → `_wine_game_dir()`.
+  The probe list is `$WINEPREFIX`, osxEQL's `prefix` **and `prefix-cx`**
+  (their launcher falls back to the latter when `prefix` has no
+  `system.reg`, and one machine can have both), CrossOver and Whisky
+  bottles, Lutris `~/Games`, flatpak Bottles, plain `~/.wine`, and Steam
+  Proton. Each is joined with the tails above and confirmed by an
+  `eqclient.ini`/`eqgame.exe`/`Logs` probe, so an empty folder never wins.
+  Paths per sowoky/osxEQL `engine/lib.sh`.
+- **`game_running()` must match the COMMAND LINE off Windows.** Under Wine
+  the process name is wine/wine64-preloader; matching `eqgame.exe` by name
+  would always report "not running" and mis-drive the `/log on` banner.
+  Same technique as osxEQL's own `pgrep -f` health check.
+- The overlay and OCR stay Windows-only and are never imported by the
+  server (the overlay is a CHILD PROCESS via `child_command()`), which is
+  the reason the rest ports for free. Do not import either from main.py.
+- No packaged build for these platforms on purpose: an unsigned .app needs
+  `xattr -dr com.apple.quarantine` before it opens — right-click→Open no
+  longer reliably bypasses Gatekeeper — which is a worse first run than
+  `git clone`. `start_companion.sh` covers both platforms.
+
 ## Configuration (.env — see .env.example for the annotated version)
 
 `EQL_GAME_DIR` is the one path most installs must set; `Logs/`, `maps/`, and

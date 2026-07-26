@@ -126,8 +126,9 @@ for OCR position tracking or to hack on the code.
 
 *(For the .exe you need none of this — just Windows and the game.)*
 
-- **Windows 10/11** (log tailing works anywhere, but OCR position tracking
-  and the overlay are Windows-only)
+- **Windows 10/11**, or **macOS / Linux** running the game under Wine
+  (see [Mac and Linux](#mac-and-linux) — the overlay and OCR are
+  Windows-only there)
 - **Python 3.11+**
 - **Node.js 18+** (serves the web UI)
 - EverQuest Legends with logging enabled (type `/log on` in game once)
@@ -204,6 +205,63 @@ Open **http://localhost:3000**, then in game type:
 | `/loc` | drops a position fix on the Atlas (or enable OCR tracking) |
 
 Then press **check exports** and **Consult** in the Advisor tab.
+
+## Mac and Linux
+
+There is no native EQL client for either, so people play under **Wine** —
+and that turns out to suit this app well. From the host side a Wine bottle
+is an ordinary folder, so the combat log is a normal file: WarCounsel reads
+it directly, without going through Wine at all.
+
+**First get the game running**, using whichever the community recommends:
+
+| macOS | Linux |
+|---|---|
+| [osxEQL](https://github.com/sowoky/osxEQL) — free, open-source Wine + Metal | [Lutris](https://lutris.net) |
+| [CrossOver](https://www.codeweavers.com/crossover) — paid, commercially supported Wine | [Bottles](https://usebottles.com) |
+| [Whisky](https://getwhisky.app) | plain `wine` in `~/.wine` |
+
+**Then run WarCounsel from source:**
+
+```bash
+git clone https://github.com/EKirschmann/WarCounsel.git
+cd WarCounsel
+./start_companion.sh          # add "dev" for hot reload
+```
+
+You need Python 3.11+ and Node 20+ (`brew install python node`, or your
+distro's packages). Everything else is handled on first run.
+
+The game folder is found automatically in the usual bottle locations —
+osxEQL's `prefix` and `prefix-cx`, CrossOver and Whisky bottles, Lutris
+under `~/Games`, Bottles, and plain `~/.wine`. If yours lives somewhere
+else, point at it and skip the guessing:
+
+```bash
+EQL_GAME_DIR="$WINEPREFIX/drive_c/users/Public/Daybreak Game Company/Installed Games/EverQuest Legends"   ./start_companion.sh
+```
+
+Then `/log on` in game, exactly as on Windows.
+
+### What you do not get
+
+- **No in-game overlay.** It relies on Win32 click-through windows, global
+  hotkeys and a tray icon; macOS has no Scroll Lock key and will not
+  reliably draw over a fullscreen Wine game anyway. **Run the game
+  windowed** and keep the browser beside it — that is the intended shape
+  here.
+- **No screen-OCR position feed.** Typing `/loc` still plots you on the
+  Atlas; only the automatic tracking is missing.
+- **No packaged download.** Run from source. An unsigned Mac app would
+  need `xattr -dr com.apple.quarantine` before it would open, which is a
+  worse first run than `git clone`.
+
+Everything else is the same build: HUD, War Ledger, encounters, Atlas 2D
+and 3D, the Advisor, sessions and settings.
+
+> Tested by construction against every bottle layout above, but not yet on
+> real hardware — if the game folder is not found on yours, please open an
+> issue with the path and it will be a one-line fix.
 
 ## Updating
 

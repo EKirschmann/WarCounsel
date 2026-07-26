@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from backend.agent.advisor import generate_advice, generate_gear_advice
 from backend.agent.graph import get_agent
 from backend.agent.state import AgentState, ProfileData
-from backend.config import _registry_game_dir, settings
+from backend.config import detect_game_dir, settings
 from backend.game_data import hunting_candidates, spell_classes
 from backend import session_state
 from backend.geometry_system import geometry3d_for_zone, geometry_for_zone
@@ -1017,7 +1017,7 @@ async def api_settings_get():
     from backend.secrets_store import which_are_set
     return {
         "game": _describe_game_dir(settings.eql_game_dir),
-        "detected_game_dir": _registry_game_dir(),
+        "detected_game_dir": detect_game_dir(),
         "data_dir": str(data_dir().resolve()),
         "packaged": is_frozen(),
         "llm": {

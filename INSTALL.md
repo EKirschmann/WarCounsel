@@ -16,6 +16,9 @@ touches game files, never injects, never automates anything in-game.
 
 ---
 
+> **On a Mac or Linux?** Both options below are Windows-only. Skip to
+> [Mac and Linux](#mac-and-linux) at the end of this guide.
+
 ## Which download do I want?
 
 There are two. Pick one.
@@ -272,3 +275,73 @@ the War Ledger within a second.
 | Antivirus quarantines something | Restore it and add it to exclusions. The full install is plain readable Python/JavaScript; the .exe is a packed Python build, which scanners flag by pattern fairly often |
 | The .exe starts and nothing appears | Open the `data` folder next to it and read the end of `companion.log` — it records exactly what failed |
 | Something else (full install) | Close the black window, run **start_companion.bat** again, and read the last lines it prints — they usually say exactly what's missing |
+
+---
+
+## Mac and Linux
+
+EverQuest Legends has no Mac or Linux version, so you are already running
+it through **Wine** — CrossOver, Whisky or osxEQL on a Mac; Lutris,
+Bottles or plain Wine on Linux. Get the game working that way first;
+those projects have their own guides and this one cannot help with them.
+
+Once the game runs, WarCounsel is three commands. It reads your combat log
+straight off the disk — Wine is not involved on our side at all.
+
+**1. Install Python and Node**, if you do not have them.
+
+```bash
+# macOS, with Homebrew
+brew install python node
+
+# Debian / Ubuntu
+sudo apt install python3 python3-venv nodejs npm
+```
+
+**2. Download and start it.**
+
+```bash
+git clone https://github.com/EKirschmann/WarCounsel.git
+cd WarCounsel
+./start_companion.sh
+```
+
+The first run takes a couple of minutes while it fetches what it needs.
+After that it opens **http://localhost:3000** by itself.
+
+**3. In the game, type `/log on` once** — then the commands in the table
+under [Day to day](#day-to-day), which are the same on every platform.
+
+### If it cannot find your game
+
+It looks in the usual places automatically. If yours is somewhere else,
+tell it where — the folder is the one containing `eqclient.ini`:
+
+```bash
+EQL_GAME_DIR="/full/path/to/EverQuest Legends" ./start_companion.sh
+```
+
+Inside a bottle that path usually ends
+`.../drive_c/users/Public/Daybreak Game Company/Installed Games/EverQuest Legends`.
+
+### Two things are missing here
+
+**The in-game overlay does not run.** It is built on Windows-only
+plumbing — click-through windows, global hotkeys, a tray icon — and macOS
+will not reliably draw over a fullscreen Wine game regardless. **Play
+windowed and put the browser next to the game**; that is how it is meant
+to be used on these platforms.
+
+**Automatic position tracking does not run** either, because it works by
+reading pixels off the screen. Typing `/loc` still puts you on the map.
+
+Everything else is identical: the live HUD, the damage meter, encounter
+breakdowns, both map views, the Advisor and session history.
+
+### It did not work
+
+Open an issue at
+<https://github.com/EKirschmann/WarCounsel/issues> with your platform, how
+you run the game (CrossOver, Lutris, …) and the path to your game folder.
+Mac and Linux support is new and untested on real hardware, so a bad path
+is the most likely cause and the easiest to fix.

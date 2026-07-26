@@ -1,3 +1,5 @@
+import os
+import sys
 from pathlib import Path
 
 from pydantic import model_validator
@@ -36,6 +38,86 @@ def _registry_game_dir() -> str | None:
             except OSError:
                 continue
     return None
+
+
+# ---------------------------------------------------------------- wine bottles
+# There is no native Mac or Linux client: people play EQL under Wine, so the
+# game lives inside a bottle that looks like a normal folder from the host.
+# Everything below "Daybreak Game Company" is IDENTICAL to a Windows install,
+# so only the root has to be found -- Logs/ and maps/ still derive as usual.
+#
+# Paths per sowoky/osxEQL (engine/lib.sh) and the Lutris/Bottles defaults.
+_WINE_TAILS = (
+    "users/Public/Daybreak Game Company/Installed Games/EverQuest Legends",
+    "Daybreak Game Company/Installed Games/EverQuest Legends",
+    "Program Files/Daybreak Game Company/Installed Games/EverQuest Legends",
+    "Program Files (x86)/Daybreak Game Company/Installed Games/EverQuest Legends",
+)
+
+
+def _looks_like_eql(d: Path) -> bool:
+    """A real install, not an empty folder the installer left behind."""
+    return d.is_dir() and (
+        (d / "eqclient.ini").is_file()
+        or (d / "eqgame.exe").is_file()
+        or (d / "Logs").is_dir())
+
+
+def _drive_c_roots() -> list[Path]:
+    """Candidate drive_c directories, best guess first."""
+    home = Path.home()
+    roots: list[Path] = []
+
+    env_prefix = os.environ.get("WINEPREFIX")
+    if env_prefix:
+        roots.append(Path(env_prefix) / "drive_c")
+
+    if sys.platform == "darwin":
+        # osxEQL keeps a back-compat "prefix-cx" beside "prefix"; a machine
+        # that installed early can have BOTH, and only one is real.
+        osx_home = Path(os.environ.get("OSXEQL_HOME")
+                        or home / "Library/Application Support/osxEQL")
+        roots += [osx_home / "prefix" / "drive_c",
+                  osx_home / "prefix-cx" / "drive_c"]
+        # CrossOver (CodeWeavers' commercial Wine) and Whisky name bottles
+        # freely, so these are globs rather than fixed paths.
+        roots += sorted((home / "Library/Application Support/CrossOver/Bottles")
+                        .glob("*/drive_c"))
+        roots += sorted((home / "Library/Containers"
+                         "/com.isaacmarovitz.Whisky/Bottles").glob("*/drive_c"))
+    elif sys.platform.startswith("linux"):
+        roots.append(home / ".wine" / "drive_c")
+        # Lutris installs each game to its own prefix under ~/Games by default
+        roots += sorted((home / "Games").glob("*/drive_c"))
+        roots += sorted((home / "Games").glob("*/*/drive_c"))
+        # Flatpak Lutris and Bottles keep theirs inside the sandbox
+        roots += sorted((home / ".var/app/net.lutris.Lutris/data/lutris")
+                        .glob("*/drive_c"))
+        roots += sorted((home / ".var/app/com.usebottles.bottles"
+                         "/data/bottles/bottles").glob("*/drive_c"))
+        # Steam Proton, harmless if EQL is never shipped there
+        roots += sorted((home / ".steam/steam/steamapps/compatdata")
+                        .glob("*/pfx/drive_c"))
+    return roots
+
+
+def _wine_game_dir() -> str | None:
+    """EQL inside a Wine bottle (macOS / Linux). None when nothing matches."""
+    seen: set = set()
+    for root in _drive_c_roots():
+        if root in seen or not root.is_dir():
+            continue
+        seen.add(root)
+        for tail in _WINE_TAILS:
+            candidate = root / tail
+            if _looks_like_eql(candidate):
+                return str(candidate)
+    return None
+
+
+def detect_game_dir() -> str | None:
+    """Where EQL is installed, however this machine runs it."""
+    return _registry_game_dir() or _wine_game_dir()
 
 
 class Settings(BaseSettings):
@@ -77,12 +159,13 @@ class Settings(BaseSettings):
                 setattr(self, _field, _value)
         game = Path(self.eql_game_dir)
         if not game.is_dir():
-            # custom install path: the Daybreak uninstall registry key
-            # names the real dir — zero-config discovery (Windows only)
-            reg = _registry_game_dir()
-            if reg:
-                self.eql_game_dir = reg
-                game = Path(reg)
+            # custom install path: the Daybreak uninstall registry key on
+            # Windows, else a Wine bottle on macOS/Linux — zero-config either
+            # way, since the layout below the bottle is identical.
+            found = detect_game_dir()
+            if found:
+                self.eql_game_dir = found
+                game = Path(found)
         if not self.eql_log_dir:
             self.eql_log_dir = str(game / "Logs")
         if not self.eql_maps_dir:

@@ -17,6 +17,7 @@ Both lookups are cached: _sync_hints() runs on every snapshot (~6/s) and
 neither a file read nor a process scan belongs on that path.
 """
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import Optional
@@ -26,6 +27,7 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 GAME_PROCESS = "eqgame.exe"
+GAME_STEM = "eqgame"      # what survives into a Wine command line
 _INI_NAME = "eqclient.ini"
 
 _ini_cache: dict = {"path": None, "mtime": None, "value": None}
@@ -65,7 +67,14 @@ def logging_enabled() -> Optional[bool]:
 
 
 def game_running() -> bool:
-    """Is eqgame.exe alive? Cached 5s — process scans are not free."""
+    """Is the game alive? Cached 5s — process scans are not free.
+
+    Under Wine (every Mac and Linux install: there is no native client) the
+    process NAME is wine/wine64-preloader, not eqgame.exe — only the command
+    line carries it. So off Windows we scan cmdline instead, the same way
+    osxEQL's own health check uses `pgrep -f`. Matching by name there would
+    silently always report "not running", which drives the /log on banner.
+    """
     now = time.monotonic()
     if now - _proc_cache["checked"] <= 5.0:
         return _proc_cache["running"]
@@ -73,9 +82,14 @@ def game_running() -> bool:
     running = False
     try:
         import psutil
-        running = any(
-            p.info["name"] and p.info["name"].lower() == GAME_PROCESS
-            for p in psutil.process_iter(["name"]))
+        if sys.platform == "win32":
+            running = any(
+                p.info["name"] and p.info["name"].lower() == GAME_PROCESS
+                for p in psutil.process_iter(["name"]))
+        else:
+            running = any(
+                any(GAME_STEM in (a or "").lower() for a in (p.info["cmdline"] or ()))
+                for p in psutil.process_iter(["cmdline"]))
     except Exception:
         running = False
     _proc_cache["running"] = running
