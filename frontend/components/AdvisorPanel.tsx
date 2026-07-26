@@ -32,8 +32,48 @@ function hgSegments(levels: number[]): Array<[number, number]> {
 /** eqlwiki page for a zone. Titles are the plain zone name with underscores
  *  ("Lower Guk" -> Lower_Guk), which is what the hunting table already
  *  carries, so no mapping table is needed. */
+/** The wiki title for a zone. Advisor picks arrive carrying their level
+ *  band ("Upper Guk (5-30)"), which is worth showing but is not part of the
+ *  page name -- linking it verbatim 404s on every pick. Strip one trailing
+ *  parenthetical; the label itself keeps it. */
+function zoneTitle(zone: string) {
+  return zone.replace(/\s*\([^()]*\)\s*$/, "").trim();
+}
+
 function wikiZoneUrl(zone: string) {
-  return `https://eqlwiki.com/index.php/${encodeURIComponent(zone.replace(/ /g, "_"))}`;
+  const t = zoneTitle(zone);
+  return `https://eqlwiki.com/index.php/${encodeURIComponent(t.replace(/ /g, "_"))}`;
+}
+
+/** Wiki SEARCH rather than a page. For zone names we have not verified,
+ *  a search always resolves; a direct page link would dead-end whenever
+ *  the name is slightly off. */
+function wikiSearchUrl(term: string) {
+  return `https://eqlwiki.com/index.php?search=${encodeURIComponent(term)}`;
+}
+
+/** A zone name that links out to the wiki.
+ *  `verified` distinguishes the two sources we have: hunting picks survive
+ *  _gate_locations() against the community table, so their names are real
+ *  and get a page link. Gear-farm zones are raw model output with no zone
+ *  gate, so they get a search link instead of a link we cannot stand
+ *  behind. */
+function ZoneLink({ zone, verified = true }: { zone: string; verified?: boolean }) {
+  return (
+    <a
+      className="zone-link"
+      href={verified ? wikiZoneUrl(zone) : wikiSearchUrl(zoneTitle(zone))}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={
+        verified
+          ? `${zoneTitle(zone)} — open on eqlwiki`
+          : `Search eqlwiki for ${zoneTitle(zone)}`
+      }
+    >
+      {zone}
+    </a>
+  );
 }
 
 /** Gantt of hunting-zone level bands (community Recommended-Levels table):
@@ -676,7 +716,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                 <ul className="adv-list">
                   {advice.locations.map((l) => (
                     <li key={l.zone}>
-                      <strong>{l.zone}</strong>
+                      <strong><ZoneLink zone={l.zone} /></strong>
                       <br />
                       {l.why}
                       {l.notable && (
@@ -920,7 +960,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                         {f.zone && (
                           <>
                             {" — "}
-                            {f.zone}
+                            <ZoneLink zone={f.zone} verified={false} />
                             {f.source ? ` · ${f.source}` : ""}
                           </>
                         )}

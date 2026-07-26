@@ -1356,6 +1356,14 @@ a.hg-label { text-decoration: none; }
 a.hg-label:hover,
 a.hg-label:focus-visible { color: var(--gold-bright); text-decoration: underline; }
 a.hg-label:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* Zone names that link to the wiki, outside the Gantt. Inherit their
+   surrounding colour so a linked zone in a list still reads as the list's
+   own text, not as chrome. */
+a.zone-link { color: inherit; text-decoration: none; }
+a.zone-link:hover,
+a.zone-link:focus-visible { color: var(--gold-bright); text-decoration: underline; }
+a.zone-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .hg-track {
   position: relative;
   height: 16px;
