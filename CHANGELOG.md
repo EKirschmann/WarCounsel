@@ -4,6 +4,14 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## Unreleased
+
+The Atlas links out to **eqltools' whole-world atlas**, which shows every
+zone connected in 3D with coordinate lookup. Ours tracks where you are
+inside a zone; that one is for planning where to go, so the two answer
+different questions and the link sits beside the route finder rather than
+competing with it.
+
 ## v2.1.0 — 2026-07-27
 
 **Mac and Linux.** Neither has a native EQL client, so people play under

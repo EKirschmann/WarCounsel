@@ -624,6 +624,22 @@ export const AtlasPanel = memo(function AtlasPanel({
         </button>
       </form>
 
+      {/* Outbound, so it sits apart from Route/Recenter rather than becoming
+          a fourth button that looks like it acts on this chart. Ours tracks
+          where you ARE; theirs is for planning where to go. */}
+      <div className="atlas-external">
+        <a
+          href="https://eqltools.com/atlas?world=1"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Whole-world atlas at eqltools — opens in a new tab"
+        >
+          Whole-world atlas at eqltools
+          <span aria-hidden="true"> ↗</span>
+        </a>
+        <span className="atlas-external-hint">every zone in 3D, with coords</span>
+      </div>
+
       <div className="geo-bar">
         <div className="geo-toggle" role="tablist" aria-label="Map source">
           <button

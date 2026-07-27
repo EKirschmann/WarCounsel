@@ -655,6 +655,36 @@ body {
 .route-bar button:hover:not(:disabled) { background: rgba(200, 170, 110, 0.12); }
 .route-bar button:disabled { opacity: 0.4; cursor: default; }
 
+/* Outbound link under the route bar. Deliberately quieter than the route
+   controls above it: it leaves the app, so it must not read as an action
+   on this chart. */
+.atlas-external {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--hairline-dim);
+}
+.atlas-external a {
+  color: var(--muted);
+  font-family: var(--font-body), sans-serif;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.atlas-external a:hover,
+.atlas-external a:focus-visible { color: var(--gold); text-decoration: underline; }
+.atlas-external a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.atlas-external-hint {
+  color: var(--muted);
+  font-size: 11px;
+  opacity: 0.75;
+}
+@media (max-width: 620px) {
+  .atlas-external-hint { display: none; }
+}
+
 .route-chips {
   display: flex;
   flex-wrap: wrap;
