@@ -460,3 +460,27 @@ export interface LlmInfo {
   options?: LlmOption[];
   openai_key_set: boolean;
 }
+
+export interface RouteStep {
+  zone: string;
+  /** null on the first step; "walk", "naval translocator", or "<class> ritual: <spell>". */
+  via: string | null;
+  /** set only on a port step — the earliest level that class reaches the zone. */
+  level: number | null;
+}
+
+export interface RouteVariant {
+  via: "druid" | "wizard";
+  steps: RouteStep[];
+  saves: number | null;
+  level: number | null;
+  spell: string | null;
+}
+
+export interface RouteReply {
+  path: string[] | null;
+  reason?: string;
+  steps?: RouteStep[];
+  walk?: RouteStep[];
+  variants?: RouteVariant[];
+}

@@ -130,6 +130,8 @@ ZONE_GRAPH: dict[str, list[str]] = {
     "Lower Guk": ["Upper Guk"],
     "Southern Desert of Ro": ["Innothule Swamp", "Oasis of Marr"],
     "Oasis of Marr": ["Southern Desert of Ro", "Northern Desert of Ro"],
+    "Stonebrunt Mountains": ["Toxxulia Forest"],
+    "Temple of Cazic-Thule": ["Feerrott"],
     "Northern Desert of Ro": ["Oasis of Marr", "East Commonlands",
                               "New Sebilis Expedition"],
     # its wiki page: one entrance, in the northwest of Northern Ro
@@ -177,6 +179,25 @@ ZONE_GRAPH: dict[str, list[str]] = {
     "Paineel": ["Toxxulia Forest"],
     "Kerra Isle": ["Toxxulia Forest", "Erud's Crossing"],
 }
+
+# The graph is UNDIRECTED in intent -- every zone connection can be walked
+# both ways -- but it is written as an adjacency dict, so a hand-added entry
+# easily lists one side only. All 150 original edges were symmetric; the two
+# added in 2026-07 (Stonebrunt, Temple of Cazic-Thule) were not, and produced
+# one-way doors that routed IN but never OUT. Symmetrising at import makes
+# that class of typo impossible rather than merely unlikely.
+def _symmetrise(graph: dict) -> dict:
+    for a, neighbours in list(graph.items()):
+        for b in neighbours:
+            graph.setdefault(b, [])
+            if a not in graph[b]:
+                graph[b].append(a)
+                logger.debug("ZONE_GRAPH: added missing reverse edge %s -> %s", b, a)
+    return graph
+
+
+_symmetrise(ZONE_GRAPH)
+
 
 # Difficulty/instance suffixes -- "Befallen 2 (Adaptive)", "Befallen 4 (Refined)"
 # etc. Every difficulty tier uses the same chart as the base zone.
@@ -235,6 +256,14 @@ ZONE_ALIASES = {
     # unresolved (and logged) until someone reports real coordinates.
     "old sebilis": "Old Sebilis",
     "cazic thule": "Temple of Cazic-Thule",
+    # spell descriptions name zones their own way; these are the forms
+    # the druid/wizard port text uses
+    "western commonlands": "West Commonlands",
+    "commonlands": "West Commonlands",
+    "south desert of ro": "Southern Desert of Ro",
+    "northern plains of karana": "North Karana",
+    "western plains of karana": "West Karana",
+    "eastern plains of karana": "East Karana",
 }
 
 
@@ -384,22 +413,74 @@ PORT_SPELLS: dict[str, dict[str, str]] = {
 }
 
 
+# Destinations are MINED from the eqlbuilds snapshot rather than hand-listed,
+# because the hand list drifted: it said "Circle of Butcher" (no such spell)
+# and "Ro Portal" for what the game calls North Ro Portal. Mining also gets
+# the level for free, and picks the EARLIEST spell reaching each zone --
+# the self-only Ring/Gate lands ~9 levels before the group Circle/Portal
+# (druid Butcherblock: Ring 16 vs Circle 25), and "when can I get there"
+# is answered by the earlier one.
+_DEST_RE = re.compile(
+    r"(?:transports?|teleports?)\s+(?:you|your group|your entire group|your target)"
+    r"\s+to\s+(?:the\s+)?([A-Z][^.,]*)", re.IGNORECASE)
+_PORT_CACHE: dict = {}
+
+
+def port_options(cls: str) -> dict:
+    """{zone: {"spell", "level"}} a class can ritual-port to, earliest first.
+
+    Falls back to the static PORT_SPELLS (levels unknown) when the builds
+    snapshot is absent, which is the no-MCP-clone case.
+    """
+    key = str(cls).lower()
+    if key in _PORT_CACHE:
+        return _PORT_CACHE[key]
+    out: dict = {}
+    try:
+        from backend.builds_data import class_spells
+        for s in class_spells(key.capitalize()) or []:
+            desc = s.get("description") or ""
+            # gate/evac go somewhere the router cannot predict
+            if any(k in desc for k in ("bind point", "relatively safe",
+                                       "current zone")):
+                continue
+            m = _DEST_RE.search(desc)
+            if not m:
+                continue
+            zone = _canonical(m.group(1).strip())
+            if not zone or zone not in ZONE_GRAPH:
+                continue
+            lvl = s.get("level") or 99
+            if zone not in out or lvl < out[zone]["level"]:
+                out[zone] = {"spell": s.get("name") or "", "level": lvl}
+    except Exception:
+        logger.exception("port_options(%s) failed; using the static table", cls)
+    if not out:
+        out = {z: {"spell": sp, "level": None}
+               for z, sp in PORT_SPELLS.get(key, {}).items() if z in ZONE_GRAPH}
+    _PORT_CACHE[key] = out
+    return out
+
+
 def find_route_ex(frm: str, to: str,
                   port_classes: tuple = ()) -> Optional[list[dict]]:
     """Labeled BFS over walk edges + translocator dock cliques + (when
     the trio can ritual-cast them) druid/wizard port jumps from any
-    zone. Returns [{"zone", "via"}]; via is None for the start."""
+    zone. Returns [{"zone", "via", "level"}]; via is None for the start
+    and level is set only on a port step, being the earliest level the
+    class can reach that zone."""
     start, goal = _canonical(frm), _canonical(to)
     if (not start or not goal or start not in ZONE_GRAPH
             or goal not in ZONE_GRAPH):
         return None
     if start == goal:
-        return [{"zone": start, "via": None}]
-    port_jumps: dict[str, str] = {}
+        return [{"zone": start, "via": None, "level": None}]
+    port_jumps: dict[str, tuple] = {}
     for cls in port_classes:
-        for z, spell in PORT_SPELLS.get(str(cls).lower(), {}).items():
-            if z in ZONE_GRAPH and z not in port_jumps:
-                port_jumps[z] = f"{cls} port ritual: {spell}"
+        for z, opt in port_options(cls).items():
+            if z in port_jumps:
+                continue
+            port_jumps[z] = (f"{cls} ritual: {opt['spell']}", opt["level"])
     clique_of: dict[str, set] = {}
     for cl in TRANSLOCATOR_CLIQUES:
         present = [z for z in cl if z in ZONE_GRAPH]
@@ -407,18 +488,21 @@ def find_route_ex(frm: str, to: str,
             clique_of.setdefault(z, set()).update(
                 p for p in present if p != z)
     seen = {start}
-    queue: deque[list[dict]] = deque([[{"zone": start, "via": None}]])
+    queue: deque[list[dict]] = deque([[{"zone": start, "via": None,
+                                        "level": None}]])
     while queue:
         path = queue.popleft()
         cur = path[-1]["zone"]
         neigh = [(n, "walk") for n in ZONE_GRAPH.get(cur, [])]
         neigh += [(n, "naval translocator")
                   for n in sorted(clique_of.get(cur, ()))]
-        neigh += list(port_jumps.items())
-        for n, via in neigh:
+        neigh += [(n, v[0], v[1]) for n, v in port_jumps.items()]
+        for entry in neigh:
+            n, via = entry[0], entry[1]
+            lvl = entry[2] if len(entry) > 2 else None
             if n in seen:
                 continue
-            step = {"zone": n, "via": via}
+            step = {"zone": n, "via": via, "level": lvl}
             if n == goal:
                 return path + [step]
             seen.add(n)

@@ -685,6 +685,32 @@ body {
   .atlas-external-hint { display: none; }
 }
 
+/* Walk route plus druid/wizard variants. The variants are indented and
+   dimmer: they are the same trip, shortened, not separate destinations. */
+.route-block { border-bottom: 1px solid var(--hairline-dim); }
+.route-block .route-chips { border-bottom: none; padding-bottom: 4px; }
+.route-block .route-chips:last-child { padding-bottom: 8px; }
+.route-alt { padding-left: 22px; opacity: 0.86; }
+.route-tag {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 6px;
+  flex: none;
+}
+/* the two porting classes keep their EQ colours, matching the meter */
+.route-tag[data-cls="druid"] { color: #c89a3e; }
+.route-tag[data-cls="wizard"] { color: #5f7fd4; }
+.route-lvl { color: var(--gold); font-size: 0.92em; }
+.route-saves {
+  margin-left: 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--heal, #1fb38c);
+  flex: none;
+}
+
 .route-chips {
   display: flex;
   flex-wrap: wrap;

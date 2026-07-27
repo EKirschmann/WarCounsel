@@ -1504,7 +1504,29 @@ async def get_route(to: str, frm: Optional[str] = None,
     if steps is None:
         return {"path": None,
                 "reason": f"No known route from {normalize_zone(start)} to {normalize_zone(to)}"}
-    return {"path": [s["zone"] for s in steps], "steps": steps}
+
+    # The walk route answers "how do I get there on foot". The port variants
+    # answer "how much shorter once someone in the group can cast it", which
+    # is the question that actually gets asked, since ritual ports persist
+    # once leveled. Shown only when they beat walking -- an identical list
+    # under two headings is noise.
+    walk = find_route_ex(start, to, ())
+    variants = []
+    for cls in ("druid", "wizard"):
+        alt = find_route_ex(start, to, (cls,))
+        if not alt or (walk and len(alt) >= len(walk)):
+            continue
+        port = next((s for s in alt if s.get("level")), None)
+        variants.append({
+            "via": cls,
+            "steps": alt,
+            "saves": (len(walk) - len(alt)) if walk else None,
+            # the gating level: you need this before the shortcut exists
+            "level": port["level"] if port else None,
+            "spell": (port["via"].split(": ", 1)[-1] if port else None),
+        })
+    return {"path": [s["zone"] for s in steps], "steps": steps,
+            "walk": walk, "variants": variants}
 
 
 @app.get("/api/chat/history")

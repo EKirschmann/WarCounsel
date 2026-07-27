@@ -4,7 +4,9 @@ import { FormEvent, memo, useCallback, useEffect, useRef, useState } from "react
 import { apiGet, apiSend } from "@/lib/api";
 import { makeCadence, prefersReducedMotion } from "@/lib/glide";
 import { Atlas3D } from "@/components/Atlas3D";
-import type { GeometryFloor, MapData, Position, ZoneGeometry } from "@/lib/types";
+import type {
+  GeometryFloor, MapData, Position, RouteReply, RouteStep, RouteVariant, ZoneGeometry,
+} from "@/lib/types";
 
 interface OcrStatus {
   deps_ok: boolean;
@@ -194,6 +196,22 @@ function renderMapLayer(
   return c;
 }
 
+/** One route rendered as chips. A step carrying a level was reached by a
+ *  port ritual, so that level is the gate on using this line at all. */
+function RouteSteps({ steps }: { steps: RouteStep[] }) {
+  return (
+    <>
+      {steps.map((s, i) => (
+        <span key={s.zone} className="route-chip" data-last={i === steps.length - 1}>
+          {s.zone}
+          {s.level ? <span className="route-lvl" title={s.via ?? ""}> ({s.level})</span> : null}
+          {i < steps.length - 1 && <span className="route-arrow"> ▸ </span>}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export const AtlasPanel = memo(function AtlasPanel({
   zone,
   position,
@@ -222,7 +240,8 @@ export const AtlasPanel = memo(function AtlasPanel({
   const [map, setMap] = useState<MapData | null>(null);
   const [zones, setZones] = useState<string[]>([]);
   const [dest, setDest] = useState("");
-  const [route, setRoute] = useState<string[] | null>(null);
+  const [route, setRoute] = useState<RouteStep[] | null>(null);
+  const [variants, setVariants] = useState<RouteVariant[]>([]);
   const [routeMsg, setRouteMsg] = useState<string | null>(null);
   const [ocr, setOcr] = useState<OcrStatus | null>(null);
   const [ocrHelp, setOcrHelp] = useState(false);
@@ -588,11 +607,15 @@ export const AtlasPanel = memo(function AtlasPanel({
     setRouteMsg(null);
     setRoute(null);
     try {
-      const r = await apiGet<{ path: string[] | null; reason?: string }>(
+      const r = await apiGet<RouteReply>(
         `/api/route?to=${encodeURIComponent(dest.trim())}`,
       );
-      if (r.path) setRoute(r.path);
-      else setRouteMsg(r.reason ?? "No route found.");
+      if (r.path) {
+        setRoute(r.walk ?? r.steps ?? null);
+        setVariants(r.variants ?? []);
+      } else {
+        setRouteMsg(r.reason ?? "No route found.");
+      }
     } catch {
       setRouteMsg("The backend is unreachable.");
     }
@@ -624,6 +647,37 @@ export const AtlasPanel = memo(function AtlasPanel({
         </button>
       </form>
 
+      {route && (
+        <div className="route-block">
+          <div className="route-chips" aria-label="Route on foot">
+            {variants.length > 0 && <span className="route-tag">on foot</span>}
+            <RouteSteps steps={route} />
+            <button
+              className="route-clear"
+              onClick={() => { setRoute(null); setVariants([]); }}
+              aria-label="Clear route"
+            >
+              ×
+            </button>
+          </div>
+          {/* Ritual ports persist once leveled, so a shorter line is worth
+              showing even when nobody can cast it yet — it says what the
+              trip becomes later. Only shown when it beats walking. */}
+          {variants.map((v) => (
+            <div key={v.via} className="route-chips route-alt"
+                 aria-label={`Route using ${v.via} ports`}>
+              <span className="route-tag" data-cls={v.via}>{v.via}</span>
+              <RouteSteps steps={v.steps} />
+              {v.saves ? (
+                <span className="route-saves">
+                  −{v.saves} {v.saves === 1 ? "hop" : "hops"}
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Outbound, so it sits apart from Route/Recenter rather than becoming
           a fourth button that looks like it acts on this chart. Ours tracks
           where you ARE; theirs is for planning where to go. */}
@@ -639,6 +693,7 @@ export const AtlasPanel = memo(function AtlasPanel({
         </a>
         <span className="atlas-external-hint">every zone in 3D, with coords</span>
       </div>
+
 
       <div className="geo-bar">
         <div className="geo-toggle" role="tablist" aria-label="Map source">
@@ -689,19 +744,6 @@ export const AtlasPanel = memo(function AtlasPanel({
         {view === "geo" && !geom && <span className="geo-note">Mining walls from the client…</span>}
       </div>
 
-      {route && (
-        <div className="route-chips" aria-label="Route">
-          {route.map((z, i) => (
-            <span key={z} className="route-chip" data-last={i === route.length - 1}>
-              {z}
-              {i < route.length - 1 && <span className="route-arrow"> ▸ </span>}
-            </span>
-          ))}
-          <button className="route-clear" onClick={() => setRoute(null)} aria-label="Clear route">
-            ×
-          </button>
-        </div>
-      )}
       {routeMsg && <div className="route-msg">{routeMsg}</div>}
 
       {view === "3d" ? (
