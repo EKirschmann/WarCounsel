@@ -4,7 +4,7 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
-## Unreleased
+## v2.1.0 — 2026-07-27
 
 **Mac and Linux.** Neither has a native EQL client, so people play under
 Wine — CrossOver, Whisky or osxEQL on a Mac; Lutris, Bottles or plain
