@@ -4,7 +4,7 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
-## Unreleased
+## v2.1.1 — 2026-07-28
 
 **Routes now show the druid and wizard lines.** Under the walking route,
 each porting class gets its own line with the level you need in parens on
@@ -20,12 +20,16 @@ zone, the vendor, their guild and their coordinates. It also fixes a bug
 that hid the list entirely: the 25-spell cap kept the lowest levels, so
 anyone with a backlog of skipped spells saw nothing at all.
 
+**Launch-day patch.** The new **Void-touched Potential** raid token is
+counted with your motes — it merges the same way but is named nothing
+like one, so it was invisible. Both spellings of the Iksar city resolve
+to its map, since the patch notes and the game disagree. And the advisor
+will no longer suggest spending points on the new autogranted **Unbound**
+AAs, which arrive free at level.
 
-The Atlas links out to **eqltools' whole-world atlas**, which shows every
+**The Atlas links out to eqltools' whole-world atlas**, which shows every
 zone connected in 3D with coordinate lookup. Ours tracks where you are
-inside a zone; that one is for planning where to go, so the two answer
-different questions and the link sits beside the route finder rather than
-competing with it.
+inside a zone; that one is for planning where to go.
 
 ## v2.1.0 — 2026-07-27
 

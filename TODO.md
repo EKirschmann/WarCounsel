@@ -104,6 +104,43 @@ the plan, once post-launch consensus exists.
 
 ---
 
+## Audio triggers
+
+**Status:** requested 2026-07-28. Not started.
+
+Today the only sound the app makes is a single `winsound.MessageBeep` from
+the overlay when a tracked rule fires — one chime for everything, and only
+if the overlay is running. TTS was deliberately left out, pointing people
+at the standalone eql-alerts app for voice callouts.
+
+What "audio triggers" should mean, roughly in order of value:
+
+- **A sound per rule.** `data/tracked_rules.json` already carries `kind`,
+  `pattern`, `enabled` and `sound` (currently a bool). Making `sound` a
+  filename turns one chime into "that was a named spawn" versus "that was
+  a tell" without looking away from the game.
+- **Distinct built-ins.** The summon warning and your name in group/guild/
+  raid chat are the two that already bypass the rules table; they deserve
+  to be distinguishable by ear, since they mean very different things.
+- **Volume, and a mute that survives restart.** Overlay prefs
+  (`overlay_prefs.json`) is the natural home, and the settings panel
+  already renders that schema from the backend.
+- **Optional TTS**, revisiting the earlier decision. Mudmouth shows the
+  local-only shape: Kokoro-FastAPI, nothing leaving the machine. If it is
+  ever added it should stay opt-in and offline by default, and it should
+  not become a reason to duplicate eql-alerts.
+
+**Constraints worth knowing before starting:**
+
+- **The overlay is the only thing that beeps**, on purpose — the browser
+  cannot be relied on to have focus or permission, and two sources would
+  double up. Anything added should keep that single-source rule.
+- `winsound` is **Windows-only**. Now that macOS and Linux are supported,
+  audio needs a per-platform seam (`afplay` / `paplay` / `winsound`), and
+  it must fail soft the way the tray already does.
+- Sound files have to ship or be user-supplied. Bundling a handful means
+  `--add-data` and a CI assertion, exactly like `maps/`.
+
 ## Launch-day patch follow-ups (2026-07-28)
 
 Checked at launch; these are the ones needing real-world data before they
