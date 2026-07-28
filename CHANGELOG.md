@@ -4,7 +4,7 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
-## Unreleased
+## v2.1.5 — 2026-07-28
 
 **Fixed: the app could refuse to start**, with a database error about a
 character name already existing. Character records were keyed by name
