@@ -188,6 +188,10 @@ export interface Snapshot {
   /** Fired tracked-rule alerts (data/tracked_rules.json). */
   alerts?: { id: number; ts: string; kind: string; text: string; sound: boolean }[];
   pet_inventory?: Record<string, string>;
+  /** when the pet list was read; null if never */
+  pet_inventory_at?: string | null;
+  /** read before the game launched — that pet no longer exists */
+  pet_inventory_stale?: boolean;
   name: string;
   server: string;
   level: number | null;

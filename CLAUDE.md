@@ -599,6 +599,15 @@ display**; failing entries are dropped and logged, never shown. The gates
   spell" + log "6 additional" => rank 6). Maxed AAs and already-owned/
   beyond-max ranks are dropped.
 
+- **A pre-launch PET INVENTORY is flagged too.** `pet_inventory` is
+  deliberately NOT cleared on a session roll, because pet gear genuinely
+  survives death and re-summon — only a fresh `/pet inventory check` clears
+  it, and it persists across restarts. That is right within an era and wrong
+  across a wipe: a beta list describes a pet that no longer exists while
+  still gating what the advisor suggests handing over. `_pet_inv_ts` (now
+  persisted) is compared against the launch boundary; the snapshot carries
+  `pet_inventory_stale`, the panel reads "Was holding (BETA)", and the sync
+  hint is urgent.
 - **Pre-launch exports are flagged, not just aged.** `_pre_launch()` compares
   a file's mtime against `settings.eql_launch_iso` (2026-07-28). An export
   from beta is not merely stale: a character need not survive a launch, so

@@ -937,8 +937,20 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                     </div>
                     {held.length > 0 && (
                       <p className="adv-purchase">
-                        <span className="adv-cls">Now holding: </span>
+                        <span className="adv-cls">
+                          {snap?.pet_inventory_stale ? "Was holding (BETA): " : "Now holding: "}
+                        </span>
                         {held.join(" · ")}
+                      </p>
+                    )}
+                    {/* Pet gear survives death and re-summon, so this list is
+                        deliberately kept between sessions — but it does not
+                        survive a wipe, and a beta list describes a pet that no
+                        longer exists while still gating hand-over advice. */}
+                    {snap?.pet_inventory_stale && (
+                      <p className="set-note" data-ok="0">
+                        That list was read before launch — that pet is gone. Run{" "}
+                        <code>/pet inventory check</code> to replace it.
                       </p>
                     )}
                     {recs.length > 0 ? (

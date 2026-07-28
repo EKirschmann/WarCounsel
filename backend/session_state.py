@@ -34,6 +34,9 @@ PERSIST_FIELDS = [
     "encounter_history", "unknown_casts", "loadout_hint", "last_death",
     "mob_stats", "_last_kill", "_pending_xp", "_pending_coin",
     "who_roster", "pet_owners", "pet_inventory", "owned_aas",
+    # WHEN the pet list was read. Without it a beta reading looks
+    # identical to one taken a minute ago.
+    "_pet_inv_ts",
     "spell_casts", "crits", "coin_copper", "rune_absorbed",
     "session_started", "_active_buckets", "_dinged", "loot_count",
     "pending_sessions", "stuns_taken", "overheal", "motes",

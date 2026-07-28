@@ -1090,6 +1090,23 @@ class CharacterTracker:
                 parts.append(f"cast {r['spell']}")
         return "Recently: " + ", ".join(parts) + "."
 
+    def _pet_inv_pre_launch(self) -> bool:
+        """Was the pet list read before the game launched?
+
+        Pet gear legitimately survives death and re-summon, so this is NOT
+        cleared on a session roll — but it does not survive a wipe, and a
+        beta reading describes a pet that no longer exists while still
+        gating what the advisor will suggest handing over.
+        """
+        if not self._pet_inv_ts:
+            return False
+        try:
+            from backend.config import settings
+            return self._pet_inv_ts < datetime.fromisoformat(
+                settings.eql_launch_iso)
+        except (TypeError, ValueError):
+            return False
+
     def _sync_hints(self, book: Optional[dict]) -> list:
         """In-game commands worth running, with why. Rendered in Vitals."""
         hints = []
@@ -1109,6 +1126,12 @@ class CharacterTracker:
         elif not self.has_log:
             hints.append({"command": "/log on",
                           "reason": "No log file found — the companion is blind without one"})
+        if self._pet_inv_pre_launch():
+            hints.append({"command": "/pet inventory check",
+                          "urgent": True,
+                          "reason": "The pet gear list is from BEFORE launch — "
+                                    "that pet is gone, and the advisor is still "
+                                    "gating hand-overs against it"})
         if self.pet_hint:
             hints.append({"command": "/pet leader",
                           "reason": "A summoned pet is unmapped — its damage is "
@@ -1178,6 +1201,9 @@ class CharacterTracker:
             "max_hp": self.max_hp,
             "max_mana": self.max_mana,
             "pet_inventory": dict(self.pet_inventory),
+            "pet_inventory_at": (self._pet_inv_ts.isoformat()
+                                 if self._pet_inv_ts else None),
+            "pet_inventory_stale": self._pet_inv_pre_launch(),
             "loadout_hint": self.loadout_hint,
             "owned_aas": {
                 "distinct": len(self.owned_aas),

@@ -6,6 +6,12 @@ in the app header; update by closing the companion and running
 
 ## Unreleased
 
+**Beta pet gear is called out.** The pet's equipment list is kept between
+sessions on purpose, since pet gear survives death and re-summon — but it
+does not survive a wipe. A list read before launch now says so and asks
+for a fresh `/pet inventory check`, instead of presenting a vanished
+pet's gear as current.
+
 **Fixed: a custom endpoint sent requests to OpenAI.** Settings had no
 field for the endpoint address, so choosing Custom left it empty — and an
 empty address falls through to OpenAI, which answers 401 because your key
