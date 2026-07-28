@@ -612,10 +612,13 @@ whenever the Inventory parse changes.
   - Ollama gets a REAL client, not the `custom` OpenAI shim, because it
     speaks its own protocol. `OLLAMA_BASE_URL`/`OLLAMA_MODEL` exist so it
     can live on another machine — a common setup.
-  - `langchain-ollama` is in requirements.txt but NOT requirements-lite:
-    the packaged exe is deterministic by design. `available()` reports it
-    false there and the panel greys it out, which is the whole point of
-    that probe.
+  - `langchain-ollama` is in BOTH requirements files. The exe carries the
+    LLM clients deliberately (see requirements-lite's own comment) and
+    Ollama is the only keyless one, so it fits a single-file download
+    best. CI now asserts openai/anthropic/local all report available in
+    the packaged build — omitting a client once shipped an exe whose key
+    field could do nothing, and nothing caught it because the advisor
+    falls back silently.
   - It was supported in `get_llm()` from the start yet unreachable until
     2026-07-28: absent from both provider lists AND rejected by
     `POST /api/llm`'s allow-list. If you add a provider, that guard, the

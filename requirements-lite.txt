@@ -26,6 +26,11 @@ pillow>=10.0
 # and counsel falls back to the deterministic advisor.
 langchain-openai>=0.2
 langchain-anthropic>=0.3
+# Ollama. Included for the same reason as the others, and more so: it is
+# the only provider needing NO key and NO account, which is the best fit
+# for the audience that downloads a single .exe. 31 KB plus one small
+# HTTP client -- langchain-core is already here.
+langchain-ollama>=1.0
 # Overlay tray icon. pystray imports its platform backend lazily, so a
 # packaged build also needs --hidden-import pystray._win32.
 pystray>=0.19

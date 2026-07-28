@@ -11,9 +11,10 @@ unreachable — missing from both provider menus and rejected outright by
 the API. Pick "Local — Ollama" in Settings, or set `LLM_PROVIDER=local`.
 The model and server address are fields in Settings — no `.env` editing —
 so it can point at another machine, which is the usual setup when the
-desktop has the GPU and you play on a laptop. Source installs need
-`pip install -r requirements.txt`; the packaged .exe stays deterministic
-by design and shows it greyed out rather than failing quietly.
+desktop has the GPU and you play on a laptop. It works in the packaged **.exe** as well — it is the only provider
+needing no key and no account, which suits a one-file download, so it now
+ships alongside the OpenAI and Anthropic clients. Source installs get it
+from `pip install -r requirements.txt`.
 
 ## v2.1.1 — 2026-07-28
 

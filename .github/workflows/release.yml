@@ -180,6 +180,16 @@ jobs:
             throw "bundled maps missing (New Sebilis Expedition would draw no 2D chart)"
           }
           "bundled maps: $($info.data.bundled_maps)" | Write-Host
+          # requirements-lite carries the LLM clients on purpose. Leaving
+          # one out once shipped an exe whose API key field could never do
+          # anything, and it was invisible because the advisor falls back
+          # to the deterministic path without complaining.
+          foreach ($p in "openai", "anthropic", "local") {
+            if (-not $info.llm.available.$p) {
+              throw "LLM provider '$p' missing from the bundle"
+            }
+          }
+          "LLM providers aboard: openai, anthropic, local (Ollama)" | Write-Host
 
       - name: Verify the overlay's own dependencies survived packaging
         # The overlay is a separate process the server test never reaches, and

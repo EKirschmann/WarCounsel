@@ -106,10 +106,15 @@ def _build(provider: str, model: str):
 def available() -> dict:
     """Which providers THIS BUILD can actually run.
 
-    The packaged executable ships without langchain on purpose (it is the
-    deterministic build), so every LLM provider is unavailable there. The
-    advisor would degrade gracefully anyway, but a settings panel that
-    offers a model it will silently ignore is worse than one that says so.
+    The packaged exe DOES carry the LLM clients — requirements-lite.txt
+    lists them deliberately, because a settings panel offering an API key
+    field that can never do anything is worse than one that says so. What
+    it omits is OCR. (This docstring previously claimed the opposite; the
+    exe has shipped with openai and anthropic working for some time.)
+
+    PyInstaller bundles only what the BUILD MACHINE has installed, so this
+    probes at runtime rather than trusting the requirements file, and the
+    panel greys out whatever is genuinely missing.
     """
     from importlib.util import find_spec
 

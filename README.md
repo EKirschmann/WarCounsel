@@ -139,6 +139,7 @@ for OCR position tracking or to hack on the code.
 |---|---|---|
 | None (deterministic) | nothing | default-ready; mechanical but honest counsel, instant |
 | LM Studio | a local model | free, private; ~26B MoE models work well |
+| Ollama | `ollama pull <model>` | free, private, no key — works in the .exe too |
 | OpenAI | an API key | best quality; a consult is ~7k tokens |
 | Custom endpoint | any OpenAI-compatible URL | Groq / OpenRouter / Gemini compat / LAN — free tiers work |
 
