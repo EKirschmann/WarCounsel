@@ -88,9 +88,18 @@ def _build(provider: str, model: str):
         # any OpenAI-compatible endpoint: Groq, OpenRouter, Together,
         # Gemini's compat layer, a friend's LM Studio over LAN, ...
         from langchain_openai import ChatOpenAI
+        base = _load().get("custom_base_url") or settings.custom_base_url
+        if not base:
+            # ChatOpenAI silently defaults to api.openai.com when base_url is
+            # empty, so a missing URL did not fail — it SENT THE USER'S KEY TO
+            # OPENAI and came back 401. Refuse instead; the advisor catches
+            # this and falls back to the deterministic path.
+            raise RuntimeError(
+                "Custom provider has no base URL. Set one (e.g. "
+                "https://api.groq.com/openai/v1) — without it the request and "
+                "your API key would go to OpenAI's default endpoint.")
         return ChatOpenAI(
-            model=model,
-            base_url=_load().get("custom_base_url") or settings.custom_base_url,
+            model=model, base_url=base,
             api_key=_key("custom_api_key", settings.custom_api_key) or "unset")
     if provider == "openai":
         from langchain_openai import ChatOpenAI

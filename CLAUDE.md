@@ -751,6 +751,13 @@ whenever the Inventory parse changes.
   reported "no JSON in LLM reply" while the raw reply plainly contained
   some. It also flattens Anthropic-style block lists and checks
   `response_metadata`.
+- **`custom` REFUSES to build without a base URL.** `ChatOpenAI` silently
+  defaults to api.openai.com when `base_url` is empty, so a missing URL did
+  not fail — it sent the user's key to OpenAI and returned 401. Reported by
+  someone configuring Groq. The panel also never rendered a base-URL field
+  at all, so the endpoint was unreachable from the UI even though
+  `app_config` had always allow-listed it; a provider needing an endpoint
+  needs an INPUT for it, not just storage.
 - **`probe()` / `GET /api/llm/probe` answers a different question from
   `available()`.** Available = "is the client library installed"; probe =
   "is a server actually listening, and is a model loaded". LM Studio and

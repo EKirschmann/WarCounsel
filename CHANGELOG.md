@@ -4,6 +4,15 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## Unreleased
+
+**Fixed: a custom endpoint sent requests to OpenAI.** Settings had no
+field for the endpoint address, so choosing Custom left it empty — and an
+empty address falls through to OpenAI, which answers 401 because your key
+belongs to Groq or OpenRouter. There is now a field for it, a warning
+while it is blank, and the app refuses to send anything rather than
+posting your key to the wrong provider.
+
 ## v2.1.5 — 2026-07-28
 
 **Fixed: the app could refuse to start**, with a database error about a

@@ -122,6 +122,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   // Ollama's host is its own field: unlike LM Studio it is commonly on
   // ANOTHER machine, so it cannot be a fixed default.
   const [ollamaUrl, setOllamaUrl] = useState("");
+  const [customUrl, setCustomUrl] = useState("");
   const [probe, setProbe] = useState<LlmProbe | null>(null);
   const [probing, setProbing] = useState(false);
   const [verdict, setVerdict] = useState<GameVerdict | null>(null);
@@ -143,6 +144,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           : d.llm.openai_model,
         );
         setOllamaUrl(d.llm.ollama_base_url ?? "");
+        setCustomUrl(d.llm.custom_base_url ?? "");
         setVerdict(d.game);
       })
       .catch((e) => setError(String(e)));
@@ -230,7 +232,12 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         llm_provider: provider,
       };
       if (provider === "openai") body.openai_model = model;
-      if (provider === "custom") body.custom_model = model;
+      if (provider === "custom") {
+        body.custom_model = model;
+        // Without this the endpoint was never settable from the panel,
+        // and an empty base URL sends the key to OpenAI.
+        body.custom_base_url = customUrl.trim();
+      }
       if (provider === "anthropic") body.anthropic_model = model;
       if (provider === "local") {
         body.ollama_model = model;
@@ -252,7 +259,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     } finally {
       setBusy(false);
     }
-  }, [gameDir, provider, model, apiKey, ollamaUrl, onClose]);
+  }, [gameDir, provider, model, apiKey, ollamaUrl, customUrl, onClose]);
 
   const clearKey = useCallback(async () => {
     const field = keyFieldFor(provider);
@@ -359,6 +366,17 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                       aria-label="Model name"
                     />
                   </div>
+                  {provider === "custom" && (
+                    <div className="set-row">
+                      <input
+                        value={customUrl}
+                        spellCheck={false}
+                        onChange={(e) => setCustomUrl(e.target.value)}
+                        placeholder="https://api.groq.com/openai/v1"
+                        aria-label="Custom endpoint base URL"
+                      />
+                    </div>
+                  )}
                   <div className="set-row">
                     <input
                       type="password"
@@ -387,6 +405,13 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   so counsel would quietly fall back to the built-in advisor.
                   The packaged .exe is deterministic by design — use the
                   source install if you want an LLM.
+                </p>
+              )}
+              {provider === "custom" && !customUrl.trim() && (
+                <p className="set-note" data-ok="0">
+                  Add the endpoint above, or the request — and your key — go
+                  to OpenAI instead. Groq is{" "}
+                  <code>https://api.groq.com/openai/v1</code>.
                 </p>
               )}
               {provider === "none" && (
