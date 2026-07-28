@@ -67,6 +67,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [provider, setProvider] = useState("none");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
+  // Ollama's host is its own field: unlike LM Studio it is commonly on
+  // ANOTHER machine, so it cannot be a fixed default.
+  const [ollamaUrl, setOllamaUrl] = useState("");
   const [verdict, setVerdict] = useState<GameVerdict | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +84,11 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         setGameDir(d.game.path ?? "");
         setProvider(d.llm.active.provider);
         setModel(
-          d.llm.active.provider === "custom" ? d.llm.custom_model : d.llm.openai_model,
+          d.llm.active.provider === "custom" ? d.llm.custom_model
+          : d.llm.active.provider === "local" ? d.llm.ollama_model
+          : d.llm.openai_model,
         );
+        setOllamaUrl(d.llm.ollama_base_url ?? "");
         setVerdict(d.game);
       })
       .catch((e) => setError(String(e)));
@@ -127,6 +133,23 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     }
   }, [gameDir]);
 
+  // One `model` field serves every provider, so switching the dropdown
+  // has to reseed it — otherwise picking Ollama inherits the OpenAI model
+  // and the hint reads "ollama pull o3".
+  const switchProvider = useCallback(
+    (next: string) => {
+      setProvider(next);
+      if (!data) return;
+      setModel(
+        next === "custom" ? data.llm.custom_model
+        : next === "local" ? data.llm.ollama_model
+        : next === "openai" ? data.llm.openai_model
+        : "",
+      );
+    },
+    [data],
+  );
+
   const save = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -137,6 +160,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       };
       if (provider === "openai") body.openai_model = model;
       if (provider === "custom") body.custom_model = model;
+      if (provider === "local") {
+        body.ollama_model = model;
+        body.ollama_base_url = ollamaUrl.trim();
+      }
       // Only send a key when one was typed. Omitting it leaves whatever is
       // stored untouched — saving the game folder must never wipe a key.
       const field = keyFieldFor(provider);
@@ -153,7 +180,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     } finally {
       setBusy(false);
     }
-  }, [gameDir, provider, model, apiKey, onClose]);
+  }, [gameDir, provider, model, apiKey, ollamaUrl, onClose]);
 
   const clearKey = useCallback(async () => {
     const field = keyFieldFor(provider);
@@ -235,7 +262,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               <select
                 id="set-provider"
                 value={provider}
-                onChange={(e) => setProvider(e.target.value)}
+                onChange={(e) => switchProvider(e.target.value)}
               >
                 {PROVIDERS.map((p) => {
                   const usable = data.llm.available?.[p.id] !== false;
@@ -302,14 +329,32 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 </p>
               )}
               {provider === "local" && (
-                <p className="set-note">
-                  Uses Ollama at <code>{data.llm.ollama_base_url}</code> with
-                  the model <code>{data.llm.ollama_model}</code>. No key
-                  needed — install Ollama, then{" "}
-                  <code>ollama pull {data.llm.ollama_model}</code>. Set
-                  <code>OLLAMA_BASE_URL</code> and <code>OLLAMA_MODEL</code>{" "}
-                  in <code>.env</code> to point at another machine or model.
-                </p>
+                <>
+                  <div className="set-row">
+                    <input
+                      value={model}
+                      spellCheck={false}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="model, e.g. llama3.1"
+                      aria-label="Ollama model"
+                    />
+                  </div>
+                  <div className="set-row">
+                    <input
+                      value={ollamaUrl}
+                      spellCheck={false}
+                      onChange={(e) => setOllamaUrl(e.target.value)}
+                      placeholder="http://localhost:11434"
+                      aria-label="Ollama server address"
+                    />
+                  </div>
+                  <p className="set-note">
+                    No key needed. Install Ollama and run{" "}
+                    <code>ollama pull {model || "llama3.1"}</code>. Point the
+                    address at another machine if Ollama runs on your desktop
+                    while you play elsewhere.
+                  </p>
+                </>
               )}
             </section>
 

@@ -9,10 +9,11 @@ in the app header; update by closing the companion and running
 **Ollama is selectable now.** It was wired into the backend all along but
 unreachable — missing from both provider menus and rejected outright by
 the API. Pick "Local — Ollama" in Settings, or set `LLM_PROVIDER=local`.
-`OLLAMA_BASE_URL` and `OLLAMA_MODEL` let it run on another machine, which
-is the usual setup when the desktop has the GPU and you play on a laptop.
-Source installs need `pip install -r requirements.txt`; the packaged .exe
-stays deterministic by design and will show it greyed out.
+The model and server address are fields in Settings — no `.env` editing —
+so it can point at another machine, which is the usual setup when the
+desktop has the GPU and you play on a laptop. Source installs need
+`pip install -r requirements.txt`; the packaged .exe stays deterministic
+by design and shows it greyed out rather than failing quietly.
 
 ## v2.1.1 — 2026-07-28
 
