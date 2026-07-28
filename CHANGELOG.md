@@ -6,6 +6,11 @@ in the app header; update by closing the companion and running
 
 ## Unreleased
 
+**Anthropic is selectable now** — the client was already bundled in the
+.exe, it just could not be picked. **Grok** needs no new support: it is
+OpenAI-compatible, so point the Custom endpoint at
+`https://api.x.ai/v1`, which the provider menu now says out loud.
+
 **Ollama is selectable now.** It was wired into the backend all along but
 unreachable — missing from both provider menus and rejected outright by
 the API. Pick "Local — Ollama" in Settings, or set `LLM_PROVIDER=local`.

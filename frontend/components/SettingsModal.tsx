@@ -41,6 +41,7 @@ type SettingsData = {
     lmstudio_base_url: string;
     ollama_base_url: string;
     ollama_model: string;
+    anthropic_model: string;
     keys_set: Record<string, boolean>;
     available: Record<string, boolean>;
   };
@@ -51,13 +52,15 @@ const PROVIDERS = [
   { id: "lmstudio", label: "Local — LM Studio" },
   { id: "local", label: "Local — Ollama" },
   { id: "openai", label: "OpenAI" },
-  { id: "custom", label: "Custom — any OpenAI-compatible endpoint" },
+  { id: "anthropic", label: "Anthropic — Claude" },
+  { id: "custom", label: "Custom — OpenAI-compatible (Grok, Groq, OpenRouter…)" },
 ];
 
 /** Which secret field a provider needs, or null when it needs none. */
 function keyFieldFor(provider: string): string | null {
   if (provider === "openai") return "openai_api_key";
   if (provider === "custom") return "custom_api_key";
+  if (provider === "anthropic") return "anthropic_api_key";
   return null;
 }
 
@@ -143,6 +146,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       setModel(
         next === "custom" ? data.llm.custom_model
         : next === "local" ? data.llm.ollama_model
+        : next === "anthropic" ? data.llm.anthropic_model
         : next === "openai" ? data.llm.openai_model
         : "",
       );
@@ -160,6 +164,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       };
       if (provider === "openai") body.openai_model = model;
       if (provider === "custom") body.custom_model = model;
+      if (provider === "anthropic") body.anthropic_model = model;
       if (provider === "local") {
         body.ollama_model = model;
         body.ollama_base_url = ollamaUrl.trim();
@@ -275,7 +280,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 })}
               </select>
 
-              {(provider === "openai" || provider === "custom") && (
+              {(provider === "openai" || provider === "custom"
+                || provider === "anthropic") && (
                 <>
                   <div className="set-row">
                     <input

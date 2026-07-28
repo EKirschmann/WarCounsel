@@ -141,7 +141,8 @@ for OCR position tracking or to hack on the code.
 | LM Studio | a local model | free, private; ~26B MoE models work well |
 | Ollama | `ollama pull <model>` | free, private, no key — works in the .exe too |
 | OpenAI | an API key | best quality; a consult is ~7k tokens |
-| Custom endpoint | any OpenAI-compatible URL | Groq / OpenRouter / Gemini compat / LAN — free tiers work |
+| Anthropic | an API key | Claude; also in the .exe |
+| Custom endpoint | any OpenAI-compatible URL | **Grok** (`https://api.x.ai/v1`) / Groq / OpenRouter / LAN — free tiers work |
 
 **Optional — EQL MCP server** ([ArtSabintsev/everquest-legends-mcp](https://github.com/ArtSabintsev/everquest-legends-mcp),
 Node 22+) for structured spell/AA data. Without it the app fetches the wiki

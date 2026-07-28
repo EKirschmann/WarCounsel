@@ -98,7 +98,7 @@ def _build(provider: str, model: str):
                           temperature=0.3)
     from langchain_anthropic import ChatAnthropic
     return ChatAnthropic(
-        model=model, max_tokens=8000,
+        model=model or settings.anthropic_model, max_tokens=8000,
         api_key=_key("anthropic_api_key", settings.anthropic_api_key)
         or "unset")
 

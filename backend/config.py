@@ -132,6 +132,7 @@ class Settings(BaseSettings):
     # beefy desktop and play on the laptop.
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1"
+    anthropic_model: str = "claude-sonnet-5"
     openai_api_key: str = ""                  # frontier option (Advisor tab)
     openai_model: str = "o3"                  # default when provider=openai
     custom_base_url: str = ""                 # any OpenAI-compatible server

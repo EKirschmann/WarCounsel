@@ -619,6 +619,16 @@ whenever the Inventory parse changes.
     the packaged build — omitting a client once shipped an exe whose key
     field could do nothing, and nothing caught it because the advisor
     falls back silently.
+  - **Grok needs no provider of its own** — xAI is OpenAI-compatible at
+    `https://api.x.ai/v1`, so it is a `custom` endpoint. The menu names it
+    so nobody asks for a Grok provider that would just duplicate `custom`.
+  - **Adding a provider means FOUR places**, and missing any of them makes
+    it invisible: `get_llm()`, the `POST /api/llm` allow-list, the
+    `GET /api/llm` options list, and SettingsModal's `PROVIDERS` (plus
+    `keyFieldFor` if it needs a key). Both Ollama AND Anthropic were
+    implemented and shipped yet unreachable for exactly this reason —
+    Anthropic was even bundled into the .exe, so we paid to package a
+    client nobody could select.
   - It was supported in `get_llm()` from the start yet unreachable until
     2026-07-28: absent from both provider lists AND rejected by
     `POST /api/llm`'s allow-list. If you add a provider, that guard, the
