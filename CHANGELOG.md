@@ -4,6 +4,20 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## Unreleased
+
+**Fixed: the wrong model name after switching providers.** Picking LM
+Studio or Ollama could report a Claude model, because anything the
+builder did not recognise silently became Anthropic, and because only
+OpenAI and Custom remembered their own model. Every provider now reports
+and keeps its own, and an unknown one fails loudly instead of quietly
+becoming something else.
+
+**Fixed: "no JSON in LLM reply" from models that answer in their
+reasoning.** Some builds — QAT quantisations especially — return an empty
+`content` and put the whole answer in `reasoning_content`. The reply is
+now read from wherever the model put it.
+
 ## v2.1.2 — 2026-07-28
 
 **All-time stats.** The Vitals panel has a small **all time** button next

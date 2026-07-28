@@ -212,6 +212,35 @@ def _lmstudio_budget(prompt_chars: int) -> int:
         return 6000
 
 
+def _reply_text(response: Any) -> str:
+    """All the text a reply carries, wherever the provider put it.
+
+    `content` is not always where the answer is. QAT and reasoning builds
+    served through LM Studio return an EMPTY content with the whole answer
+    in `reasoning_content`, so reading content alone yields "" and the
+    caller reports no JSON while the raw reply plainly contains some.
+    Anthropic-style block lists are flattened here too.
+    """
+    out: List[str] = []
+    content = getattr(response, "content", None)
+    if isinstance(content, str):
+        out.append(content)
+    elif isinstance(content, list):
+        for block in content:
+            if isinstance(block, str):
+                out.append(block)
+            elif isinstance(block, dict):
+                out.append(str(block.get("text") or block.get("content") or ""))
+    extra = getattr(response, "additional_kwargs", None) or {}
+    meta = getattr(response, "response_metadata", None) or {}
+    for src in (extra, meta):
+        for key in ("reasoning_content", "reasoning", "thinking"):
+            val = src.get(key)
+            if isinstance(val, str) and val.strip():
+                out.append(val)
+    return chr(10).join(p for p in out if p)
+
+
 def _extract_json(text: str) -> Optional[dict]:
     # thinking models (qwen3 family) prefix <think> blocks — cut them out so
     # stray braces inside the reasoning can't confuse the JSON scan
@@ -901,9 +930,12 @@ async def generate_advice(ctx: dict) -> dict:
                 except Exception:
                     pass
             response = await bound.ainvoke([HumanMessage(content=prompt)])
-        data = _extract_json(response.content or "")
+        raw = _reply_text(response)
+        data = _extract_json(raw)
         if not data:
-            raise ValueError("no JSON object in LLM reply")
+            raise ValueError(
+                "no JSON object in LLM reply "
+                f"({len(raw)} chars of text seen)")
         solo = (ctx.get("playstyle") or "").startswith("solo")
         usable = ([s["name"] for s in book["castable"]
                    if s["level"] <= ctx["level"]]
@@ -1655,9 +1687,12 @@ async def generate_gear_advice(ctx: dict) -> dict:
             pass
     try:
         response = await bound.ainvoke([HumanMessage(content=prompt)])
-        data = _extract_json(response.content or "")
+        raw = _reply_text(response)
+        data = _extract_json(raw)
         if not data:
-            raise ValueError("no JSON object in LLM reply")
+            raise ValueError(
+                "no JSON object in LLM reply "
+                f"({len(raw)} chars of text seen)")
     except Exception as e:
         logger.warning("Gear advisor failed: %.140s", str(e))
         try:

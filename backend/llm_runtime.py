@@ -39,24 +39,34 @@ def custom_model() -> str:
 def active() -> dict:
     cfg = _load()
     provider = cfg.get("provider") or settings.llm_provider
+    # Each provider has its OWN model setting. Falling back to
+    # settings.model for everything but openai/custom meant picking Ollama
+    # or Anthropic displayed — and USED — the LM Studio model id.
     if provider == "openai":
         model = openai_model()
     elif provider == "custom":
         model = custom_model()
     elif provider == "none":
         model = "builtin"
+    elif provider == "local":
+        model = cfg.get("ollama_model") or settings.ollama_model
+    elif provider == "anthropic":
+        model = cfg.get("anthropic_model") or settings.anthropic_model
     else:
-        model = settings.model
+        model = settings.model          # lmstudio
     return {"provider": provider, "model": model}
 
 
 def set_active(provider: str, model: str | None = None) -> dict:
     cfg = _load()
     cfg["provider"] = provider
-    if provider == "openai" and model:
-        cfg["openai_model"] = model.strip()
-    if provider == "custom" and model:
-        cfg["custom_model"] = model.strip()
+    # Persist per provider, or switching away and back loses the choice.
+    per_provider = {"openai": "openai_model", "custom": "custom_model",
+                    "local": "ollama_model", "anthropic": "anthropic_model",
+                    "lmstudio": "model"}
+    key = per_provider.get(provider)
+    if key and model:
+        cfg[key] = model.strip()
     _CONFIG.parent.mkdir(parents=True, exist_ok=True)
     _CONFIG.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
     logger.info("LLM switched to %s / %s", provider,
@@ -96,11 +106,19 @@ def _build(provider: str, model: str):
         return ChatOllama(model=model or settings.ollama_model,
                           base_url=settings.ollama_base_url,
                           temperature=0.3)
-    from langchain_anthropic import ChatAnthropic
-    return ChatAnthropic(
-        model=model or settings.anthropic_model, max_tokens=8000,
-        api_key=_key("anthropic_api_key", settings.anthropic_api_key)
-        or "unset")
+    if provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+        return ChatAnthropic(
+            model=model or settings.anthropic_model, max_tokens=8000,
+            api_key=_key("anthropic_api_key", settings.anthropic_api_key)
+            or "unset")
+    # Anything unrecognised used to FALL THROUGH to Anthropic, silently: a
+    # stale or misspelled provider became Claude on a default model, which
+    # is how "I chose LM Studio" could report claude-3-5-sonnet. Fail loudly
+    # instead — the advisor catches this and drops to the built-in path.
+    raise RuntimeError(
+        f"unknown LLM provider {provider!r} — expected none|lmstudio|openai|"
+        "custom|local|anthropic")
 
 
 def available() -> dict:

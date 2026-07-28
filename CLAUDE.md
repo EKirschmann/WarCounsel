@@ -671,6 +671,22 @@ whenever the Inventory parse changes.
   window (prevents cryptic 400 overflows; thinking models burn reasoning
   tokens against the completion budget). Frontier models get no knobs —
   o-series/gpt-5.x reject temperature.
+- **Every provider has its OWN model setting**, and `active()` must return
+  it. It used to fall back to `settings.model` for anything but
+  openai/custom, so picking Ollama or Anthropic displayed — and USED — the
+  LM Studio model id. `set_active()` likewise persists per provider, or
+  switching away and back silently loses the choice.
+- **`_build()` raises on an unknown provider.** It used to FALL THROUGH to
+  Anthropic, so a stale or misspelled provider quietly became Claude on
+  langchain's default model — which is how "I chose LM Studio" reported
+  claude-3-5-sonnet. Failing loudly is safe: the advisor catches it and
+  drops to the deterministic path.
+- **Read the reply with `_reply_text()`, never `response.content`.** QAT
+  and reasoning builds served through LM Studio return an EMPTY content
+  with the whole answer in `reasoning_content`, so content-only parsing
+  reported "no JSON in LLM reply" while the raw reply plainly contained
+  some. It also flattens Anthropic-style block lists and checks
+  `response_metadata`.
 - Chat (agent/graph.py) uses the same `get_llm()` seam.
 
 ## Wiki grounding
