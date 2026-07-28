@@ -703,6 +703,17 @@ whenever the Inventory parse changes.
   reported "no JSON in LLM reply" while the raw reply plainly contained
   some. It also flattens Anthropic-style block lists and checks
   `response_metadata`.
+- **`probe()` / `GET /api/llm/probe` answers a different question from
+  `available()`.** Available = "is the client library installed"; probe =
+  "is a server actually listening, and is a model loaded". LM Studio and
+  Ollama can be selected, importable and completely unreachable, and the
+  first symptom is otherwise a failed consult. LM Studio's native
+  `/api/v0/models` distinguishes downloaded from LOADED where the
+  OpenAI-shaped `/models` cannot, so it is tried first and falls back;
+  Ollama uses `/api/tags` plus `/api/ps` for what is resident. Cloud keys
+  are NOT probed — verifying one costs a paid request — so they return
+  `checked: false` rather than a misleading failure. 2.5s timeout, never
+  raises: it sits behind a button in the settings panel.
 - Chat (agent/graph.py) uses the same `get_llm()` seam.
 
 ## Wiki grounding

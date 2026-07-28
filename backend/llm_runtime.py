@@ -153,6 +153,82 @@ def available() -> dict:
     }
 
 
+def probe(provider: str | None = None) -> dict:
+    """Is the local model server actually up, and is anything loaded?
+
+    `available()` only answers "is the client library installed", which is
+    a different question: LM Studio and Ollama can be selected, importable
+    and completely unreachable, and the first sign is a failed consult.
+    Asking the server costs one short HTTP call.
+
+    Never raises and never blocks for long -- a 2.5s timeout, because this
+    runs behind a settings panel, not a background job.
+    """
+    import json as _json
+    import urllib.request
+
+    provider = provider or active()["provider"]
+    out: dict = {"provider": provider, "checked": True, "reachable": False,
+                 "models": [], "loaded": [], "reason": None}
+
+    def get(url: str):
+        with urllib.request.urlopen(url, timeout=2.5) as r:
+            return _json.loads(r.read())
+
+    try:
+        if provider == "lmstudio":
+            base = settings.lmstudio_base_url.rstrip("/")
+            try:
+                # LM Studio's own API distinguishes downloaded from LOADED;
+                # the OpenAI-compatible /models does not.
+                data = get(base.rsplit("/v1", 1)[0] + "/api/v0/models")
+                rows = data.get("data", [])
+                out["models"] = [m.get("id") for m in rows if m.get("id")]
+                out["loaded"] = [m.get("id") for m in rows
+                                 if m.get("state") == "loaded"]
+            except Exception:
+                data = get(base + "/models")          # OpenAI shape fallback
+                out["models"] = [m.get("id") for m in data.get("data", [])]
+            out["reachable"] = True
+        elif provider == "local":
+            base = settings.ollama_base_url.rstrip("/")
+            data = get(base + "/api/tags")
+            out["models"] = [m.get("name") for m in data.get("models", [])
+                             if m.get("name")]
+            try:                                      # /api/ps = in memory now
+                ps = get(base + "/api/ps")
+                out["loaded"] = [m.get("name") for m in ps.get("models", [])
+                                 if m.get("name")]
+            except Exception:
+                pass
+            out["reachable"] = True
+        elif provider == "custom":
+            base = (_load().get("custom_base_url")
+                    or settings.custom_base_url or "").rstrip("/")
+            if not base:
+                out.update(checked=False, reason="No custom base URL set")
+                return out
+            data = get(base + "/models")
+            out["models"] = [m.get("id") for m in data.get("data", [])]
+            out["reachable"] = True
+        else:
+            # A cloud key cannot be verified without spending a request, and
+            # "none" has nothing to reach.
+            out.update(checked=False,
+                       reason="Nothing to probe for this provider")
+            return out
+    except Exception as exc:
+        out["reason"] = f"{type(exc).__name__}: {exc}"[:160]
+        return out
+
+    want = active()["model"]
+    if out["reachable"] and want and out["models"]:
+        # Ollama tags carry a :tag suffix the model id may omit
+        names = {m.split(":")[0] for m in out["models"]} | set(out["models"])
+        out["model_present"] = want in names or want.split(":")[0] in names
+    return out
+
+
 def clear_cache() -> None:
     """Drop built chat models so the next consult picks up a new key."""
     with _lock:

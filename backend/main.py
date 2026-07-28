@@ -977,6 +977,20 @@ async def api_llm_get():
     }
 
 
+@app.get("/api/llm/probe")
+async def api_llm_probe(provider: Optional[str] = None):
+    """Is the local model server up, and is a model loaded?
+
+    Separate from `available()`, which only reports whether the client
+    library is installed. A user can select LM Studio, see it offered, and
+    have nothing listening — the first symptom otherwise is a failed
+    consult with a stack trace in the log.
+    """
+    from backend.llm_runtime import probe
+
+    return await asyncio.to_thread(probe, provider)
+
+
 @app.post("/api/llm")
 async def api_llm_set(body: dict):
     """Switch the counsel model (Advisor tab). Clears the advice caches so

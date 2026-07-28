@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet, apiSend } from "@/lib/api";
+import type { LlmProbe } from "@/lib/types";
 import { OverlaySettings } from "./OverlaySettings";
 
 type GameVerdict = {
@@ -64,6 +65,36 @@ function keyFieldFor(provider: string): string | null {
   return null;
 }
 
+/** "Is anything actually listening?" — rendered under the local providers.
+ *  Kept out of the save path: checking is free and reversible, so it is a
+ *  button rather than something that happens on every render. */
+function ProbeRow({ provider, probe, probing, onCheck }: {
+  provider: string;
+  probe: LlmProbe | null;
+  probing: boolean;
+  onCheck: () => void;
+}) {
+  const mine = probe && probe.provider === provider ? probe : null;
+  return (
+    <div className="set-row probe-row">
+      <button type="button" onClick={onCheck} disabled={probing}>
+        {probing ? "Checking…" : "Check server"}
+      </button>
+      {mine && (
+        <span className="probe-result" data-ok={mine.reachable ? "1" : "0"}>
+          {!mine.reachable
+            ? `not reachable — ${mine.reason ?? "no response"}`
+            : mine.loaded?.length
+              ? `up · ${mine.loaded[0]} loaded${
+                  mine.model_present === false ? " · your model is not in the list" : ""
+                }`
+              : `up · ${mine.models.length} model${mine.models.length === 1 ? "" : "s"} available, none loaded`}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<SettingsData | null>(null);
   const [gameDir, setGameDir] = useState("");
@@ -73,6 +104,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   // Ollama's host is its own field: unlike LM Studio it is commonly on
   // ANOTHER machine, so it cannot be a fixed default.
   const [ollamaUrl, setOllamaUrl] = useState("");
+  const [probe, setProbe] = useState<LlmProbe | null>(null);
+  const [probing, setProbing] = useState(false);
   const [verdict, setVerdict] = useState<GameVerdict | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +186,22 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     },
     [data],
   );
+
+  // Asks the local server directly. `available` only says the client
+  // library is installed, which is a different question from "is anything
+  // listening and is a model loaded".
+  const runProbe = useCallback(async (which: string) => {
+    setProbing(true);
+    setProbe(null);
+    try {
+      setProbe(await apiGet<LlmProbe>(`/api/llm/probe?provider=${which}`));
+    } catch (e) {
+      setProbe({ provider: which, checked: true, reachable: false,
+                 models: [], loaded: [], reason: String(e) });
+    } finally {
+      setProbing(false);
+    }
+  }, []);
 
   const save = useCallback(async () => {
     setBusy(true);
@@ -329,10 +378,18 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 </p>
               )}
               {provider === "lmstudio" && (
+                <>
+                  <ProbeRow
+                    provider="lmstudio"
+                    probe={probe}
+                    probing={probing}
+                    onCheck={() => runProbe("lmstudio")}
+                  />
                 <p className="set-note">
                   Uses LM Studio&apos;s local server at{" "}
                   <code>{data.llm.lmstudio_base_url}</code>. No key needed.
                 </p>
+                </>
               )}
               {provider === "local" && (
                 <>
@@ -354,6 +411,12 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                       aria-label="Ollama server address"
                     />
                   </div>
+                  <ProbeRow
+                    provider="local"
+                    probe={probe}
+                    probing={probing}
+                    onCheck={() => runProbe("local")}
+                  />
                   <p className="set-note">
                     No key needed. Install Ollama and run{" "}
                     <code>ollama pull {model || "llama3.1"}</code>. Point the

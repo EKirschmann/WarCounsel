@@ -4,6 +4,14 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## Unreleased
+
+**Check server.** Settings has a button beside LM Studio and Ollama that
+asks the local server whether it is actually running, which models it
+has, and which is loaded right now — rather than finding out when a
+consult fails. It also says when your configured model is not among the
+ones the server offers.
+
 ## v2.1.3 — 2026-07-28
 
 **All-time totals start at launch.** Beta play is no longer counted —

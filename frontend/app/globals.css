@@ -2015,6 +2015,13 @@ button.app-version:hover { color: var(--gold-bright); }
   font-size: 0.72rem;
 }
 
+/* Local-server check. Reads as a status line, not an error: "not
+   reachable" is an ordinary state when the server simply is not running. */
+.probe-row { align-items: center; }
+.probe-result { font-size: 0.74rem; line-height: 1.4; color: #8b8577; }
+.probe-result[data-ok="1"] { color: #1fb38c; }
+.probe-result[data-ok="0"] { color: #c8aa6e; }
+
 /* ---- Overlay switchboard (Settings) --------------------------------
    Selectors are scoped .modal-card deep enough to beat the generic
    .modal-card button / .modal-card input rules above, which would

@@ -525,3 +525,16 @@ export interface Lifetime {
   /** fields whose history starts later than the rest */
   partial: string[];
 }
+
+export interface LlmProbe {
+  provider: string;
+  /** false when the provider has nothing worth probing (cloud keys, none) */
+  checked: boolean;
+  reachable: boolean;
+  models: string[];
+  /** models resident in memory right now, where the server reports it */
+  loaded: string[];
+  /** whether the configured model appears in the server's list */
+  model_present?: boolean;
+  reason?: string | null;
+}
