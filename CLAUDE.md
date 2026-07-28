@@ -723,6 +723,12 @@ whenever the Inventory parse changes.
   - Ollama tags carry a `:latest` suffix the configured name usually
     omits, so the presence check matches on both the full tag and the
     part before the colon.
+  - **"none loaded" is the NORMAL idle state and must not read as a
+    fault.** Ollama unloads after `keep_alive`, default 5m, and LM Studio
+    JIT-loads too, so both sit at zero between requests and load on the
+    first call. What actually decides whether a consult works is whether
+    the CONFIGURED model is among those installed — so that is what the
+    status line leads with, and the only thing that turns it amber.
 - Chat (agent/graph.py) uses the same `get_llm()` seam.
 
 ## Wiki grounding

@@ -4,6 +4,15 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## Unreleased
+
+**"none loaded" no longer looks like a problem.** Ollama unloads a model
+after five minutes idle and loads it again on the next request, so an
+idle server showing nothing resident is normal. The check now says
+"loads on first use" and reserves the warning colour for what actually
+stops a consult: the model you configured not being among the ones
+installed.
+
 ## v2.1.4 — 2026-07-28
 
 **Check server.** Settings has a button beside LM Studio and Ollama that

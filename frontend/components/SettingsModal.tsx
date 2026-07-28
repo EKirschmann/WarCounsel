@@ -75,20 +75,38 @@ function ProbeRow({ provider, probe, probing, onCheck }: {
   onCheck: () => void;
 }) {
   const mine = probe && probe.provider === provider ? probe : null;
+  // "none loaded" is the NORMAL idle state: Ollama unloads after 5 minutes
+  // (keep_alive default) and LM Studio JIT-loads too, so both sit at zero
+  // between requests. Reporting that as a deficiency sends people hunting a
+  // fault that is not there. What actually decides whether a consult works
+  // is whether the CONFIGURED model is among the ones the server offers.
+  const status = (): { ok: boolean; text: string } => {
+    if (!mine) return { ok: true, text: "" };
+    if (!mine.reachable)
+      return { ok: false, text: `not reachable — ${mine.reason ?? "no response"}` };
+    if (!mine.models.length)
+      return { ok: false, text: "up, but no models installed yet" };
+    if (mine.model_present === false)
+      return {
+        ok: false,
+        text: `up, but your model is not among the ${mine.models.length} installed`,
+      };
+    if (mine.loaded?.length)
+      return { ok: true, text: `up · ${mine.loaded[0]} loaded` };
+    return {
+      ok: true,
+      text: `up · ${mine.models.length} model${mine.models.length === 1 ? "" : "s"} installed, loads on first use`,
+    };
+  };
+  const s = status();
   return (
     <div className="set-row probe-row">
       <button type="button" onClick={onCheck} disabled={probing}>
         {probing ? "Checking…" : "Check server"}
       </button>
       {mine && (
-        <span className="probe-result" data-ok={mine.reachable ? "1" : "0"}>
-          {!mine.reachable
-            ? `not reachable — ${mine.reason ?? "no response"}`
-            : mine.loaded?.length
-              ? `up · ${mine.loaded[0]} loaded${
-                  mine.model_present === false ? " · your model is not in the list" : ""
-                }`
-              : `up · ${mine.models.length} model${mine.models.length === 1 ? "" : "s"} available, none loaded`}
+        <span className="probe-result" data-ok={s.ok ? "1" : "0"}>
+          {s.text}
         </span>
       )}
     </div>
