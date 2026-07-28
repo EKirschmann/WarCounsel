@@ -1116,6 +1116,15 @@ class CharacterTracker:
         if book is None:
             hints.append({"command": "/outputfile spellbook",
                           "reason": "No spellbook export found; the advisor cannot see owned spells"})
+        elif book.get("pre_launch"):
+            # Beta data is not merely stale. A character need not survive a
+            # launch at all, so every owned-spell and owned-item gate could
+            # be reasoning about someone who no longer exists.
+            hints.append({"command": "/outputfile spellbook",
+                          "urgent": True,
+                          "reason": "Your exports are from BEFORE launch — the "
+                                    "advisor is judging what you own from beta "
+                                    "data. Re-run the output files."})
         else:
             stale = None
             try:

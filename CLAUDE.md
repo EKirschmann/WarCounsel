@@ -544,6 +544,15 @@ display**; failing entries are dropped and logged, never shown. The gates
   spell" + log "6 additional" => rank 6). Maxed AAs and already-owned/
   beyond-max ranks are dropped.
 
+- **Pre-launch exports are flagged, not just aged.** `_pre_launch()` compares
+  a file's mtime against `settings.eql_launch_iso` (2026-07-28). An export
+  from beta is not merely stale: a character need not survive a launch, so
+  every owned-spell and owned-item gate could be reasoning about someone who
+  no longer exists. "146h old" reads as slightly out of date and gets
+  ignored; "from BETA — re-export" does not. Exports carry `pre_launch`, the
+  chips say `beta`, and the sync hint is URGENT. The exports themselves have
+  no internal timestamp — mtime is the only signal available.
+
 **Owned state** comes from `/outputfile` exports parsed in spellbook.py
 (`<Name>_<server>-...-<Kind>.txt` in the game dir): Spellbook, MissingSpells,
 Inventory, Achievements — plus owned AA ranks from `/alternateadv list` log

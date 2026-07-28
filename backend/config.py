@@ -133,6 +133,12 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1"
     anthropic_model: str = "claude-sonnet-5"
+    # EQL launched 2026-07-28. Anything on disk older than this was
+    # written during beta, and beta characters do not necessarily
+    # survive into live — so "old" and "pre-launch" are different
+    # problems and get different wording. Overridable for test
+    # servers or if the date ever needs correcting.
+    eql_launch_iso: str = "2026-07-28T00:00:00"
     openai_api_key: str = ""                  # frontier option (Advisor tab)
     openai_model: str = "o3"                  # default when provider=openai
     custom_base_url: str = ""                 # any OpenAI-compatible server

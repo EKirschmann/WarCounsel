@@ -291,6 +291,8 @@ export interface AdvisorClassNote {
 }
 
 export interface SpellbookInfo {
+  /** written before the game launched — beta data, not merely stale */
+  pre_launch?: boolean;
   available: boolean;
   reason?: string;
   file?: string;
@@ -305,6 +307,8 @@ export type ExportsStatus = Record<string, {
   file?: string;
   updated?: string;
   age_hours?: number;
+  /** written before the game launched — beta data, not merely stale */
+  pre_launch?: boolean;
   count?: number | null;
 }>;
 

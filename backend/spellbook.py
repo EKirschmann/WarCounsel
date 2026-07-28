@@ -9,6 +9,7 @@ owned via other loadouts.
 that lives in log_system once a real sample exists (format TBD).
 """
 import re
+from datetime import datetime
 import time
 from pathlib import Path
 from typing import Optional
@@ -71,6 +72,7 @@ def load_spellbook(name: Optional[str], server: Optional[str]) -> Optional[dict]
         "file": path.name,
         "updated": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(mtime)),
         "age_hours": round((time.time() - mtime) / 3600.0, 1),
+        "pre_launch": _pre_launch(mtime),
         "castable": castable,
         "other_loadouts": sorted(set(other)),
     }
@@ -163,6 +165,7 @@ def load_export(name: Optional[str], server: Optional[str],
         "file": path.name,
         "updated": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(mtime)),
         "age_hours": round((time.time() - mtime) / 3600.0, 1),
+        "pre_launch": _pre_launch(mtime),
     }
     if kind in ("Spellbook", "MissingSpells"):
         castable, other = _parse_level_rows(text)
@@ -250,6 +253,22 @@ def load_export(name: Optional[str], server: Optional[str],
     return value
 
 
+def _pre_launch(mtime: float) -> bool:
+    """Was this file written before the game launched?
+
+    An export from beta is not merely stale: characters do not necessarily
+    survive a launch, so its spells and gear may describe someone who no
+    longer exists. "146h old" reads as slightly out of date; "from before
+    launch" tells the user to re-export before trusting any counsel.
+    """
+    from backend.config import settings
+    try:
+        launch = datetime.fromisoformat(settings.eql_launch_iso)
+    except (TypeError, ValueError):
+        return False
+    return datetime.fromtimestamp(mtime) < launch
+
+
 def exports_status(name: Optional[str], server: Optional[str]) -> dict:
     """Presence + freshness of every export kind (for the sync chips)."""
     out = {}
@@ -257,6 +276,8 @@ def exports_status(name: Optional[str], server: Optional[str]) -> dict:
         e = load_export(name, server, kind)
         out[kind.lower()] = (
             {"found": True, "file": e["file"], "updated": e["updated"],
-             "age_hours": e["age_hours"], "count": e.get("count")}
+             "age_hours": e["age_hours"],
+             "pre_launch": e.get("pre_launch", False),
+             "count": e.get("count")}
             if e else {"found": False})
     return out

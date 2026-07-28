@@ -6,6 +6,15 @@ in the app header; update by closing the companion and running
 
 ## Unreleased
 
+**Beta exports are called out.** Launch day means the `/outputfile` dumps
+on your disk are probably from beta — and a beta character need not have
+survived, so the advisor could be judging what you own from a character
+that no longer exists. Exports written before 2026-07-28 now read
+**"from BETA — re-export"** instead of an hour count, and the sync hint
+is marked urgent. It was already telling you they were 166 hours old;
+that reads as slightly stale rather than possibly wrong.
+
+
 **Fixed: the wrong model name after switching providers.** Picking LM
 Studio or Ollama could report a Claude model, because anything the
 builder did not recognise silently became Anthropic, and because only

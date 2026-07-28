@@ -481,7 +481,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
       <div className="adv-sync">
         <span data-ok={!!book?.available}>
           {book?.available
-            ? `spellbook: ${book.castable?.length ?? 0} spells · ${book.age_hours}h old`
+            ? `spellbook: ${book.castable?.length ?? 0} spells · ${book.pre_launch ? "from BETA — re-export" : `${book.age_hours}h old`}`
             : "spellbook: none — type /outputfile spellbook in-game"}
         </span>
         <span data-ok={!!ownedAAs?.available}>
@@ -492,7 +492,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
         {exports && ["missingspells", "inventory", "achievements"].map((k) => (
           <span key={k} data-ok={!!exports[k]?.found}>
             {exports[k]?.found
-              ? `${k === "missingspells" ? "missing" : k.slice(0, 4)}: ${exports[k]!.age_hours}h`
+              ? `${k === "missingspells" ? "missing" : k.slice(0, 4)}: ${exports[k]!.pre_launch ? "beta" : `${exports[k]!.age_hours}h`}`
               : `${k === "missingspells" ? "missing" : k.slice(0, 4)}: —`}
           </span>
         ))}
