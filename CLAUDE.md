@@ -843,6 +843,12 @@ in-window, cmd /k so the window never vanishes) — see INSTALL.md.
 
 ## Notes for assistants
 
+- **TODO.md holds shelved ideas**, each with enough context to resume cold —
+  why it is worth doing, what shape it should take, and any trap already
+  found while prototyping. Add to it rather than letting a deferred idea
+  live only in a conversation. It is explicitly NOT a roadmap.
+
+
 - Git: never commit `.env` (real keys) or `data/` (runtime state) — both
   gitignored. Commit when the user asks.
 - Before ANY destructive SQL against `data/companion.db`: SELECT the exact
