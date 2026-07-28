@@ -714,6 +714,15 @@ whenever the Inventory parse changes.
   are NOT probed — verifying one costs a paid request — so they return
   `checked: false` rather than a misleading failure. 2.5s timeout, never
   raises: it sits behind a button in the settings panel.
+  - It resolves the model via `model_for(provider)`, NOT `active()`. You
+    check a provider you have not saved yet — switching the dropdown to
+    Ollama while LM Studio is still active — so comparing against the
+    active model reported "your model is not in the list" for a model
+    plainly present. `model_for()` is now the single place that knows
+    which model belongs to which provider; `active()` delegates to it.
+  - Ollama tags carry a `:latest` suffix the configured name usually
+    omits, so the presence check matches on both the full tag and the
+    part before the colon.
 - Chat (agent/graph.py) uses the same `get_llm()` seam.
 
 ## Wiki grounding

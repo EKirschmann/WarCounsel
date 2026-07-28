@@ -36,25 +36,31 @@ def custom_model() -> str:
     return _load().get("custom_model") or settings.custom_model or "unset"
 
 
+def model_for(provider: str) -> str:
+    """The model configured for a GIVEN provider, active or not.
+
+    probe() needs this: checking Ollama while LM Studio is still the active
+    provider must compare against the OLLAMA model, or it reports "your
+    model is not in the list" for a model that is plainly there.
+    """
+    cfg = _load()
+    if provider == "openai":
+        return openai_model()
+    if provider == "custom":
+        return custom_model()
+    if provider == "none":
+        return "builtin"
+    if provider == "local":
+        return cfg.get("ollama_model") or settings.ollama_model
+    if provider == "anthropic":
+        return cfg.get("anthropic_model") or settings.anthropic_model
+    return settings.model                      # lmstudio
+
+
 def active() -> dict:
     cfg = _load()
     provider = cfg.get("provider") or settings.llm_provider
-    # Each provider has its OWN model setting. Falling back to
-    # settings.model for everything but openai/custom meant picking Ollama
-    # or Anthropic displayed — and USED — the LM Studio model id.
-    if provider == "openai":
-        model = openai_model()
-    elif provider == "custom":
-        model = custom_model()
-    elif provider == "none":
-        model = "builtin"
-    elif provider == "local":
-        model = cfg.get("ollama_model") or settings.ollama_model
-    elif provider == "anthropic":
-        model = cfg.get("anthropic_model") or settings.anthropic_model
-    else:
-        model = settings.model          # lmstudio
-    return {"provider": provider, "model": model}
+    return {"provider": provider, "model": model_for(provider)}
 
 
 def set_active(provider: str, model: str | None = None) -> dict:
@@ -221,7 +227,7 @@ def probe(provider: str | None = None) -> dict:
         out["reason"] = f"{type(exc).__name__}: {exc}"[:160]
         return out
 
-    want = active()["model"]
+    want = model_for(provider)
     if out["reachable"] and want and out["models"]:
         # Ollama tags carry a :tag suffix the model id may omit
         names = {m.split(":")[0] for m in out["models"]} | set(out["models"])
