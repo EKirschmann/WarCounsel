@@ -558,7 +558,7 @@ async def lifespan(app: FastAPI):
         t.cancel()
 
 
-APP_VERSION = "2.1.2"  # bump together with frontend/lib/version.ts
+APP_VERSION = "2.1.3"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/WarCounsel"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 
@@ -1314,15 +1314,23 @@ async def get_lifetime(db: Session = Depends(get_db)):
         return {"available": False,
                 "reason": "No character yet — type /who in game."}
 
+    # Totals start at LAUNCH: beta play belongs to a character that need not
+    # have survived it, so counting it would inflate a fresh character's
+    # numbers with someone else's history. Stored ts uses a SPACE separator
+    # ("2026-07-05 13:16:57") while the setting is ISO with a "T" — compared
+    # as strings, the mismatch silently matches nothing.
+    since = (settings.eql_launch_iso or "").replace("T", " ") or "0000"
+
     def count(kind: str) -> int:
         return (db.query(LogEventRow)
                 .filter(LogEventRow.character_id == _character_id,
-                        LogEventRow.event_type == kind).count())
+                        LogEventRow.event_type == kind,
+                        LogEventRow.ts >= since).count())
 
     row = db.execute(sqltext("""
         SELECT MIN(ts) AS first_seen, MAX(ts) AS last_seen, COUNT(*) AS events
-        FROM log_events WHERE character_id = :cid
-    """), {"cid": _character_id}).mappings().first() or {}
+        FROM log_events WHERE character_id = :cid AND ts >= :since
+    """), {"cid": _character_id, "since": since}).mappings().first() or {}
 
     # encounters carry the combat totals; summing them beats re-deriving
     enc = db.execute(sqltext("""
@@ -1334,26 +1342,31 @@ async def get_lifetime(db: Session = Depends(get_db)):
                COALESCE(MAX(json_extract(payload,'$.peak_dps')), 0) AS best
         FROM log_events
         WHERE character_id = :cid AND event_type = 'encounter'
-    """), {"cid": _character_id}).mappings().first() or {}
+          AND ts >= :since
+    """), {"cid": _character_id, "since": since}).mappings().first() or {}
 
     coin = db.execute(sqltext("""
         SELECT COALESCE(SUM(json_extract(payload,'$.copper')), 0) AS copper
         FROM log_events WHERE character_id = :cid AND event_type = 'coin'
-    """), {"cid": _character_id}).mappings().first() or {}
+          AND ts >= :since
+    """), {"cid": _character_id, "since": since}).mappings().first() or {}
 
     xp = db.execute(sqltext("""
         SELECT COALESCE(SUM(json_extract(payload,'$.percent')), 0) AS pct
         FROM log_events WHERE character_id = :cid AND event_type = 'exp'
-    """), {"cid": _character_id}).mappings().first() or {}
+          AND ts >= :since
+    """), {"cid": _character_id, "since": since}).mappings().first() or {}
 
     zones = db.execute(sqltext("""
         SELECT COUNT(DISTINCT json_extract(payload,'$.zone')) AS n
         FROM log_events WHERE character_id = :cid AND event_type = 'zone'
-    """), {"cid": _character_id}).mappings().first() or {}
+          AND ts >= :since
+    """), {"cid": _character_id, "since": since}).mappings().first() or {}
 
     sessions = (db.query(LogEventRow)
                 .filter(LogEventRow.character_id == _character_id,
-                        LogEventRow.event_type == "session").count())
+                        LogEventRow.event_type == "session",
+                        LogEventRow.ts >= since).count())
 
     return {
         "available": True,
@@ -1372,6 +1385,7 @@ async def get_lifetime(db: Session = Depends(get_db)):
         "coin_copper": int(coin.get("copper") or 0),
         "xp_percent": round(float(xp.get("pct") or 0), 2),
         "sessions": sessions,
+        "since": since,
         # coin/exp rows only exist from the version that started storing
         # them, so say so rather than quietly under-reporting
         "partial": ["coin_copper", "xp_percent"],

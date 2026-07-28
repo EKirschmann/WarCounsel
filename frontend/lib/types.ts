@@ -520,6 +520,8 @@ export interface Lifetime {
   damage_dealt: number; damage_taken: number; healing_done: number;
   fight_seconds: number; best_dps: number;
   coin_copper: number; xp_percent: number; sessions: number;
+  /** the launch boundary these totals start from */
+  since?: string;
   /** fields whose history starts later than the rest */
   partial: string[];
 }

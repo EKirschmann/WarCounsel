@@ -4,7 +4,11 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
-## Unreleased
+## v2.1.3 — 2026-07-28
+
+**All-time totals start at launch.** Beta play is no longer counted —
+a beta character need not have survived, so including it would credit a
+fresh character with someone else's history.
 
 **Beta exports are called out.** Launch day means the `/outputfile` dumps
 on your disk are probably from beta — and a beta character need not have

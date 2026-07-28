@@ -319,6 +319,13 @@ Those rows are already written per character as play happens, so there is
 no second source of truth to drift, and the live session is included for
 free — a kill persists the moment it happens.
 
+- **Totals start at LAUNCH** (`settings.eql_launch_iso`), not at the first
+  log ever read. Beta play belongs to a character that need not have
+  survived, so counting it would inflate a fresh character with someone
+  else's history. NOTE the stored `ts` uses a SPACE separator
+  ("2026-07-05 13:16:57") while the setting is ISO with a "T" — compared as
+  strings the mismatch silently matches nothing, which has bitten this
+  codebase twice, so the bound is normalised before use.
 - **Isolation is `character_id`.** Two characters never blend, and neither
   do same-named characters on different servers, which get separate rows.
   The panel refetches on character change and resets to the session view.

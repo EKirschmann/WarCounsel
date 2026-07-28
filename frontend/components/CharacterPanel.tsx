@@ -328,9 +328,10 @@ export const CharacterPanel = memo(function CharacterPanel({
             ) : null}
             {showAllTime && (
               <p className="lt-note">
-                {lifetime.character}@{lifetime.server}, since{" "}
-                {lifetime.first_seen?.slice(0, 10) ?? "—"}. Coin and XP totals
-                only count from the version that began storing them.
+                {lifetime.character}@{lifetime.server} — since launch
+                {lifetime.since ? ` (${lifetime.since.slice(0, 10)})` : ""}.
+                Beta play is not counted. Coin and XP began recording a little
+                later than the rest.
               </p>
             )}
           </div>
