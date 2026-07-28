@@ -39,6 +39,8 @@ type SettingsData = {
     custom_model: string;
     custom_base_url: string;
     lmstudio_base_url: string;
+    ollama_base_url: string;
+    ollama_model: string;
     keys_set: Record<string, boolean>;
     available: Record<string, boolean>;
   };
@@ -47,6 +49,7 @@ type SettingsData = {
 const PROVIDERS = [
   { id: "none", label: "None — deterministic (no LLM, no key needed)" },
   { id: "lmstudio", label: "Local — LM Studio" },
+  { id: "local", label: "Local — Ollama" },
   { id: "openai", label: "OpenAI" },
   { id: "custom", label: "Custom — any OpenAI-compatible endpoint" },
 ];
@@ -296,6 +299,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 <p className="set-note">
                   Uses LM Studio&apos;s local server at{" "}
                   <code>{data.llm.lmstudio_base_url}</code>. No key needed.
+                </p>
+              )}
+              {provider === "local" && (
+                <p className="set-note">
+                  Uses Ollama at <code>{data.llm.ollama_base_url}</code> with
+                  the model <code>{data.llm.ollama_model}</code>. No key
+                  needed — install Ollama, then{" "}
+                  <code>ollama pull {data.llm.ollama_model}</code>. Set
+                  <code>OLLAMA_BASE_URL</code> and <code>OLLAMA_MODEL</code>{" "}
+                  in <code>.env</code> to point at another machine or model.
                 </p>
               )}
             </section>

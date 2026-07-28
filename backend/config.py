@@ -128,6 +128,10 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"           # "anthropic" | "openai" | "lmstudio" | "local"
     model: str = "claude-3-5-sonnet-20241022"
     lmstudio_base_url: str = "http://localhost:1234/v1"
+    # Ollama's own default. Configurable because people run it on the
+    # beefy desktop and play on the laptop.
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.1"
     openai_api_key: str = ""                  # frontier option (Advisor tab)
     openai_model: str = "o3"                  # default when provider=openai
     custom_base_url: str = ""                 # any OpenAI-compatible server

@@ -90,8 +90,12 @@ def _build(provider: str, model: str):
         return ChatOpenAI(model=model, base_url=settings.lmstudio_base_url,
                           api_key="lm-studio", temperature=0.3)
     if provider == "local":
+        # Ollama. Its own server, not an OpenAI-compatible shim, so it gets
+        # a real client rather than being folded into "custom".
         from langchain_ollama import ChatOllama
-        return ChatOllama(model=model)
+        return ChatOllama(model=model or settings.ollama_model,
+                          base_url=settings.ollama_base_url,
+                          temperature=0.3)
     from langchain_anthropic import ChatAnthropic
     return ChatAnthropic(
         model=model, max_tokens=8000,

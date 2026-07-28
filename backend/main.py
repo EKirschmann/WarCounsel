@@ -958,6 +958,8 @@ async def api_llm_get():
         {"provider": "openai", "model": openai_model(),
          "label": f"OpenAI — {openai_model()}"},
     ]
+    options.append({"provider": "local", "model": settings.ollama_model,
+                    "label": f"Ollama — {settings.ollama_model}"})
     if settings.custom_base_url:
         options.append({"provider": "custom", "model": custom_model(),
                         "label": f"Custom — {custom_model()}"})
@@ -974,8 +976,9 @@ async def api_llm_set(body: dict):
     the next consult regenerates with the newly selected model."""
     from backend.llm_runtime import active, set_active
     provider = (body.get("provider") or "").strip()
-    if provider not in ("none", "lmstudio", "openai", "custom"):
-        raise HTTPException(400, "provider must be none|lmstudio|openai|custom")
+    if provider not in ("none", "lmstudio", "openai", "custom", "local"):
+        raise HTTPException(
+            400, "provider must be none|lmstudio|openai|custom|local")
     global _advice_cache, _gear_cache
     set_active(provider, body.get("model"))
     _advice_cache = None
@@ -1026,6 +1029,8 @@ async def api_settings_get():
             "custom_model": custom_model(),
             "custom_base_url": settings.custom_base_url,
             "lmstudio_base_url": settings.lmstudio_base_url,
+            "ollama_base_url": settings.ollama_base_url,
+            "ollama_model": settings.ollama_model,
             "keys_set": which_are_set(),
             "available": available(),
         },

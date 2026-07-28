@@ -608,7 +608,18 @@ whenever the Inventory parse changes.
 ## LLM runtime (backend/llm_runtime.py)
 
 - Providers: `none` (deterministic) | `lmstudio` | `openai` | `custom` (any
-  OpenAI-compatible base URL) | `anthropic` | `local` (Ollama). Switch at
+  OpenAI-compatible base URL) | `anthropic` | `local` (Ollama).
+  - Ollama gets a REAL client, not the `custom` OpenAI shim, because it
+    speaks its own protocol. `OLLAMA_BASE_URL`/`OLLAMA_MODEL` exist so it
+    can live on another machine — a common setup.
+  - `langchain-ollama` is in requirements.txt but NOT requirements-lite:
+    the packaged exe is deterministic by design. `available()` reports it
+    false there and the panel greys it out, which is the whole point of
+    that probe.
+  - It was supported in `get_llm()` from the start yet unreachable until
+    2026-07-28: absent from both provider lists AND rejected by
+    `POST /api/llm`'s allow-list. If you add a provider, that guard, the
+    `/api/llm` options list and SettingsModal's PROVIDERS all need it. Switch at
   runtime via the Advisor tab / `POST /api/llm`; persists to
   `data/llm_config.json`; switching clears consult caches.
 - `none` never builds a chat model — advisor/gear branch to

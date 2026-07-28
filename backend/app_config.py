@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 # Allow-list: only these may be overridden from the UI.
 FIELDS = ("eql_game_dir", "eql_character_name", "llm_provider",
           "openai_model", "custom_model", "custom_base_url",
-          "lmstudio_base_url", "model")
+          "lmstudio_base_url", "model",
+          "ollama_base_url", "ollama_model")
 
 _PATH = data_path("app_config.json")
 
