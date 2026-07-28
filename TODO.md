@@ -104,6 +104,32 @@ the plan, once post-launch consensus exists.
 
 ---
 
+## Launch-day patch follow-ups (2026-07-28)
+
+Checked at launch; these are the ones needing real-world data before they
+can be finished.
+
+- **OCR calibration vs the new UI Scaling option.** The patch added UI
+  scaling (1-5) and text filtering (sharper/blurrier) to the options
+  window. The screen-OCR position feed reads fixed screen regions, so a
+  scale change moves them and a filter change alters glyph rendering.
+  Nothing in the code assumes a scale, so this is a re-calibration
+  question, not a bug — but users who change the setting will need to
+  re-run the OCR calibrator, and that is worth saying in the UI.
+- **Ornamentation slots** were added to model-visible Crushbone items.
+  `SOCKET_TYPES` maps `{7 focus, 8 clicky, 9 worn, 10 proc}`; if
+  ornamentation uses a new slot number it will read as `None` and be
+  treated as unknown. Fails soft, so nothing breaks — but the number is
+  unknown until an export with one shows up. Grab an Inventory export
+  from a character holding an ornamented Crushbone item.
+- **Rampage cooldown.** Cleave and Frenzy now reduce it, mirroring the
+  Smite/Reave shaves in `COOLDOWN_SHAVES`. Rampage is not in
+  `ABILITY_COOLDOWNS` and the patch does not state its duration, so no
+  shave was added — inventing the number would be worse than omitting it.
+  The game's own readout line creates the timer regardless, so Rampage
+  already times correctly once activated; only the shave is missing. Add
+  it once someone reports the base cooldown.
+
 ## Smaller items
 
 - **Loot filter action codes are contested.** `backend/loot_filter.py`

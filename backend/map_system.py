@@ -256,6 +256,11 @@ ZONE_ALIASES = {
     # unresolved (and logged) until someone reports real coordinates.
     "old sebilis": "Old Sebilis",
     "cazic thule": "Temple of Cazic-Thule",
+    # the launch-day patch calls it "New Sebilisian Expedition"; the
+    # wiki and the zone-entry log line say "New Sebilis Expedition".
+    # Both spellings resolve rather than guessing which one sticks.
+    "new sebilisian expedition": "New Sebilis Expedition",
+    "new sebilisian": "New Sebilis Expedition",
     # spell descriptions name zones their own way; these are the forms
     # the druid/wizard port text uses
     "western commonlands": "West Commonlands",

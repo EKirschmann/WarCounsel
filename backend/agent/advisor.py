@@ -45,7 +45,7 @@ ADVISOR_PROMPT = """You are the advisor inside an EverQuest Legends (EQL) compan
 - Reanimation / Reconstitution / Reparation are RESURRECTION spells: they return a DEAD group member to their corpse with experience. They heal nothing and provide zero sustain — never describe them as healing or self-sustain, and never slot them for a solo focus (you cannot cast while dead).
 - Spell slots are scarce: only __SLOTS_NOTE__ spells can be memorized at once.
 - AAs are available from level 1 (General / Archetype / Class / Special tabs) and persist across class swaps: a rank bought once is owned in every combo that qualifies, so General and Archetype ranks are better value than a Class rank for a trio that swaps classes.
-- Special-tab AAs (e.g. Banestrike) and a class's free ranks are granted by achievements, not bought — never recommend spending points on them.
+- Never recommend spending points on an AA the character does not BUY: Special-tab AAs (e.g. Banestrike) and free ranks come from achievements, and AUTOGRANTED class AAs arrive on their own at level (the launch-day Unbound line — Alacrity/Life/Ferocity/Versatility/Drain/Lethality — is autogranted). Recommending any of these wastes the player's points.
 
 __WIKI_HEADER__
 __WIKI__

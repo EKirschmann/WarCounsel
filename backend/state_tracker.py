@@ -40,6 +40,12 @@ def _abbrev_classes(class_str) -> str:
                     for p in str(class_str).split("/"))
 
 
+RE_MOTE = re.compile(r"^Mote of (.+?) Potential$")
+# raid token, launch-day patch: merges like a mote for +1 rank
+RE_VOID_TOKEN = re.compile(r"^(?:A )?Void[-\s]?touched Potential$",
+                           re.IGNORECASE)
+
+
 def _foe_key(name: str) -> str:
     """Log lines capitalize the article at sentence start ("A dread bone
     kicks YOU") but not mid-sentence ("You crush a dread bone") -- fold the
@@ -644,9 +650,15 @@ class CharacterTracker:
                 self.loot_count += max(e.count, 1)
                 self._fire_alerts("loot", e.item, e.ts)
                 # loot lines name the corpse: exact per-mob attribution
-                mote = re.match(r"^Mote of (.+?) Potential$", e.item)
+                # Upgrade currency. The 2026-07-28 launch patch added
+                # "Void-touched Potential", a raid token that merges exactly
+                # like a mote (+1 rank to an item OR a spell) but does NOT
+                # carry the "Mote of <tier>" naming, so the old pattern
+                # missed it entirely. Counted under its own tier name.
+                mote = RE_MOTE.match(e.item) or RE_VOID_TOKEN.match(e.item)
                 if mote:
-                    tier = mote.group(1)
+                    tier = (mote.group(1) if mote.re is RE_MOTE
+                            else "Void-touched")
                     self.motes[tier] = self.motes.get(tier, 0) + max(e.count, 1)
                 if e.source and "'s corpse" in e.source:
                     mob = _foe_key(e.source.split("'s corpse")[0].strip())
