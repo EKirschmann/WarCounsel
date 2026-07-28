@@ -386,6 +386,14 @@ export interface GearMerge {
 }
 
 export interface GearAdvice {
+  /** Owned items with an activatable effect — deterministic, never LLM. */
+  clickies?: {
+    item: string;
+    spell: string;
+    note: string;
+    slot: string;
+    where: string;
+  }[];
   stale?: boolean;
   pet_gear?: PetGear[];
   merges?: GearMerge[];
@@ -430,10 +438,22 @@ export interface Advice {
   class_notes: AdvisorClassNote[];
 }
 
+export interface SpellVendor {
+  zone: string;
+  vendor: string;
+  /** guild / room the NPC stands in */
+  where: string;
+  /** in-game (x,y) as the wiki records it */
+  loc: string;
+}
+
 export interface PurchaseItem {
   name: string;
   level: number;
   now: boolean;
+  /** Resolved only for spells buyable NOW — a buy-ahead entry is a
+   *  reminder, not a shopping trip. */
+  vendors?: SpellVendor[];
 }
 
 export interface HuntingZone {

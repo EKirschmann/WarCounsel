@@ -951,6 +951,62 @@ def _parse_zem_wikitext(text: str) -> dict:
     return zones
 
 
+# Spell pages carry a where_to_obtain table whose SOURCE keeps zone, vendor,
+# location and coords as separate parameters -- the rendered page flattens
+# them into prose. Row shape:
+#   {{SpellWhereRowB | [[Ak'Anon]] | [[Clockwork Merchant]] | Library | (1104,-992) }}
+_SPELL_WHERE_ROW = re.compile(r"\{\{SpellWhereRow[B]?\s*\|(?P<body>[^}]*)\}\}",
+                              re.IGNORECASE)
+
+
+_LINK_PIPED = re.compile(r'\[\[([^\]|]+)\|([^\]]+)\]\]')
+_LINK_PLAIN = re.compile(r'\[\[([^\]]+)\]\]')
+
+
+def _delink(s: str) -> str:
+    """[[Erudin|Erudin Palace]] -> Erudin Palace; [[Ak'Anon]] -> Ak'Anon.
+
+    Function replacements, not backslash-group strings: the escaping is
+    easy to get wrong and fails SILENTLY, substituting a control character
+    instead of the captured text.
+    """
+    s = _LINK_PIPED.sub(lambda m: m.group(2), s)
+    s = _LINK_PLAIN.sub(lambda m: m.group(1), s)
+    return s.replace(chr(39) * 3, '').strip()
+
+async def spell_vendors(spell: str) -> list:
+    """Where to BUY a spell: [{zone, vendor, where, loc}], empty if unknown.
+
+    The advisor already says a spell is a "vendor purchase" and then leaves
+    the player to find it, which is half an answer."""
+    key = spell.strip().lower()
+    cached = wiki_page_cache.get("spell_vendors", key)
+    if cached is not None:
+        return cached
+    rows: list = []
+    try:
+        from backend.wiki_http import fetch_page_wikitext
+        text = await fetch_page_wikitext(spell.strip())
+        for m in _SPELL_WHERE_ROW.finditer(text or ""):
+            # collapse [[A|B]] to [[B]] FIRST: the pipe inside a wiki
+            # link is not a field separator
+            body = _LINK_PIPED.sub(lambda mm: '[[' + mm.group(2) + ']]',
+                                   m.group("body"))
+            parts = [p.strip() for p in body.split("|")]
+            if not parts or not parts[0]:
+                continue
+            zone = _delink(parts[0])
+            vendor = _delink(parts[1]) if len(parts) > 1 else ""
+            where = _delink(parts[2]) if len(parts) > 2 else ""
+            loc = _delink(parts[3]) if len(parts) > 3 else ""
+            if zone and vendor:
+                rows.append({"zone": zone, "vendor": vendor,
+                             "where": where, "loc": loc})
+    except Exception:
+        logger.exception("spell_vendors(%s) failed", spell)
+    wiki_page_cache.set(rows, WIKI_TTL, "spell_vendors", key)
+    return rows
+
 _VENDORED_ZEM: dict | None = None
 
 

@@ -1561,6 +1561,20 @@ button.app-version:hover { color: var(--gold-bright); }
   font-size: 13px;
   margin: 6px 0 2px;
 }
+/* Vendor rows under a shopping-list spell: indented, dimmer, and the
+   coords in mono so they read as something to type. */
+.adv-shop > li { margin-bottom: 6px; }
+.adv-vendors { margin: 2px 0 0; padding-left: 14px; list-style: none; }
+.adv-vendors li {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  border-left: 1px solid var(--hairline-dim);
+  padding-left: 8px;
+}
+.adv-vendor-zone { color: var(--gold); }
+.adv-vendor-loc { font-family: var(--font-mono, "IBM Plex Mono"), monospace; opacity: 0.8; }
+
 .adv-purchase-note {
   font-size: 11.5px;
   color: var(--ink-dim, rgba(230, 222, 202, 0.6));

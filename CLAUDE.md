@@ -481,6 +481,25 @@ display**; failing entries are dropped and logged, never shown. The gates
   PARTIAL (~66k spell records exist), so every helper answers "don't know"
   rather than guessing, and a spell outside the table is never dropped:
   absence of data is not evidence of compatibility.
+- **Clickies** (`_clickies`, deterministic, every gear consult): owned items
+  whose wiki `Effect:` line classifies as clicky via `_exalt_socket_type` --
+  the same classifier the exaltation code uses, so the word means one thing.
+  Worn/focus/PROC effects are excluded: they fire on their own, and listing
+  them buries the ones needing a keypress (a real inventory was 7 procs to
+  1 clicky). A clicky is invisible unless you remember the item has one.
+- **Spell vendors** (`game_data.spell_vendors`): the wiki spell page's
+  `where_to_obtain` table gives zone, NPC, guild and COORDS -- but only in
+  the WIKITEXT; the rendered page flattens it, hence
+  `wiki_http.fetch_page_wikitext`. Parse notes: de-pipe `[[A|B]]` BEFORE
+  splitting rows on `|`, or a piped zone link splits into two fields; and
+  use function replacements in `_delink`, since a mis-escaped `` silently
+  substitutes a control character instead of the capture. Attached to
+  `advice["purchase"]` for spells buyable NOW only -- a buy-ahead entry is a
+  reminder, not a shopping trip, and each lookup is a wiki round-trip.
+  - `missing_spells` is capped at 25 but now sorted level-DESCENDING first.
+    Ascending kept the 25 LOWEST, so anyone with a backlog of skipped
+    low-level spells had the cap fall below their own level and got an
+    EMPTY shopping list, silently, since an empty section just hides.
 - **Permanent buffs** (self-target + zero durationTicks, minus
   travel/summon/pet/FD/res SPAs) are listed in the prompt with a
   never-say-"refresh" instruction — Instrument of Nife-class buffs last

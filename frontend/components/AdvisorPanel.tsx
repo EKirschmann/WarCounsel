@@ -663,14 +663,32 @@ export const AdvisorPanel = memo(function AdvisorPanel({
             {(advice.purchase?.length ?? 0) > 0 && (
               <div className="adv-section">
                 <h3>Vendor shopping list</h3>
-                <p className="adv-purchase">
-                  {advice.purchase!
-                    .map((p) => `${p.name} (L${p.level}${p.now ? "" : " — buy ahead"})`)
-                    .join(" · ")}
-                </p>
+                <ul className="adv-list adv-shop">
+                  {advice.purchase!.map((p) => (
+                    <li key={p.name}>
+                      <strong>{p.name}</strong>
+                      <span className="adv-cls">
+                        {" "}L{p.level}{p.now ? "" : " — buy ahead"}
+                      </span>
+                      {(p.vendors?.length ?? 0) > 0 && (
+                        <ul className="adv-vendors">
+                          {p.vendors!.map((v) => (
+                            <li key={`${v.zone}-${v.vendor}`}>
+                              <span className="adv-vendor-zone">{v.zone}</span>
+                              {" — "}{v.vendor}
+                              {v.where && <span className="adv-cls"> · {v.where}</span>}
+                              {v.loc && <span className="adv-vendor-loc"> {v.loc}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
                 <p className="adv-purchase-note">
                   Missing from your spellbook — spells can be bought and scribed
-                  before you reach their level.
+                  before you reach their level. Vendors are shown for the ones
+                  you can buy now.
                 </p>
               </div>
             )}
@@ -872,6 +890,32 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                             </span>
                           </>
                         )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {gear && (gear.clickies?.length ?? 0) > 0 && (
+                <>
+                  <div
+                    className="adv-sub"
+                    style={{ marginTop: 10 }}
+                    title="Items you own with an effect you activate yourself. Weapon procs are excluded — those fire on their own."
+                  >
+                    Clickies you own
+                  </div>
+                  <ul className="adv-list">
+                    {(gear.clickies ?? []).map((k) => (
+                      <li key={k.item}>
+                        <strong><ItemHover name={k.item} /></strong>
+                        <span className="adv-cls"> — {k.spell}</span>
+                        {k.note && <span className="adv-cls"> ({k.note})</span>}
+                        <br />
+                        <span className="adv-cls">
+                          {k.where === "worn"
+                            ? `worn${k.slot ? ` · ${k.slot}` : ""}`
+                            : `in your ${k.where} — not equipped`}
+                        </span>
                       </li>
                     ))}
                   </ul>

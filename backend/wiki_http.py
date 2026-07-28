@@ -99,6 +99,31 @@ async def fetch_page_text(title: str, max_characters: int = 40_000):
         return None
 
 
+async def fetch_page_wikitext(title: str):
+    """Raw WIKITEXT for a page (None if missing).
+
+    Needed where the rendered HTML loses structure the source keeps -- the
+    spell pages' where_to_obtain table is a template call whose rendered
+    form is a plain table, but whose source carries zone, vendor, location
+    and coordinates as separate parameters.
+    """
+    def work():
+        d = _get({"action": "query", "prop": "revisions", "rvprop": "content",
+                  "rvslots": "main", "titles": title, "format": "json",
+                  "redirects": 1})
+        pages = (d.get("query") or {}).get("pages") or {}
+        for _, p in pages.items():
+            revs = p.get("revisions")
+            if revs:
+                return revs[0]["slots"]["main"]["*"]
+        return None
+    try:
+        return await asyncio.to_thread(work)
+    except Exception as e:
+        logger.warning("HTTP wiki wikitext %r failed: %s", title, e)
+        return None
+
+
 async def fetch_page_html(title: str):
     """Raw rendered HTML of a page (None if missing). The acquisition
     sections (Drops From / Sold by / quests / crafting) exist ONLY in

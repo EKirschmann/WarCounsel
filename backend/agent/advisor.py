@@ -1264,6 +1264,50 @@ async def _exalt_targets(stone_name: str, styp: str,
     return out
 
 
+async def _clickies(items: list) -> list:
+    """Owned items with an ACTIVATABLE effect, deterministic.
+
+    Nothing surfaced these before: a clicky is invisible unless you happen
+    to remember the item has one, and the wiki line that proves it is
+    already fetched for every owned item. Reuses _exalt_socket_type, the same classifier the
+    exaltation code uses, so "clicky" means the same thing in both places.
+
+    Worn/focus/proc effects are excluded on purpose -- those fire on their
+    own, so listing them would bury the ones that need a keypress.
+    """
+    from backend.game_data import item_line
+    seen: set = set()
+    out: list = []
+    for it in items:
+        name = it.get("name")
+        if not name or name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        line = await item_line(name)
+        if not line:
+            continue
+        m = re.search(r"(?<!Focus )Effect: ([^;|]+)", line)
+        if not m:
+            continue
+        effect = m.group(1).strip()
+        if _exalt_socket_type(effect) != "clicky":
+            continue
+        spell = effect.split("(")[0].strip()
+        cond = effect[effect.find("(") + 1:effect.rfind(")")] if "(" in effect else ""
+        slot_m = re.search(r"Slot: ([^;|]+)", line)
+        out.append({
+            "item": name,
+            "spell": spell,
+            # "Any Slot, Casting Time: Instant" -> tells you whether it has
+            # to be equipped and how long you stand still for
+            "note": cond.strip(),
+            "slot": (slot_m.group(1).strip() if slot_m else ""),
+            "where": it.get("where") or "",
+        })
+    out.sort(key=lambda x: (x["where"] != "worn", x["item"].lower()))
+    return out
+
+
 async def _merge_opportunities(items: list, exalts: list,
                                loot_filter: Optional[dict] = None) -> list:
     """Duplicate owned EQUIPMENT is an EQL merge opportunity: two copies
@@ -1349,6 +1393,7 @@ async def generate_gear_advice(ctx: dict) -> dict:
         "merges": await _merge_opportunities(items,
                                              ctx.get("exaltations") or [],
                                              ctx.get("loot_filter")),
+        "clickies": await _clickies(items),
     }
     if not items:
         return {**base, "source": "builtin", "note":
