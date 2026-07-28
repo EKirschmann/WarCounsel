@@ -4,7 +4,7 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
-## Unreleased
+## v2.1.2 — 2026-07-28
 
 **All-time stats.** The Vitals panel has a small **all time** button next
 to the session summary: lifetime kills, deaths, loot, levels, AAs, zones,
