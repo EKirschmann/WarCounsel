@@ -6,6 +6,13 @@ in the app header; update by closing the companion and running
 
 ## Unreleased
 
+**Fixed: the app could refuse to start**, with a database error about a
+character name already existing. Character records were keyed by name
+alone, so a record saved before the server was known became unfindable —
+and the app tried to add it a second time. Records are now keyed by name
+AND server, which also means two characters sharing a name on different
+servers can finally both exist. Existing databases migrate on startup.
+
 **Fixed: the overlay could render solid black.** Making the window
 click-through rewrote its window style, which on some machines discards
 the transparency settings Tk had already applied — leaving the widget

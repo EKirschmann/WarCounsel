@@ -71,6 +71,37 @@ with engine.connect() as _conn:
                        ("max_mana", "INTEGER")):
         if _col not in _cols:
             _conn.exec_driver_sql(f"ALTER TABLE characters ADD COLUMN {_col} {_typ}")
+
+    # characters.name was UNIQUE on its own, which made two servers with the
+    # same character name unstorable AND crashed startup outright: a row
+    # written before the server was known could not be found by a
+    # (name, server) lookup, so the code inserted and hit the constraint.
+    # SQLAlchemy built it as a plain unique INDEX, so this is a drop and
+    # recreate rather than a table rebuild.
+    _idx = {r[1]: r[2] for r in
+            _conn.exec_driver_sql("PRAGMA index_list(characters)")}
+    if _idx.get("ix_characters_name"):          # 1 == unique
+        _dupes = _conn.exec_driver_sql(
+            "SELECT name, server, COUNT(*) FROM characters "
+            "GROUP BY name, server HAVING COUNT(*) > 1").fetchall()
+        if _dupes:
+            # Refuse rather than fail halfway: a duplicate pair would make the
+            # new index impossible, and silently deleting someone's character
+            # rows is not ours to do.
+            logging.getLogger(__name__).warning(
+                "characters has duplicate (name, server) rows %s — leaving the "
+                "old unique index in place; remove the duplicates to migrate",
+                _dupes)
+        else:
+            _conn.exec_driver_sql("DROP INDEX ix_characters_name")
+            _conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_characters_name_server "
+                "ON characters (name, server)")
+            _conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_characters_name "
+                "ON characters (name)")
+            logging.getLogger(__name__).info(
+                "characters: unique index moved from (name) to (name, server)")
     _conn.commit()
 
 # Persist these event types to the DB; per-hit spam stays in memory only.
@@ -227,6 +258,17 @@ def _sync_character_row(db: Session) -> Character:
     row = (db.query(Character)
            .filter(Character.name == tracker.name,
                    Character.server == tracker.server).first())
+    if not row and tracker.server:
+        # A row written before the server was known has server NULL, which no
+        # (name, server) lookup can match — adopt it instead of inserting a
+        # second one, which is what raised the UNIQUE error on startup.
+        row = (db.query(Character)
+               .filter(Character.name == tracker.name,
+                       Character.server.is_(None)).first())
+        if row:
+            row.server = tracker.server
+            db.commit()
+            db.refresh(row)
     if not row:
         row = Character(name=tracker.name, server=tracker.server)
         db.add(row)

@@ -6,7 +6,7 @@ harmless; delete data/companion.db to fully clean up.
 """
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -14,9 +14,16 @@ Base = declarative_base()
 
 class Character(Base):
     __tablename__ = "characters"
+    __table_args__ = (UniqueConstraint("name", "server",
+                                       name="uq_characters_name_server"),)
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, unique=True, index=True)
+    # UNIQUE on (name, server), NOT on name alone: the same character
+    # name can exist on two servers, and a name-only constraint made
+    # the second one impossible to store -- it also crashed startup
+    # outright when a row created before the server was known could
+    # not be found by a (name, server) lookup.
+    name = Column(String, nullable=False, index=True)
     server = Column(String, nullable=True)
     level = Column(Integer, nullable=True)
     class_str = Column(String, nullable=True)   # e.g. "Monk/Paladin/Druid"

@@ -212,6 +212,24 @@ All styling is CSS custom properties in `app/globals.css` — **no Tailwind**.
   not a race; AFK prefix tolerated), and possessive pet swings
   ("Kenkyo`s warder bites" rewrites to the "<Owner> pet" convention).
 
+## characters is UNIQUE on (name, server)
+
+It was UNIQUE on `name` alone until 2026-07-28, which failed two ways:
+
+- **Startup crashed outright.** A row written before the server was known
+  has `server` NULL, which no `(name, server)` lookup can match, so
+  `_sync_character_row()` inserted — and hit the name constraint.
+  `IntegrityError` inside the lifespan means "Application startup failed".
+  It now ADOPTS a server-less row and backfills the server.
+- Two characters sharing a name on different servers could not both exist,
+  which quietly contradicts the per-character isolation the lifetime totals
+  depend on.
+
+The old constraint was a plain unique INDEX, so the migration drops and
+recreates rather than rebuilding the table. It REFUSES and logs if
+duplicate `(name, server)` pairs exist rather than deleting anyone's rows
+to force the index through.
+
 ## When the numbers stop moving
 
 A stalled tailer is INDISTINGUISHABLE from a quiet night: the overlay
