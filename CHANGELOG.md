@@ -6,6 +6,12 @@ in the app header; update by closing the companion and running
 
 ## Unreleased
 
+**The overlay says when it has stopped reading.** Frozen numbers used to
+look identical to a quiet night. If the log has not grown, or a newer log
+exists for a different character — what happens the moment you roll one,
+since the app picks its log at startup — the overlay now says so instead
+of silently showing stale values.
+
 **"none loaded" no longer looks like a problem.** Ollama unloads a model
 after five minutes idle and loads it again on the next request, so an
 idle server showing nothing resident is normal. The check now says

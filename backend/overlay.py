@@ -26,6 +26,7 @@ import logging
 import threading
 import time
 import tkinter as tk
+from typing import Optional
 import urllib.request
 from pathlib import Path
 
@@ -592,6 +593,25 @@ class OverlayMeter:
                     self.act_opacity_down()
             self._hot_prev[vk] = pressed
 
+    def _log_warning(self) -> Optional[str]:
+        """Why the numbers are not moving, when they should be.
+
+        Silence is normal while idling, so this only speaks up once the gap
+        is long enough to be odd, and it names the likeliest cause: a newer
+        log belonging to a different character, which is what happens the
+        moment someone rolls a new one.
+        """
+        snap = self.snap or {}
+        other = snap.get("newer_log")
+        if other:
+            return f"! newer log for {other} — switch character"
+        if snap.get("log_seen_growth") is False:
+            return "! no log activity yet — is /log on?"
+        stale = snap.get("log_stale_s")
+        if isinstance(stale, (int, float)) and stale > 600:
+            return f"! log quiet {int(stale // 60)}m — is /log on?"
+        return None
+
     def _render(self) -> None:
         self._poll_hotkeys()
         self.prefs = overlay_prefs.load()
@@ -670,6 +690,18 @@ class OverlayMeter:
             c.create_text(8, y + TROW_H // 2, anchor="w", fill=RED,
                           font=("Consolas", 9),
                           text="companion offline (:8000)")
+            y += TROW_H
+        elif self._log_warning():
+            # A stalled tailer looks exactly like a quiet night: the numbers
+            # simply stop moving, with nothing on screen to say why. This is
+            # the difference between "nothing is happening" and "nothing is
+            # being READ" -- most often a new character writing to a new log
+            # while we still watch the old one.
+            c.create_rectangle(0, y, W, y + TROW_H, fill=RED, width=0,
+                               stipple="gray25")
+            c.create_text(6, y + TROW_H // 2, anchor="w", fill=BRIGHT,
+                          font=("Consolas", 8, "bold"),
+                          text=self._log_warning()[:46])
             y += TROW_H
         elif not self.compact:
             prefs = self.prefs

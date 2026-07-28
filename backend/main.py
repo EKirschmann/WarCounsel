@@ -616,7 +616,47 @@ async def health():
 
 @app.get("/api/character")
 async def get_character():
-    return tracker.snapshot()
+    snap = tracker.snapshot()
+    # Log health rides the snapshot, not just /health. A stalled tailer looks
+    # exactly like "nothing is happening" — the overlay simply shows the last
+    # numbers forever, with no way to tell a quiet night from a dead feed.
+    if watcher:
+        growth = watcher.last_growth
+        # last_growth is None when the file has not grown ONCE since we
+        # started watching — the frozen case, and the one that must not be
+        # indistinguishable from a healthy idle feed.
+        snap["log_stale_s"] = (round((datetime.now() - growth).total_seconds())
+                               if growth else None)
+        snap["log_seen_growth"] = growth is not None
+        snap["log_file"] = watcher.path.name if watcher.path else None
+    # A NEWER log for a DIFFERENT character means they rolled or switched and
+    # we are still tailing the old one — the classic launch-day symptom, and
+    # invisible otherwise because the old file simply stops growing.
+    snap["newer_log"] = _newer_log_for_other_character()
+    return snap
+
+
+def _newer_log_for_other_character() -> Optional[str]:
+    """Character name of a log newer than the one we watch, if any."""
+    try:
+        from backend.log_system.parser import extract_character_from_filename
+        if not watcher or not watcher.path:
+            return None
+        current = Path(watcher.path)
+        cur_mtime = current.stat().st_mtime
+        newest, newest_name = cur_mtime, None
+        for p in Path(settings.eql_log_dir).glob("eqlog_*.txt"):
+            if p.name == current.name:
+                continue
+            m = p.stat().st_mtime
+            if m <= newest:
+                continue
+            name, _ = extract_character_from_filename(p)
+            if name and name.lower() != (tracker.name or "").lower():
+                newest, newest_name = m, name
+        return newest_name
+    except Exception:
+        return None
 
 
 @app.patch("/api/character")

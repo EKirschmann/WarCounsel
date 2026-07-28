@@ -212,6 +212,27 @@ All styling is CSS custom properties in `app/globals.css` — **no Tailwind**.
   not a race; AFK prefix tolerated), and possessive pet swings
   ("Kenkyo`s warder bites" rewrites to the "<Owner> pet" convention).
 
+## When the numbers stop moving
+
+A stalled tailer is INDISTINGUISHABLE from a quiet night: the overlay
+simply shows the last values forever. Log health therefore rides the
+snapshot, not only `/health`, so both surfaces can explain themselves.
+
+- `log_stale_s` — seconds since the file last grew; `log_seen_growth` is
+  False when it has not grown ONCE since startup, which is the frozen case
+  and must not look like healthy idling.
+- `newer_log` — a log NEWER than the watched one belonging to a DIFFERENT
+  character. `discover_log_file()` picks at startup only, so rolling a new
+  character leaves the backend tailing the old file with no symptom beyond
+  frozen numbers. This is the launch-day report.
+- The overlay renders one red line for these and nothing at all when
+  healthy — silence while idling is normal and must stay silent.
+- **`_render()` has no try/except and reschedules itself on its LAST
+  line**, so any exception there freezes the overlay permanently while
+  leaving the window on screen. The pollers already swallow their own
+  errors. Exercise the render sweep (56 snapshot × preset × compact
+  combinations) after touching that path.
+
 ## Sessions (rollover + history)
 
 "Welcome to EverQuest Legends!" (login banner) is the ONE session
