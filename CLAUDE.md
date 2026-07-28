@@ -227,6 +227,15 @@ snapshot, not only `/health`, so both surfaces can explain themselves.
   frozen numbers. This is the launch-day report.
 - The overlay renders one red line for these and nothing at all when
   healthy — silence while idling is normal and must stay silent.
+- **Never rewrite the ex-style without re-asserting the alpha.**
+  `_set_click_through()` adds WS_EX_LAYERED/WS_EX_TRANSPARENT via
+  `SetWindowLongW`, but Tk ALREADY made the window layered when it applied
+  `-alpha`. Touching the layering style bit drops the layer attributes, and
+  a layered window without them paints solid BLACK — the whole widget, with
+  the render loop ticking normally and nothing in any log. Reported as "the
+  overlay was just black" while the web UI updated fine. The call now
+  re-applies `SetLayeredWindowAttributes` immediately after. Symptom is
+  machine-dependent (DWM/driver), so it will not reproduce everywhere.
 - **`_render()` has no try/except and reschedules itself on its LAST
   line**, so any exception there freezes the overlay permanently while
   leaving the window on screen. The pollers already swallow their own

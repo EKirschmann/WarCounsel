@@ -6,6 +6,12 @@ in the app header; update by closing the companion and running
 
 ## Unreleased
 
+**Fixed: the overlay could render solid black.** Making the window
+click-through rewrote its window style, which on some machines discards
+the transparency settings Tk had already applied — leaving the widget
+painting black while everything behind it kept working normally. The
+settings are now re-applied whenever the style changes.
+
 **The overlay says when it has stopped reading.** Frozen numbers used to
 look identical to a quiet night. If the log has not grown, or a newer log
 exists for a different character — what happens the moment you roll one,

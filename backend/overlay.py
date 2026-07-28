@@ -42,6 +42,7 @@ STATE_FILE = data_path("overlay_ui.json")
 GWL_EXSTYLE = -20
 WS_EX_LAYERED = 0x00080000
 WS_EX_TRANSPARENT = 0x00000020
+LWA_ALPHA = 0x00000002
 VK_SCROLL = 0x91
 
 BG = "#12151a"
@@ -435,6 +436,14 @@ class OverlayMeter:
             else:
                 style &= ~WS_EX_TRANSPARENT
             ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+            # Tk already made this window layered when it applied -alpha.
+            # Rewriting the ex-style touches the layering style bit, and a
+            # layered window whose attributes have been dropped paints BLACK
+            # -- the whole widget, with the render loop running normally, so
+            # nothing in the logs. Re-assert the alpha every time the style
+            # changes; it is one call and it costs nothing when unnecessary.
+            ctypes.windll.user32.SetLayeredWindowAttributes(
+                hwnd, 0, int(max(0.0, min(1.0, self.alpha)) * 255), LWA_ALPHA)
         except Exception:
             pass
 
