@@ -504,3 +504,18 @@ export interface RouteReply {
   walk?: RouteStep[];
   variants?: RouteVariant[];
 }
+
+export interface Lifetime {
+  available: boolean;
+  character: string | null;
+  server: string | null;
+  first_seen: string | null;
+  last_seen: string | null;
+  kills: number; deaths: number; loot: number; levels: number; aas: number;
+  zones: number; fights: number;
+  damage_dealt: number; damage_taken: number; healing_done: number;
+  fight_seconds: number; best_dps: number;
+  coin_copper: number; xp_percent: number; sessions: number;
+  /** fields whose history starts later than the rest */
+  partial: string[];
+}

@@ -312,6 +312,31 @@ hours-to-level estimate (exact only after a same-session ding).
   GET /api/trio-compare) and a 2s-bucket damage "timeline" (the
   Encounter panel sparkline).
 
+## All-time totals (`GET /api/lifetime`)
+
+DERIVED from the stored `log_events` rows, not accumulated into a counter.
+Those rows are already written per character as play happens, so there is
+no second source of truth to drift, and the live session is included for
+free — a kill persists the moment it happens.
+
+- **Isolation is `character_id`.** Two characters never blend, and neither
+  do same-named characters on different servers, which get separate rows.
+  The panel refetches on character change and resets to the session view.
+- Counts come from event rows (`kill`, `death`, `loot`, `level`, `aa`,
+  distinct `zone`); combat totals are SUMmed out of the persisted
+  `encounter` payloads via `json_extract`, which already carry
+  total_damage / damage_taken / total_healing / duration / peak_dps.
+- **`coin` and `exp` joined PERSISTED_EVENTS on 2026-07-28** so lifetime
+  could show them at all; they were headline session numbers with no
+  stored row. All-time coin and XP therefore begin at that date while
+  everything else reaches back to the first log this install read, which
+  is why the response carries a `partial` list and the panel says so.
+- `Coin.copper` is resolved at PARSE time. `amount` is prose ("3 gold, 5
+  silver"), so a stored row could not be summed without re-parsing every
+  string.
+- The view defaults to the session, not all-time: the session answers "how
+  is tonight going", which is what a glance mid-play wants.
+
 ## Session persistence (survives restarts)
 
 `session_state.py` snapshots the tracker (counters, ledger, encounters,

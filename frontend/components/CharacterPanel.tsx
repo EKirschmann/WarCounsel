@@ -2,7 +2,14 @@
 
 import { memo, useEffect, useState } from "react";
 import { apiGet, apiSend } from "@/lib/api";
-import type { SessionSummary, Snapshot, TrioCompareRow } from "@/lib/types";
+
+/** 3,614,400 -> "3.6M" — lifetime numbers outgrow a table cell. */
+function fmtBig(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+import type { Lifetime, SessionSummary, Snapshot, TrioCompareRow } from "@/lib/types";
 
 const PLAYSTYLES = [
   "solo_dps", "group_dps", "tank", "healer", "support", "pet_focused", "balanced",
@@ -33,6 +40,10 @@ export const CharacterPanel = memo(function CharacterPanel({
   const [manaDraft, setManaDraft] = useState("");
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [trios, setTrios] = useState<TrioCompareRow[]>([]);
+  const [lifetime, setLifetime] = useState<Lifetime | null>(null);
+  // Session is the default: it answers "how is tonight going", which is
+  // what someone glances at mid-play. All-time is a deliberate look.
+  const [showAllTime, setShowAllTime] = useState(false);
   useEffect(() => {
     if (!snap?.name) return;
     apiGet<{ history: SessionSummary[] }>("/api/sessions")
@@ -41,7 +52,13 @@ export const CharacterPanel = memo(function CharacterPanel({
     apiGet<{ trios: TrioCompareRow[] }>("/api/trio-compare")
       .then((d) => setTrios(d.trios ?? []))
       .catch(() => setTrios([]));
-  }, [snap?.name]);
+    // Refetched whenever the character changes, so totals can never carry
+    // over from whoever was loaded before.
+    apiGet<Lifetime>("/api/lifetime")
+      .then((d) => setLifetime(d.available ? d : null))
+      .catch(() => setLifetime(null));
+    setShowAllTime(false);
+  }, [snap?.name, snap?.server]);
   useEffect(() => {
     setHpDraft(snap?.max_hp != null ? String(snap.max_hp) : "");
   }, [snap?.max_hp]);
@@ -277,7 +294,49 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
-        {sessions.length > 0 && (
+        {lifetime && (
+          <div className="loot-list hunt-list">
+            <div className="lt-head">
+              <h3>{showAllTime ? "All time" : "This session"}</h3>
+              <button
+                type="button"
+                className="lt-toggle"
+                onClick={() => setShowAllTime((v) => !v)}
+                title={`${lifetime.character}@${lifetime.server} — totals are per character and server`}
+              >
+                {showAllTime ? "session" : "all time"}
+              </button>
+            </div>
+            {showAllTime ? (
+              <table className="hunt-table lt-table">
+                <tbody>
+                  <tr><td className="hunt-name">Kills</td><td>{lifetime.kills.toLocaleString()}</td>
+                      <td className="hunt-name">Deaths</td><td>{lifetime.deaths.toLocaleString()}</td></tr>
+                  <tr><td className="hunt-name">Loot</td><td>{lifetime.loot.toLocaleString()}</td>
+                      <td className="hunt-name">Levels</td><td>{lifetime.levels}</td></tr>
+                  <tr><td className="hunt-name">Fights</td><td>{lifetime.fights.toLocaleString()}</td>
+                      <td className="hunt-name">Zones</td><td>{lifetime.zones}</td></tr>
+                  <tr><td className="hunt-name">Damage</td><td>{fmtBig(lifetime.damage_dealt)}</td>
+                      <td className="hunt-name">Taken</td><td>{fmtBig(lifetime.damage_taken)}</td></tr>
+                  <tr><td className="hunt-name">Healed</td><td>{fmtBig(lifetime.healing_done)}</td>
+                      <td className="hunt-name">Best DPS</td><td>{lifetime.best_dps}</td></tr>
+                  <tr><td className="hunt-name">In combat</td>
+                      <td>{Math.round(lifetime.fight_seconds / 3600)}h</td>
+                      <td className="hunt-name">AAs</td><td>{lifetime.aas}</td></tr>
+                </tbody>
+              </table>
+            ) : null}
+            {showAllTime && (
+              <p className="lt-note">
+                {lifetime.character}@{lifetime.server}, since{" "}
+                {lifetime.first_seen?.slice(0, 10) ?? "—"}. Coin and XP totals
+                only count from the version that began storing them.
+              </p>
+            )}
+          </div>
+        )}
+
+        {sessions.length > 0 && !showAllTime && (
           <div className="loot-list hunt-list">
             <h3>Past sessions</h3>
             <table className="hunt-table">

@@ -220,6 +220,10 @@ class Coin(LogEvent):
     vendor: Optional[str] = None     # "from Lanadin for the X(s)."
     item: Optional[str] = None       # the item a vendor sale was for
     from_item: bool = False          # "You received ... from that item."
+    # Denominations resolved at parse time. `amount` alone is prose, so a
+    # stored row could not be summed without re-parsing every string; the
+    # lifetime totals need this on the row itself.
+    copper: int = 0
 
 
 class LocUpdate(LogEvent):

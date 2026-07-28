@@ -274,6 +274,17 @@ def _parse_ts(ts_str: str) -> Optional[datetime]:
     _TS_MEMO[ts_str] = value
     return value
 
+_COIN_VALUE = {"platinum": 1000, "gold": 100, "silver": 10, "copper": 1}
+_COIN_PARTS = re.compile(r"(\d+)\s+(platinum|gold|silver|copper)")
+
+
+def _coin_copper(amount: str) -> int:
+    """'3 gold, 5 silver and 7 copper' -> 357. Resolved at parse time so a
+    stored coin row can be summed without re-reading its prose."""
+    return sum(int(n) * _COIN_VALUE[d]
+               for n, d in _COIN_PARTS.findall(amount or ""))
+
+
 def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.LogEvent]:
     """Parse a raw log line into an event, or None if unrecognized."""
     line = line.rstrip("\r\n")
@@ -420,14 +431,17 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
         return ev.MissIn(attacker=mi.group(1), verb=mi.group(2),
                          defense=defense, **base)
     if co := RE_VENDOR_SALE.match(body):
-        return ev.Coin(amount=co.group(1), vendor=co.group(2),
-                       item=co.group(3), **base)
+        return ev.Coin(amount=co.group(1), copper=_coin_copper(co.group(1)),
+                       vendor=co.group(2), item=co.group(3), **base)
     if co := RE_COIN.match(body):
-        return ev.Coin(amount=co.group(1), **base)
+        return ev.Coin(amount=co.group(1),
+                       copper=_coin_copper(co.group(1)), **base)
     if co := RE_COIN_SPLIT.match(body):
-        return ev.Coin(amount=co.group(1), split=True, **base)
+        return ev.Coin(amount=co.group(1), copper=_coin_copper(co.group(1)),
+                       split=True, **base)
     if co := RE_COIN_ITEM.match(body):
-        return ev.Coin(amount=co.group(1), from_item=True, **base)
+        return ev.Coin(amount=co.group(1), copper=_coin_copper(co.group(1)),
+                       from_item=True, **base)
     if fa := RE_FACTION.match(body):
         return ev.Faction(faction=fa.group(1),
                           delta=int(fa.group(2)) if fa.group(2) else 0,

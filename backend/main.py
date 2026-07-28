@@ -23,7 +23,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text as sqltext
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.agent.advisor import generate_advice, generate_gear_advice
@@ -74,7 +74,12 @@ with engine.connect() as _conn:
     _conn.commit()
 
 # Persist these event types to the DB; per-hit spam stays in memory only.
-PERSISTED_EVENTS = {"zone", "level", "kill", "death", "aa", "loot", "skill", "char_info"}
+PERSISTED_EVENTS = {"zone", "level", "kill", "death", "aa", "loot", "skill",
+                    "char_info", "coin", "exp"}
+# coin/exp added 2026-07-28 so lifetime totals can show them. They are
+# headline session numbers that were never persisted, so all-time coin
+# and XP accumulate from that date forward -- everything else in the
+# lifetime view goes back to the first log this install ever read.
 STATE_BROADCAST_MIN_INTERVAL = 1.0  # seconds
 EVENT_FLUSH_INTERVAL = 0.15  # coalesce events into ~6 WS frames/sec
 EVENT_BUFFER_MAX = 600       # cap the buffer during client-less catch-up bursts
@@ -1291,6 +1296,86 @@ async def get_sessions(limit: int = 12, db: Session = Depends(get_db)):
              .order_by(LogEventRow.ts.desc()).limit(limit).all())
         rows = [r.payload for r in q]
     return {"current": current, "history": rows}
+
+
+@app.get("/api/lifetime")
+async def get_lifetime(db: Session = Depends(get_db)):
+    """All-time totals for the ACTIVE character, from stored events.
+
+    Derived rather than accumulated in a counter: the rows are already
+    written per character as play happens, so this needs no second source
+    of truth that could drift, and it includes the live session for free.
+
+    Isolation is by character_id, so switching characters switches the
+    numbers -- two characters on one account never blend, and neither do
+    same-named characters on different servers, which get separate rows.
+    """
+    if not _character_id:
+        return {"available": False,
+                "reason": "No character yet — type /who in game."}
+
+    def count(kind: str) -> int:
+        return (db.query(LogEventRow)
+                .filter(LogEventRow.character_id == _character_id,
+                        LogEventRow.event_type == kind).count())
+
+    row = db.execute(sqltext("""
+        SELECT MIN(ts) AS first_seen, MAX(ts) AS last_seen, COUNT(*) AS events
+        FROM log_events WHERE character_id = :cid
+    """), {"cid": _character_id}).mappings().first() or {}
+
+    # encounters carry the combat totals; summing them beats re-deriving
+    enc = db.execute(sqltext("""
+        SELECT COUNT(*) AS fights,
+               COALESCE(SUM(json_extract(payload,'$.total_damage')), 0) AS dealt,
+               COALESCE(SUM(json_extract(payload,'$.damage_taken')), 0) AS taken,
+               COALESCE(SUM(json_extract(payload,'$.total_healing')), 0) AS healed,
+               COALESCE(SUM(json_extract(payload,'$.duration')), 0) AS secs,
+               COALESCE(MAX(json_extract(payload,'$.peak_dps')), 0) AS best
+        FROM log_events
+        WHERE character_id = :cid AND event_type = 'encounter'
+    """), {"cid": _character_id}).mappings().first() or {}
+
+    coin = db.execute(sqltext("""
+        SELECT COALESCE(SUM(json_extract(payload,'$.copper')), 0) AS copper
+        FROM log_events WHERE character_id = :cid AND event_type = 'coin'
+    """), {"cid": _character_id}).mappings().first() or {}
+
+    xp = db.execute(sqltext("""
+        SELECT COALESCE(SUM(json_extract(payload,'$.percent')), 0) AS pct
+        FROM log_events WHERE character_id = :cid AND event_type = 'exp'
+    """), {"cid": _character_id}).mappings().first() or {}
+
+    zones = db.execute(sqltext("""
+        SELECT COUNT(DISTINCT json_extract(payload,'$.zone')) AS n
+        FROM log_events WHERE character_id = :cid AND event_type = 'zone'
+    """), {"cid": _character_id}).mappings().first() or {}
+
+    sessions = (db.query(LogEventRow)
+                .filter(LogEventRow.character_id == _character_id,
+                        LogEventRow.event_type == "session").count())
+
+    return {
+        "available": True,
+        "character": tracker.name, "server": tracker.server,
+        "first_seen": row.get("first_seen"), "last_seen": row.get("last_seen"),
+        "events": row.get("events") or 0,
+        "kills": count("kill"), "deaths": count("death"),
+        "loot": count("loot"), "levels": count("level"), "aas": count("aa"),
+        "zones": zones.get("n") or 0,
+        "fights": enc.get("fights") or 0,
+        "damage_dealt": int(enc.get("dealt") or 0),
+        "damage_taken": int(enc.get("taken") or 0),
+        "healing_done": int(enc.get("healed") or 0),
+        "fight_seconds": int(enc.get("secs") or 0),
+        "best_dps": round(float(enc.get("best") or 0), 1),
+        "coin_copper": int(coin.get("copper") or 0),
+        "xp_percent": round(float(xp.get("pct") or 0), 2),
+        "sessions": sessions,
+        # coin/exp rows only exist from the version that started storing
+        # them, so say so rather than quietly under-reporting
+        "partial": ["coin_copper", "xp_percent"],
+    }
 
 
 @app.get("/api/tracked-rules")

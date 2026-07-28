@@ -6,6 +6,15 @@ in the app header; update by closing the companion and running
 
 ## Unreleased
 
+**All-time stats.** The Vitals panel has a small **all time** button next
+to the session summary: lifetime kills, deaths, loot, levels, AAs, zones,
+fights, damage dealt and taken, healing, best DPS and hours in combat —
+per character and server, so switching characters switches the numbers
+and nothing blends. It reads your existing history, so it is populated
+from the first launch rather than starting at zero. Coin and XP are the
+exception: they were never stored before, so those two begin
+accumulating now.
+
 **Anthropic is selectable now** — the client was already bundled in the
 .exe, it just could not be picked. **Grok** needs no new support: it is
 OpenAI-compatible, so point the Custom endpoint at
