@@ -292,8 +292,19 @@ overflow until you drag one out.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Credits for the community projects whose
-data and techniques are vendored here are in [NOTICE.md](NOTICE.md).
+MIT — see [LICENSE](LICENSE).
+
+**Take what's useful.** Copy the parser, lift the verification-gate
+pattern, vendor the data files, fork the whole thing. No permission
+needed. A mention is appreciated, not required — this exists because
+other people in this community published their work first, and most of
+them asked for nothing either.
+
+Two exceptions, because they aren't ours to give away: wiki-derived
+content stays **CC BY-SA 4.0**, and vendored third-party data keeps its
+own licence. Both are listed in [NOTICE.md](NOTICE.md), along with credits
+for the projects this is built on and a note on where each kind of number
+in the app comes from.
 
 ## Notes
 

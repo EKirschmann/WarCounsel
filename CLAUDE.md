@@ -843,6 +843,15 @@ in-window, cmd /k so the window never vanishes) — see INSTALL.md.
 
 ## Notes for assistants
 
+- **NOTICE.md is the sourcing record, and it must stay current.** Anything
+  vendored gets an entry with its real licence; MIT on this repo does NOT
+  relicense it. Two obligations are non-optional: wiki-derived content
+  (`zem_levels.wiki`, and everything mined at runtime) stays CC BY-SA 4.0,
+  and third-party data keeps its own terms. It also records which KIND of
+  source each number comes from — log-parsed, export-parsed, wiki-mined,
+  modeled — which is the honest version of "how much should I trust this".
+  Six vendored files went uncredited before 2026-07-28; check NOTICE when
+  you add a data file, not later.
 - **TODO.md holds shelved ideas**, each with enough context to resume cold —
   why it is worth doing, what shape it should take, and any trap already
   found while prototyping. Add to it rather than letting a deferred idea
