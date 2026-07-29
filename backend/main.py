@@ -1668,6 +1668,90 @@ async def ocr_preview():
 
 
 _overlay_proc = None
+_OVERLAY_PID = data_path("overlay.pid")
+
+
+def _overlay_pid_alive():
+    """PID of an overlay we started earlier that is still running.
+
+    `_overlay_proc` is MODULE state, and uvicorn --reload re-imports this
+    module on every edit. That silently orphaned the overlay: the handle
+    reset to None while the child kept running, so the toggle took the
+    LAUNCH branch, the named-mutex singleton blocked the second copy, and
+    the overlay could no longer be dismissed from the web UI at all -- it
+    could still be dragged, which is exactly how it was reported. A pid
+    file outlives the reload.
+    """
+    try:
+        pid = int(_OVERLAY_PID.read_text(encoding="utf-8").strip())
+    except Exception:
+        return None
+    try:
+        import psutil
+        pr = psutil.Process(pid)
+        if not pr.is_running():
+            return None
+        # CONFIRM it is an overlay before signalling anything. Pids get
+        # recycled, and terminating an unrelated process because a stale
+        # file named it is not a recoverable mistake.
+        if not _is_overlay_cmdline(pr.cmdline()):
+            return None
+        return pid
+    except Exception:
+        return None
+
+
+def _is_overlay_cmdline(cmdline) -> bool:
+    """Is this OUR combat overlay, and specifically not the OCR calibrator?
+
+    Matching the substring "overlay" is far too loose: it hits any shell
+    command that merely mentions the word, and "--ocr-overlay" contains
+    "--overlay", so a sloppy test would let the overlay toggle terminate
+    the OCR region calibrator. Source mode runs `-m backend.overlay`;
+    a frozen build passes a BARE `--overlay` flag, checked as an exact
+    argv token so `--ocr-overlay` cannot match it.
+    """
+    toks = [str(t) for t in (cmdline or [])]
+    if any("backend.overlay" in t for t in toks):
+        return True
+    return "--overlay" in toks
+
+
+def _find_overlay_pid():
+    """Scan for a running overlay we have no handle OR pid file for.
+
+    Covers the overlay that was already running before the pid file
+    existed -- including one orphaned by an earlier reload, which is
+    otherwise unkillable from the UI forever.
+    """
+    try:
+        import psutil
+    except Exception:
+        return None
+    for pr in psutil.process_iter(["pid", "cmdline"]):
+        try:
+            if _is_overlay_cmdline(pr.info.get("cmdline")):
+                return pr.info["pid"]
+        except Exception:
+            continue
+    return None
+
+
+def _kill_overlay_pid(pid: int) -> None:
+    try:
+        import psutil
+        pr = psutil.Process(pid)
+        pr.terminate()
+        try:
+            pr.wait(timeout=3)
+        except Exception:
+            pr.kill()
+    except Exception:
+        logger.debug("overlay pid %s would not die", pid, exc_info=True)
+    try:
+        _OVERLAY_PID.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 @app.post("/api/overlay")
@@ -1684,18 +1768,36 @@ async def toggle_combat_overlay():
         except subprocess.TimeoutExpired:
             _overlay_proc.kill()
         _overlay_proc = None
+        try:
+            _OVERLAY_PID.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return {"running": False}
+    # No live handle -- but a --reload may have dropped it while the overlay
+    # kept running, so ask the pid file before assuming nothing is up.
+    orphan = _overlay_pid_alive() or _find_overlay_pid()
+    if orphan is not None:
+        _kill_overlay_pid(orphan)
         return {"running": False}
     _overlay_proc = subprocess.Popen(
         child_command("backend.overlay", "--overlay"),
         cwd=str(child_cwd()),
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
     )
+    try:
+        _OVERLAY_PID.parent.mkdir(parents=True, exist_ok=True)
+        _OVERLAY_PID.write_text(str(_overlay_proc.pid), encoding="utf-8")
+    except Exception:
+        logger.debug("could not record the overlay pid", exc_info=True)
     return {"running": True}
 
 
 @app.get("/api/overlay")
 async def overlay_status():
-    return {"running": _overlay_proc is not None and _overlay_proc.poll() is None}
+    live = _overlay_proc is not None and _overlay_proc.poll() is None
+    # the pid file is what makes this survive a --reload
+    return {"running": live or _overlay_pid_alive() is not None
+            or _find_overlay_pid() is not None}
 
 
 @app.get("/api/overlay/prefs")
