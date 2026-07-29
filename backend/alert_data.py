@@ -22,12 +22,20 @@ regenerate must PRESERVE them; they are also CC BY-SA (see
 NOTICE.md), which the MIT alerts data is not. Keep the marker on
 every such row.
 
-Where the two sources DISAGREE the pack's value was kept, since
-its collision rule was a deliberate choice and other classes read
-the same row. Seven necro spells differ and are worth a look if a
-timer ever reads long: asystole 72/42, boil blood 108/42, cajole
-undead 1140/1230, chilling embrace 96/36, envenomed bolt 42/36,
-scourge 126/72, venom of the snake 42/36 (pack/eqlbuilds)."""
+Where the two sources disagree and the PACK IS LONGER, the eqlbuilds
+value wins: a timer that outlives its effect is the one failure this
+table must not have, and the pack's own rule was already "keep the
+shortest on collision". Six necro rows were lowered on that basis
+(asystole, boil blood, chilling embrace, envenomed bolt, scourge,
+venom of the snake). Where the pack is SHORTER it stands, since it
+already under-promises -- cajole undead 1140 vs 1230 is left alone.
+
+NOT yet reconciled: 19 more rows where the pack runs long, mostly
+bard songs sharing a systematic 18-vs-12 gap that looks like a pack
+convention rather than 19 separate errors. Two entries in the other
+direction -- nimble 12 vs 3240, strengthen death 420 vs 3600 -- are
+almost certainly NAME COLLISIONS between different spells, which is
+why nothing here is reconciled by name match alone."""
 import re
 
 SPELL_TIMERS = {
@@ -38,7 +46,7 @@ SPELL_TIMERS = {
     "anthem de arms": 18,
     "argli": 120,
     "asphyxiate": 120,
-    "asystole": 72,
+    "asystole": 42,            # [eqlbuilds] 7 ticks
     "augment": 1560,
     "augmentation": 850,
     "auspice": 54,             # [eqlbuilds] 9 ticks
@@ -51,7 +59,7 @@ SPELL_TIMERS = {
     "bewitching bravura": 18,
     "bind sight": 720,
     "bind wound": 10,
-    "boil blood": 108,
+    "boil blood": 42,          # [eqlbuilds] 7 ticks
     "bond of death": 54,
     "boon of the garou": 360,
     "breath of ro": 60,
@@ -70,7 +78,7 @@ SPELL_TIMERS = {
     "cessation of life": 96,   # [eqlbuilds] 16 ticks
     "ch": 10,
     "ch | ${2} <--": 10,
-    "chilling embrace": 96,
+    "chilling embrace": 36,    # [eqlbuilds] 6 ticks
     "chloroblast | ${2} <--": 3,
     "clarity": 1620,
     "clarity ii": 1980,
@@ -102,7 +110,7 @@ SPELL_TIMERS = {
     "engulfing darkness": 60,  # [eqlbuilds] 10 ticks
     "enthrall": 48,
     "entrance": 72,
-    "envenomed bolt": 42,
+    "envenomed bolt": 36,      # [eqlbuilds] 6 ticks
     "eternities torment": 126, # [eqlbuilds] 21 ticks
     "evade": 10,
     "evasive": 180,
@@ -173,7 +181,7 @@ SPELL_TIMERS = {
     "scent of darkness": 840,  # [eqlbuilds] 140 ticks
     "scent of dusk": 840,      # [eqlbuilds] 140 ticks
     "scent of shadow": 840,    # [eqlbuilds] 140 ticks
-    "scourge": 126,
+    "scourge": 72,             # [eqlbuilds] 12 ticks
     "screaming terror": 18,
     "sha's ferocity": 1057,
     "sha's lethargy": 204,
@@ -218,7 +226,7 @@ SPELL_TIMERS = {
     "vampiric": 54,
     "vampiric curse": 54,      # [eqlbuilds] 9 ticks
     "velocity": 2160,
-    "venom of the snake": 42,
+    "venom of the snake": 36,  # [eqlbuilds] 6 ticks
     "verses of victory": 18,
     "vex": 60,
     "vilia's chorus of celerity": 18,

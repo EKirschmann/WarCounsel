@@ -60,7 +60,14 @@ away:
   (MIT) and **GiuffreLab/eql-metrics** — most of what we checked was
   already handled, but those two lines were not.
 - Packaged builds may embed a copy of the eqlbuilds dataset snapshot from
-  **ArtSabintsev/everquest-legends-mcp** (MIT).
+  **ArtSabintsev/everquest-legends-mcp**. MIT covers that project's CODE and
+  packaging; it does NOT relicense the data. The snapshot's own
+  `manifest.json` records the eqlwiki revision it was extracted against
+  (`wikiRevisionId`), so the dataset is wiki-derived and stays
+  **CC BY-SA 4.0** -- the same terms as everything else mined from the wiki.
+  This applies to ALL of it, not only the `[eqlbuilds]` rows in
+  `backend/alert_data.py`: `builds_data.py` feeds spell levels, AA ladders
+  and skills into the advisor throughout.
 - [eqltools.com](https://eqltools.com) is linked from the Atlas and its
   published sourcing discipline is the model for this file.
 
