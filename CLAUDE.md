@@ -745,6 +745,77 @@ whenever the Inventory parse changes.
   PERSISTS through death/re-summon. `pet_slots`/`pet_classes` are user-set
   columns; controls live inline in the Equipment header.
 
+## Item facts learned from exports (`backend/item_facts.py`)
+
+The wiki is NOT the only slot authority. For a WORN row the Inventory
+export's Location column IS the slot, and the game only allowed the item
+there if the character could use it — so slot and trio-usability come free
+and exact. Stats stay wiki-only and are still REFUSED when missing.
+
+- **Keyed on item ID, never the name.** An id is stable across +N merges
+  (`Boots of the Long Road` and its `+2` share `177708`), so one wearing
+  teaches the fact once and forever, on any character.
+- **`Any Slot` is excluded from learning** — it accepts anything
+  equippable, so an item sitting there proves nothing about where it
+  belongs.
+- **The slot of an item never yet worn is NOT inferred.** That guess would
+  read as knowledge and be wrong invisibly — the same failure the no-fuzzy
+  zone rule exists to prevent.
+- `set_stats()` takes numbers a PLAYER read off the item, stored as a
+  wiki-shaped compact line so `_fits_slot` / `item_stat_vector` /
+  `weapon_indices` consume it unchanged. Those lines carry **`PRE-SCALED`**
+  and `scale_item_line()` REFUSES to touch a line bearing it: a player
+  reads stats at the item's CURRENT rank, and the slider formula expects
+  base values. The rule used to be "callers must not re-scale"; the line
+  now says so and it is enforced.
+- Launch added a block around id 69xxx with no wiki pages, including worn
+  gear. Wiki-less items with a `+N` are the ACTIONABLE `unknown` set — only
+  equipment merges to a rank, so no consumable pollutes the list — while
+  the prompt still lists every wiki-less item as STATS UNKNOWN so the model
+  cannot invent numbers.
+- **`HELD` is not a wildcard.** `_fits_slot` treated it like `Any Slot`,
+  which put a Secondary-only dagger there. Only `Any Slot` is permissive.
+- **Specific slots resolve before `Any Slot`.** `CANON_SLOTS` lists the
+  wildcards first for DISPLAY; iterating that order let one claim a Chest
+  robe before Chest was considered, after which `used` blocked its real
+  home.
+
+## Group-filtered meter rows
+
+The ally gate checks the TARGET ("did they hit one of our foes"), and
+`_foe_key` can only compare mob NAMES because the log carries no mob IDs —
+so a stranger fighting a DIFFERENT mob of the same name is credited as an
+ally. Observed live: two "Spirit of Dessication" at once. That half is
+unfixable, so the gate moved to the side that CAN be verified — the
+contributor.
+
+- Roster from `<Name> has joined/left the group.` PLUS group-chat senders.
+  Join lines cannot cover logging in already grouped (nobody ever joined),
+  so a join-only filter would hide a real group.
+- **"You have joined Dad Bods." is a GUILD line** — both self forms anchor
+  on "the group" or the roster gets seeded with a guild name.
+- **An empty roster FAILS OPEN** and credits everyone, exactly as before.
+- Filtered damage is LUMPED, never dropped: a silently missing contributor
+  is indistinguishable from a quiet fight, and the gate CAN be wrong (an
+  unmapped groupmate's pet has a generated name that proves nothing).
+  Synthetic overlay rows are parenthesised and `_class_color` refuses them
+  a class colour, or a meta row reads as another person in the fight.
+- `class_str` still has two writers with different orderings — see the log
+  pipeline section.
+
+## The overlay toggle and `--reload`
+
+`_overlay_proc` is MODULE state and uvicorn `--reload` cycles the worker on
+every edit, resetting it to None while the overlay child keeps running. The
+toggle then took the LAUNCH branch, the named-mutex singleton blocked the
+second copy, and the overlay became impossible to dismiss from the web UI —
+while still DRAGGABLE, which is how it gets reported. A pid file outlives
+the reload and a process scan covers one orphaned before the file existed.
+Both paths confirm the target really is an overlay first: pids are recycled.
+**Match `backend.overlay` or `--overlay` as an exact argv TOKEN** — a
+substring test on "overlay" also matches `--ocr-overlay`, so the combat
+toggle could kill the OCR calibrator.
+
 ## LLM runtime (backend/llm_runtime.py)
 
 - Providers: `none` (deterministic) | `lmstudio` | `openai` | `custom` (any
@@ -1007,7 +1078,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v2.1.8**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.1.9**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
 builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**

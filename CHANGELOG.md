@@ -4,6 +4,48 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.1.9 — 2026-07-29
+
+Thanks to **@soaringswine** for three contributions in this release.
+
+**Gear the wiki has never heard of is now usable.** Launch shipped a block
+of items eqlwiki has no page for, and several are pieces people are already
+wearing. Without a page there was no slot, so a perfectly good chest piece
+sat in a bag with the chest slot empty and nothing said a word. The app now
+learns an item's slot from your own export — where you have worn something,
+the game has already told us where it goes — and you can fill in stats for
+anything still missing. Empty slots get suggestions at all now, which they
+never did without a model configured.
+
+**The damage meter no longer credits strangers.** Someone fighting nearby
+could appear in your meter, including their pet, even when they were on a
+different mob that merely shares a name with yours. Only confirmed group
+members are credited now, learned from join and leave lines and from group
+chat. Anything excluded shows as one "filtered" row rather than vanishing —
+if the app is wrong about who is in your group, you can see that it is.
+
+**A hostile spell's timer ends when its target dies.** A damage-over-time
+timer used to run its full duration whether or not the mob was still alive.
+It now learns its victim from the first tick and ends with them, whoever
+landed the killing blow.
+
+**Every necromancer offensive spell with a duration now has a timer.**
+Clinging Darkness, Disease Cloud, Poison Bolt and 39 others produced no
+timer at all — and a missing timer looks exactly like a spell that has
+none. Six existing timers that ran longer than the spell actually lasts
+were also corrected downward.
+
+**Fixed: the OCR calibration box could not be moved or resized.** It
+snapped back to where it started on every drag.
+
+**Fixed: the overlay could become impossible to close.** While the app was
+being edited, the Overlay button stopped dismissing it — you could still
+drag it around, but nothing would close it.
+
+**Fixed: two slots lied about being checked.** A weapon could be suggested
+for "Held", which nothing goes in, and empty slots claimed nothing you
+owned would fit them without having looked.
+
 ## v2.1.8 — 2026-07-29
 
 **Empty slots get suggestions.** Gear advice without a model only ever
