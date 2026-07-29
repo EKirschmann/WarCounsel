@@ -641,18 +641,55 @@ def _pareto_beats(a: dict, b: dict) -> bool:
     return better
 
 
+def _wpn_index(line: str, level) -> Optional[dict]:
+    """MH/OH white-DPS indices for a 1H weapon, or None when the swap is
+    NOT decidable without judgment: 2H (it empties the secondary slot),
+    any Effect (the index excludes procs, so a proccing weapon can beat a
+    higher index), or no damage/delay to model."""
+    from backend.game_data import weapon_indices
+    if not level or "Skill: 2H" in line:
+        return None
+    if re.search(r"(?<!Focus )Effect: ", line):
+        return None
+    d = re.search(r"DMG: (\d+)", line)
+    dl = re.search(r"Atk Delay: (\d+)", line)
+    if not (d and dl):
+        return None
+    return weapon_indices(int(d.group(1)), int(dl.group(1)), level)
+
+
+def _weapon_beats(a: dict, b: dict, wa: dict, wb: dict, hand: str) -> bool:
+    """A weapon upgrade this path can defend: strictly higher white-DPS
+    index for the hand it goes in, and no OTHER stat lower.
+
+    DMG and DELAY are deliberately EXCLUDED from the stat comparison.
+    Judging them apart is what made a fast weapon look worse than a slow
+    one -- 7/30 loses to 7/42 on delay alone under a naive vector -- and
+    combining them correctly is precisely what the index does."""
+    if wa[hand] <= wb[hand]:
+        return False
+    for k in set(a) | set(b):
+        if k in ("DMG", "DELAY"):
+            continue
+        if a.get(k, 0.0) < b.get(k, 0.0):
+            return False
+    return True
+
+
 async def _builtin_gear(ctx: dict) -> dict:
     """No-LLM gear counsel: exact same-item rank upgrades, plus cross-item
     swaps when a bag/bank item strictly Pareto-dominates the worn item's
     stat vector with BOTH sides scaled to their owned +N (never worse,
-    better somewhere). Judgment-shaped trade-offs (weapon ratios, procs,
-    farm targets) still need a model."""
+    better somewhere), plus 1H WEAPON swaps decided by the white-DPS
+    index. Judgment-shaped trade-offs (procs, 2H, farm targets) still
+    need a model."""
     from backend.game_data import (item_line, item_stat_vector,
                                    scale_item_line, _trio_usable)
     worn = ctx.get("worn") or {}
     items = ctx.get("inventory_items") or []
     classes = [x.strip() for x in (ctx.get("class_str") or "").split("/")
                if x.strip()]
+    lvl = ctx.get("level")
     recs, used = [], set()
     for slot, cur in worn.items():
         cb, cr = _item_base(cur), _item_rank(cur)
@@ -672,20 +709,40 @@ async def _builtin_gear(ctx: dict) -> dict:
                          "where": best["where"]})
             used.add(best["name"].lower())
             continue
-        # cross-item Pareto swap — armor-style slots only (weapon value is
-        # ratio/proc-shaped, not strictly comparable stat by stat)
-        if re.sub(r"\s+\d+$", "", slot.lower()) in ("primary", "secondary",
-                                                    "range"):
+        # cross-item swap. Weapons used to be skipped wholesale here
+        # because ratio-vs-delay is not stat-comparable -- but that was
+        # written before weapon_indices(), which answers exactly that
+        # question (the MH damage bonus is a FLAT, delay-independent add,
+        # so a fast weapon wins past the point ratio suggests). 1H swaps
+        # are therefore decidable without a model. RANGE keeps its skip:
+        # bows and thrown have mechanics the index does not model.
+        base_slot = re.sub(r"\s+\d+$", "", slot.lower())
+        if base_slot == "range":
+            if cur:
+                # SAY it was not compared. The backfill otherwise writes
+                # "no better owned option flagged", which reads as "I
+                # checked and nothing won" when nothing was checked.
+                recs.append({"slot": slot, "current": cur, "recommend": cur,
+                             "why": "not compared — ranged weapons are not "
+                                    "covered by the white-DPS index; pick a "
+                                    "model in the Counsel selector to have "
+                                    "them reviewed",
+                             "where": "worn"})
             continue
+        hand = {"primary": "mh", "secondary": "oh"}.get(base_slot)
         try:
             cur_line = await item_line(cur)
         except Exception:
             cur_line = None
         if not cur_line:
             continue  # STATS UNKNOWN worn item is never replaced
-        cur_vec = item_stat_vector(scale_item_line(cur_line, cr))
+        cur_scaled = scale_item_line(cur_line, cr)
+        cur_vec = item_stat_vector(cur_scaled)
         if not cur_vec:
             continue
+        cur_wi = _wpn_index(cur_scaled, lvl) if hand else None
+        if hand and not cur_wi:
+            continue  # worn weapon is 2H/proc'd/statless -- not decidable
         champ = None
         for it in items:
             nm = it["name"]
@@ -702,20 +759,36 @@ async def _builtin_gear(ctx: dict) -> dict:
                 continue
             if classes and _trio_usable(line, classes) is False:
                 continue
-            vec = item_stat_vector(scale_item_line(line, _item_rank(nm)))
-            if not vec or not _pareto_beats(vec, cur_vec):
+            scaled = scale_item_line(line, _item_rank(nm))
+            vec = item_stat_vector(scaled)
+            if not vec:
                 continue
-            gain = sum(vec.get(k, 0.0) - cur_vec.get(k, 0.0)
-                       for k in set(vec) | set(cur_vec) if k != "DELAY")
+            if hand:
+                wi = _wpn_index(scaled, lvl)
+                if not wi or not _weapon_beats(vec, cur_vec, wi, cur_wi, hand):
+                    continue
+                gain, shown = wi[hand] - cur_wi[hand], wi[hand]
+            else:
+                if not _pareto_beats(vec, cur_vec):
+                    continue
+                gain = sum(vec.get(k, 0.0) - cur_vec.get(k, 0.0)
+                           for k in set(vec) | set(cur_vec) if k != "DELAY")
+                shown = None
             if champ is None or gain > champ[0]:
-                champ = (gain, it)
+                champ = (gain, it, shown)
         if champ:
             it = champ[1]
+            if hand:
+                why = (f"higher white-DPS index at its owned +N — "
+                       f"{champ[2]} vs {cur_wi[hand]} ({hand.upper()}) with no "
+                       "other stat lower. Procs are excluded from the index, "
+                       "so a proccing weapon can still beat this")
+            else:
+                why = ("strictly better at its owned +N — every "
+                       "listed stat equal or higher (wiki "
+                       "item-level scaling applied to both)")
             recs.append({"slot": slot, "current": cur,
-                         "recommend": it["name"],
-                         "why": "strictly better at its owned +N — every "
-                                "listed stat equal or higher (wiki "
-                                "item-level scaling applied to both)",
+                         "recommend": it["name"], "why": why,
                          "where": it["where"]})
             used.add(it["name"].lower())
     exalts = [{"name": x["name"], "move_to": "",
@@ -729,8 +802,9 @@ async def _builtin_gear(ctx: dict) -> dict:
         "note": "Deterministic gear check — no LLM. Same-item higher-rank "
                 "upgrades plus strictly-better swaps, with stats compared "
                 "at each item's owned +N via the wiki's item-level "
-                "formula; weapon trade-offs and farming targets need a "
-                "model from the Counsel selector.",
+                "formula. 1H weapons compare by white-DPS index; procs, "
+                "2H and farming targets need a model from the "
+                "Counsel selector.",
         "slots": _full_slot_table(recs, worn),
         "farm": [], "exaltations": exalts, "unknown": [], "pet_gear": [],
     }

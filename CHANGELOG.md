@@ -4,6 +4,30 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.1.7 — 2026-07-29
+
+**Weapon upgrades are found without an LLM.** Gear advice running with no
+model configured skipped your weapon slots entirely and still reported
+"no better owned option flagged" — so a plainly better weapon sitting in
+your bags went unmentioned, and the wording implied it had been checked.
+One-handed weapons are now compared properly, using the same white-DPS
+index the gear list already showed you: a swap is suggested only when the
+new weapon scores higher in the hand it goes in and gives up nothing
+else.
+
+Damage and delay are judged **together**, which is the point — a 7 damage
+/ 30 delay weapon beats a 7 damage / 42 delay one, but compared stat by
+stat the faster weapon looks worse on delay and loses. That is exactly
+how a real upgrade stayed hidden.
+
+Both weapons are measured at the rank you actually own, so **merging
+either one re-decides the swap** — merge the challenger and it wins by
+more; merge what you are holding far enough and it correctly keeps what
+you have. Two-handers, anything with a proc, and ranged weapons are left
+alone on purpose: procs are not in the index, so a proccing weapon can
+beat a higher score. The ranged row now says it was not compared instead
+of claiming nothing better was found.
+
 ## v2.1.6 — 2026-07-29
 
 **Fixed: the Trio comparison panel returned a server error.** It read a

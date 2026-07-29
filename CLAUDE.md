@@ -692,6 +692,18 @@ whenever the Inventory parse changes.
   fast MH wins beyond ratio; off-hand swings ~(6*level+5)/400 of the
   time with NO bonus. Gear lines carry [white-DPS index: MH x / OH y]
   for 1H weapons; INDEX not absolute (ATK/AC unknown), procs excluded.
+  The DETERMINISTIC path uses it too (`_wpn_index`/`_weapon_beats` in
+  advisor.py): a 1H swap needs a strictly higher index for its hand (MH
+  Primary / OH Secondary) AND no OTHER stat lower. **DMG and DELAY are
+  deliberately EXCLUDED from that stat check** — judging them apart is
+  what makes a fast weapon lose (7/30 "loses" to 7/42 on delay alone
+  under a plain Pareto vector, which is how a real upgrade stayed
+  invisible), and combining them is the index's whole job. Not decidable,
+  so skipped: 2H (empties the secondary), any non-Focus `Effect:` (a
+  proccing weapon can beat a higher index), and RANGE (bows/thrown are
+  not modeled — that row SAYS it was not compared rather than letting the
+  backfill claim nothing better was found). Both sides scale to their
+  owned +N first, so a MERGE re-decides the swap in either direction.
 - **Exaltations** (informational, NOT prescriptive moves — the real
   socketing rules per eqlwiki/eqlegendstools are now known): a stone shows
   its granted effect, ACTIVE vs DORMANT-until-LN (Effect "at Level N" vs
@@ -985,7 +997,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v2.1.6**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.1.7**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
 builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**
