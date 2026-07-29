@@ -10,7 +10,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Optional
 
-from backend import alerts, builds_data, spell_file
+from backend import alerts, spell_file
 from backend.alert_data import (ABILITY_COOLDOWNS, COOLDOWN_SHAVES,
                                 SPELL_TIMERS)
 from backend.log_system import events as ev
@@ -736,18 +736,15 @@ class CharacterTracker:
                      ts: datetime) -> None:
         self.active_timers = [t for t in self.active_timers
                               if t["name"] != name][-9:]
-        # `target` is CONFIRMED (a tick named it); `provisional` is a guess
-        # from whatever we last damaged, recorded only for spells the
-        # snapshot calls hostile. A hostile spell that never ticks — root,
-        # snare, fear, charm — has no other way to learn its victim, and a
-        # DoT can have its mob die before the first tick lands. The guess is
-        # only ever consulted while `target` is still None, and a wrong one
-        # self-corrects (see _bind_timer_target).
-        hostile = kind == "spell" and builds_data.is_hostile(
-            strip_tier(name)) is True
+        # `target` is set ONLY by a tick that names the victim
+        # (_bind_timer_target) — never guessed. Guessing from `last_target`
+        # at cast time was tried and reverted: that value survives its
+        # mob's death, opening a pull with a root/snare is exactly when it
+        # is stalest, and a spell that never ticks has no way to correct a
+        # wrong guess — so a same-named kill later could reap a live timer
+        # for good. A never-ticking spell keeps None and runs out instead.
         self.active_timers.append({
             "name": name, "kind": kind, "seconds": seconds, "target": None,
-            "provisional": self.last_target if hostile else None,
             "ends": ts + timedelta(seconds=seconds)})
 
     def _bind_timer_target(self, spell: Optional[str], target: str,
@@ -769,7 +766,7 @@ class CharacterTracker:
         for t in self.active_timers:
             if (t["kind"] == "spell"
                     and strip_tier(t["name"]).lower() == low):
-                t["target"] = foe          # confirmed beats any guess
+                t["target"] = foe
                 return
         # nothing live under that name — was it reaped a moment ago?
         self._reaped = [r for r in self._reaped if r["ends"] > ts]
@@ -787,19 +784,18 @@ class CharacterTracker:
     def _cancel_timers_for_target(self, name: str) -> None:
         """The mob died, so everything we put ON it is gone.
 
-        Removes timers CONFIRMED on this foe, plus hostile ones still only
-        guessing at it. Buffs, songs and ability cooldowns carry neither
-        field and are never touched. Reaped rows are kept until their
-        original expiry so a tick can undo the removal — losing a timer
-        that is still running is the worse error, and a same-named kill
-        makes that genuinely ambiguous.
+        Removes ONLY timers a tick confirmed on this foe. A hostile spell
+        that never ticked still has target=None and deliberately runs its
+        full duration — same as before this feature existed. Buffs and
+        ability cooldowns never bind and are never touched. Reaped rows
+        are kept until their original expiry so a tick can undo the
+        removal — losing a timer that is still running is the worse
+        error, and a same-named kill makes that genuinely ambiguous.
         """
         foe = _foe_key(name)
         keep, reap = [], []
         for t in self.active_timers:
-            hit = (t["target"] == foe if t.get("target") is not None
-                   else t.get("provisional") == foe)
-            (reap if hit else keep).append(t)
+            (reap if t.get("target") == foe else keep).append(t)
         self.active_timers = keep
         self._reaped = ([r for r in self._reaped if r not in reap] + reap)[-10:]
 
