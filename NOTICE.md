@@ -32,6 +32,15 @@ away:
   `backend/alert_data.py`, and the real-log test fixture under
   `tests/fixtures/`, derive from **kpxcoolx/eql-alerts** and
   **kpxcoolx/eql-meter** (MIT).
+  - EXCEPT the `SPELL_TIMERS` rows marked `[eqlbuilds]`, whose durations
+    come from the eqlbuilds.com dataset's `durationTicks` (x6 = seconds).
+    That is wiki-derived, so those values are **CC BY-SA 4.0**, not MIT —
+    one file, two licences, which is why the marker has to stay on the
+    row. The alerts pack is a raid trigger list and carries almost no
+    low-level content, so these fill gaps it will never cover; a
+    regenerate from that pack must preserve the marked rows. These are
+    exact game data rather than community measurement, and so are the
+    only entries here that do NOT deliberately under-promise.
 - Zone travel and translocator/ritual routing data in
   `backend/map_system.py` follows **rari/eqltools** (CC0).
 - The curated spell-line stacking table in `backend/spell_lines.json`
