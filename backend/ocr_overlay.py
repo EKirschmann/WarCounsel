@@ -51,22 +51,33 @@ def main() -> None:
     )
     label.place(x=6, y=4)
 
-    drag = {"x": 0, "y": 0, "resizing": False}
+    # ANCHORED, not incremental: every motion is measured from the geometry
+    # captured at press time. `root.geometry()` only *requests* a move, and
+    # winfo_x/width keep reporting the old values until the ConfigureNotify
+    # comes back, so a handler that reads them mid-drag computes from stale
+    # numbers. Anchoring also makes a repeated event idempotent instead of
+    # destructive (see the single-bind note below).
+    drag = {"x": 0, "y": 0, "ox": 0, "oy": 0, "ow": 0, "oh": 0, "resizing": False}
 
     def press(e):
-        drag["x"], drag["y"] = e.x_root, e.y_root
-        drag["resizing"] = (e.x > root.winfo_width() - GRIP
-                            and e.y > root.winfo_height() - GRIP)
+        root.update_idletasks()  # settle geometry before we anchor to it
+        drag.update(x=e.x_root, y=e.y_root,
+                    ox=root.winfo_x(), oy=root.winfo_y(),
+                    ow=root.winfo_width(), oh=root.winfo_height())
+        # e.x/e.y are relative to whichever widget got the event (the label
+        # sits at 6,4 inside a frame at 2,2), so the grip test works in
+        # screen space instead — it is the only coordinate all three share.
+        drag["resizing"] = (e.x_root - drag["ox"] > drag["ow"] - GRIP
+                            and e.y_root - drag["oy"] > drag["oh"] - GRIP)
 
     def motion(e):
         dx, dy = e.x_root - drag["x"], e.y_root - drag["y"]
-        drag["x"], drag["y"] = e.x_root, e.y_root
         if drag["resizing"]:
-            w = max(root.winfo_width() + dx, 120)
-            h = max(root.winfo_height() + dy, 60)
+            w = max(drag["ow"] + dx, 120)
+            h = max(drag["oh"] + dy, 60)
             root.geometry(f"{w}x{h}")
         else:
-            root.geometry(f"+{root.winfo_x() + dx}+{root.winfo_y() + dy}")
+            root.geometry(f"+{drag['ox'] + dx}+{drag['oy'] + dy}")
 
     def save(_e=None):
         cfg.update(left=root.winfo_x(), top=root.winfo_y(),
@@ -76,10 +87,13 @@ def main() -> None:
         print(f"saved: {cfg}")
         root.destroy()
 
-    for w in (root, inner, label):
-        w.bind("<ButtonPress-1>", press)
-        w.bind("<B1-Motion>", motion)
-        w.bind("<Double-Button-1>", save)
+    # Bind ONCE, on root only. A widget's bindtags are (widget, class,
+    # toplevel, all), so events on inner/label already reach root's handler —
+    # binding all three ran every handler TWICE per event. That also
+    # double-fired save(), whose second call touched a destroyed window.
+    root.bind("<ButtonPress-1>", press)
+    root.bind("<B1-Motion>", motion)
+    root.bind("<Double-Button-1>", save)
     root.bind("<Return>", save)
     root.bind("<Escape>", lambda e: (print("cancelled"), root.destroy()))
     root.focus_force()
