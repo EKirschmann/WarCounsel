@@ -8,6 +8,7 @@ owned via other loadouts.
 `/alternateadv list` (in-game) prints owned AAs into the LOG; the parser for
 that lives in log_system once a real sample exists (format TBD).
 """
+import logging
 import re
 from datetime import datetime
 import time
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import Optional
 
 from backend.config import settings
+
+logger = logging.getLogger(__name__)
 
 _cache: dict = {}
 
@@ -184,10 +187,22 @@ def load_export(name: Optional[str], server: Optional[str],
         current = None  # most-recent top-level item, to attach its sockets
         for line in text.splitlines():
             parts = line.split("\t")
-            if len(parts) < 2 or parts[0].lower() == "location":
+            # The export has MORE than one header: a "KeyRing" section
+            # carries its own "KeyRing<TAB>Name<TAB>ID" row, which passed the
+            # location check and landed a phantom bag item called "Name" in
+            # the inventory (and in the item count the advisor reports).
+            if (len(parts) < 2 or parts[0].lower() == "location"
+                    or parts[1].strip().lower() == "name"):
                 continue
             count += 1
             loc, item = parts[0].strip(), parts[1].strip()
+            # column 3 is the item ID. It is STABLE across +N merges (a
+            # base item and its +2 share one id), which makes it the right
+            # key for anything we learn and want to keep -- see item_facts.
+            try:
+                item_id = int(parts[2].strip()) if len(parts) > 2 else 0
+            except ValueError:
+                item_id = 0
             empty = not item or item.lower() == "empty"
             m = sub_re.match(loc)
             if m:
@@ -214,7 +229,7 @@ def load_export(name: Optional[str], server: Optional[str],
                     continue  # non-exalt socket rows on gear: nothing to track
                 items.append({"loc": loc,
                               "where": "bank" if in_bank else "bags",
-                              "name": item})
+                              "name": item, "id": item_id})
                 continue
             if empty:
                 current = None
@@ -229,7 +244,8 @@ def load_export(name: Optional[str], server: Optional[str],
                 where = "bank"
             else:
                 where = "bags"
-            entry = {"loc": loc, "where": where, "name": item, "sockets": {}}
+            entry = {"loc": loc, "where": where, "name": item,
+                     "id": item_id, "sockets": {}}
             items.append(entry)
             current = entry
         value["worn"] = worn
@@ -244,6 +260,15 @@ def load_export(name: Optional[str], server: Optional[str],
         value["item_sockets"] = socket_avail
         value["exaltations"] = exalts
         value["count"] = count
+        # WORN position is authoritative slot data and costs nothing: the
+        # Location column IS the slot. Learning it means a wiki-less item
+        # can still be placed once it has been equipped even once, on any
+        # character. Fails soft -- a cache write must never break an export.
+        try:
+            from backend import item_facts
+            item_facts.learn(items)
+        except Exception:
+            logger.debug("item_facts learn skipped", exc_info=True)
     else:  # Achievements — structure unknown until a real export exists
         lines = [ln for ln in text.splitlines() if ln.strip()]
         value["count"] = len(lines)

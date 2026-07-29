@@ -505,6 +505,12 @@ def scale_item_line(line: str, rank: int) -> str:
     lines — scaling an already-scaled line compounds. rank<=0 = as-is."""
     if not line or rank <= 0:
         return line
+    # Player-supplied numbers are read off the item AT its current rank,
+    # so they are already scaled. The old rule was "callers must not
+    # re-scale"; making the line say so enforces it instead of relying on
+    # every call site remembering.
+    if "PRE-SCALED" in line:
+        return line
     quals = set()
 
     def _sub(m):
@@ -628,6 +634,18 @@ async def item_line(name: str) -> Optional[str]:
     not equipment."""
     base = _strip_upgrade(name)
     key = base.lower()
+    # A player-supplied line WINS over the wiki cache miss and over the
+    # wiki itself: launch shipped items eqlwiki has no page for, including
+    # gear people are already wearing, and the owner reading numbers off
+    # the item is a better source than nothing. Checked FIRST so it also
+    # short-circuits the network round trip.
+    try:
+        from backend import item_facts
+        supplied = item_facts.stats_for(0, base)
+    except Exception:
+        supplied = None
+    if supplied:
+        return supplied[0]
     cached = wiki_page_cache.get("item_line2", key)
     if cached is not None:
         return cached or None
@@ -895,7 +913,17 @@ async def build_gear_context(items: list, classes: Optional[list] = None,
                              f"OH {wi['oh']}]")
             lines.append(f"{entry['name']} [{where}]{tag}{note} — {line}")
         else:
-            unknown.append(entry["name"])
+            # The prompt line below still lists EVERY wiki-less item, so the
+            # model cannot invent numbers for any of them. `unknown` is the
+            # ACTIONABLE subset -- what the user can do something about --
+            # and a raw dump buries a wearable item under Bread Cakes,
+            # Backpacks and Water Flasks. A "+N" rank is the deterministic
+            # tell: only equipment merges to a rank, so every wiki-less
+            # GEAR item carries one and no consumable does. Launch added a
+            # whole item block the wiki has not documented, including
+            # pieces the user is already wearing.
+            if item_rank(entry["name"]) > 0:
+                unknown.append(entry["name"])
             where = "/".join(sorted(entry["where"]))
             lines.append(f"{entry['name']} [{where}] — STATS UNKNOWN "
                          "(no wiki page; do not invent numbers for this item)")

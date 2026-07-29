@@ -596,13 +596,24 @@ _SLOT_TOKENS = {
     "face": "FACE", "neck": "NECK", "shoulders": "SHOULDERS", "arms": "ARMS",
     "back": "BACK", "hands": "HANDS", "chest": "CHEST", "legs": "LEGS",
     "feet": "FEET", "waist": "WAIST", "ammo": "AMMO",
+    # HELD is a real slot the client writes, but nothing is known to go in
+    # it, so it must NOT be permissive. It used to fall through to the
+    # "accepts anything" branch with Any Slot, which put a Secondary-only
+    # Parrying Dagger there. Requiring the token means only an item whose
+    # own Slot line says HELD can be recommended -- and if no EQL item ever
+    # does, the row stays honestly empty instead of collecting whatever
+    # happened to be spare.
+    "held": "HELD",
 }
 
 
 async def _fits_slot(item: str, slot: str) -> bool:
-    """Wiki Slot-line check: a Piercing dagger can't be a Range rec. Any
-    Slot / Held accept anything; items without slot data pass (the
-    unknown-stats guard keeps those honest)."""
+    """Wiki Slot-line check: a Piercing dagger can't be a Range rec.
+
+    ANY SLOT accepts anything equippable and is the only wildcard. HELD is
+    NOT one -- see _SLOT_TOKENS. Items with no slot data still pass here;
+    the unknown-stats guard is what keeps those honest, and for an EMPTY
+    slot item_facts supplies the slot from a previous wearing."""
     low = slot.lower().strip()
     low = re.sub(r"\s+\d+$", "", low)  # "ear 2" -> "ear"
     token = _SLOT_TOKENS.get(low)
@@ -683,6 +694,7 @@ async def _builtin_gear(ctx: dict) -> dict:
     better somewhere), plus 1H WEAPON swaps decided by the white-DPS
     index. Judgment-shaped trade-offs (procs, 2H, farm targets) still
     need a model."""
+    from backend import item_facts
     from backend.game_data import (item_line, item_stat_vector,
                                    scale_item_line, _trio_usable)
     worn = ctx.get("worn") or {}
@@ -697,7 +709,14 @@ async def _builtin_gear(ctx: dict) -> dict:
     # verdict on a comparison that never ran. Reported from live play: an
     # empty off-hand with spare 1H weapons sitting in bags. CANON_SLOTS is
     # ordered Primary before Secondary, which the 2H check below needs.
-    slot_order = CANON_SLOTS + [k for k in worn if k not in CANON_SLOTS]
+    # SPECIFIC slots first, the generic "Any Slot" pair LAST. CANON_SLOTS
+    # lists Any Slot first for display, and iterating in that order let the
+    # wildcard claim an item before its real home was even considered -- a
+    # Chest robe was recommended into Any Slot 2, then `used` blocked it
+    # from Chest. Any Slot should mop up what is left over, not pre-empt.
+    _order = CANON_SLOTS + [k for k in worn if k not in CANON_SLOTS]
+    slot_order = ([k for k in _order if not k.startswith("Any Slot")]
+                  + [k for k in _order if k.startswith("Any Slot")])
     for slot in slot_order:
         cur = (worn.get(slot) or "").strip()
         cb, cr = (_item_base(cur), _item_rank(cur)) if cur else ("", 0)
@@ -778,6 +797,13 @@ async def _builtin_gear(ctx: dict) -> dict:
             cur_line, cur_vec, cur_wi = None, {}, None
         base_idx = (cur_wi or {}).get(hand, 0.0) if hand else 0.0
         champ = None
+        # Wiki-less items we nonetheless know the SLOT of, because the
+        # player has worn them before (item_facts learns Location from the
+        # export). Good enough to FILL an empty slot -- that needs no
+        # comparison -- and never good enough to REPLACE anything, since
+        # with no stats there is nothing to compare. Kept separate so a
+        # verified candidate always wins.
+        fallback = None
         for it in items:
             nm = it["name"]
             if (it.get("where") == "worn" or nm.lower() in used
@@ -788,6 +814,11 @@ async def _builtin_gear(ctx: dict) -> dict:
             except Exception:
                 line = None
             if not line or "Slot:" not in line:
+                if not cur and fallback is None:
+                    fs = (item_facts.slot_for_id(it.get("id"))
+                          or item_facts.slot_for_name(nm))
+                    if fs and fs.strip().lower() == base_slot:
+                        fallback = it
                 continue
             if not await _fits_slot(nm, slot):
                 continue
@@ -811,6 +842,16 @@ async def _builtin_gear(ctx: dict) -> dict:
                 shown = None
             if champ is None or gain > champ[0]:
                 champ = (gain, it, shown)
+        if champ is None and fallback is not None:
+            recs.append({"slot": slot, "current": cur,
+                         "recommend": fallback["name"],
+                         "why": "fills an empty slot — you have worn this "
+                                "item before, so its slot is known from your "
+                                "own export. Its STATS are not on the wiki, "
+                                "so this is not a stat comparison",
+                         "where": fallback["where"]})
+            used.add(fallback["name"].lower())
+            continue
         if champ:
             it = champ[1]
             if hand and not cur:

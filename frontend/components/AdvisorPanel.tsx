@@ -233,6 +233,12 @@ export const AdvisorPanel = memo(function AdvisorPanel({
   const [rescanning, setRescanning] = useState(false);
   const [gear, setGear] = useState<GearAdvice | null>(null);
   const [gearLoading, setGearLoading] = useState(false);
+  // Slots with nothing in them, so an unverifiable owned item can be shown
+  // next to the gap it MIGHT fill. The app cannot match them up itself --
+  // no wiki page means no Slot line -- so it says that instead of guessing.
+  const emptySlots = (gear?.slots ?? [])
+    .filter((s) => !s.current)
+    .map((s) => s.slot);
 
   useEffect(() => {
     // restore the last gear counsel if the backend still has it (no LLM run)
@@ -919,6 +925,37 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                       </li>
                     ))}
                   </ul>
+                </>
+              )}
+              {gear && (gear.unknown?.length ?? 0) > 0 && (
+                <>
+                  <div
+                    className="adv-sub"
+                    style={{ marginTop: 10 }}
+                    title="Owned items with no eqlwiki page. Without a Slot line the app cannot place them, so they are never recommended — including into an empty slot."
+                  >
+                    Owned, but not on the wiki
+                  </div>
+                  <ul className="adv-list">
+                    {(gear.unknown ?? []).map((n) => (
+                      <li key={n}>
+                        <strong>{n}</strong>
+                        <br />
+                        <span className="adv-cls">
+                          no wiki page, so its STATS are unknown and it is never
+                          used in a comparison. Wear it once and the app learns
+                          its slot from your export.
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {emptySlots.length > 0 && (
+                    <div className="adv-cls" style={{ marginTop: 4 }}>
+                      You have {emptySlots.length} empty slot
+                      {emptySlots.length === 1 ? "" : "s"} ({emptySlots.join(", ")})
+                      {" "}— if one of the above fits, the app cannot tell.
+                    </div>
+                  )}
                 </>
               )}
               {(() => {
