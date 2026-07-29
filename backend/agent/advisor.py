@@ -691,10 +691,18 @@ async def _builtin_gear(ctx: dict) -> dict:
                if x.strip()]
     lvl = ctx.get("level")
     recs, used = [], set()
-    for slot, cur in worn.items():
-        cb, cr = _item_base(cur), _item_rank(cur)
-        best = None
-        for it in items:
+    # EVERY canonical slot, not just the occupied ones. Iterating
+    # worn.items() meant an EMPTY slot was never considered at all, while
+    # _full_slot_table backfilled it as "nothing owned equips here" -- a
+    # verdict on a comparison that never ran. Reported from live play: an
+    # empty off-hand with spare 1H weapons sitting in bags. CANON_SLOTS is
+    # ordered Primary before Secondary, which the 2H check below needs.
+    slot_order = CANON_SLOTS + [k for k in worn if k not in CANON_SLOTS]
+    for slot in slot_order:
+        cur = (worn.get(slot) or "").strip()
+        cb, cr = (_item_base(cur), _item_rank(cur)) if cur else ("", 0)
+        best = None if not cur else None
+        for it in (items if cur else []):
             if it.get("where") == "worn":
                 continue
             r = _item_rank(it["name"])
@@ -730,19 +738,45 @@ async def _builtin_gear(ctx: dict) -> dict:
                              "where": "worn"})
             continue
         hand = {"primary": "mh", "secondary": "oh"}.get(base_slot)
-        try:
-            cur_line = await item_line(cur)
-        except Exception:
-            cur_line = None
-        if not cur_line:
-            continue  # STATS UNKNOWN worn item is never replaced
-        cur_scaled = scale_item_line(cur_line, cr)
-        cur_vec = item_stat_vector(cur_scaled)
-        if not cur_vec:
-            continue
-        cur_wi = _wpn_index(cur_scaled, lvl) if hand else None
-        if hand and not cur_wi:
-            continue  # worn weapon is 2H/proc'd/statless -- not decidable
+        if base_slot == "secondary":
+            # a 2H weapon occupies BOTH hands. The LLM path already dropped
+            # the secondary row behind a 2H primary; this path never did,
+            # and filling an empty off-hand made that gap reachable.
+            eff_prim = next((r.get("recommend") for r in recs
+                             if r["slot"] == "Primary" and r.get("recommend")),
+                            None) or (worn.get("Primary") or "")
+            if eff_prim:
+                try:
+                    pl = await item_line(eff_prim)
+                except Exception:
+                    pl = None
+                if pl and "Skill: 2H" in pl:
+                    recs.append({"slot": slot, "current": cur,
+                                 "recommend": None, "where": None,
+                                 "why": "— occupied by the two-handed "
+                                        "primary (it uses both hands)"})
+                    continue
+        if cur:
+            try:
+                cur_line = await item_line(cur)
+            except Exception:
+                cur_line = None
+            if not cur_line:
+                continue  # STATS UNKNOWN worn item is never replaced
+            cur_scaled = scale_item_line(cur_line, cr)
+            cur_vec = item_stat_vector(cur_scaled)
+            if not cur_vec:
+                continue
+            cur_wi = _wpn_index(cur_scaled, lvl) if hand else None
+            if hand and not cur_wi:
+                continue  # worn weapon 2H/proc'd/statless -- not decidable
+        else:
+            # EMPTY slot: the baseline is nothing, so anything owned that
+            # fits and is usable is an improvement. Weapons still need an
+            # index (a proc'd or 2H candidate stays a judgment call), it is
+            # just measured against zero instead of against a worn weapon.
+            cur_line, cur_vec, cur_wi = None, {}, None
+        base_idx = (cur_wi or {}).get(hand, 0.0) if hand else 0.0
         champ = None
         for it in items:
             nm = it["name"]
@@ -765,9 +799,10 @@ async def _builtin_gear(ctx: dict) -> dict:
                 continue
             if hand:
                 wi = _wpn_index(scaled, lvl)
-                if not wi or not _weapon_beats(vec, cur_vec, wi, cur_wi, hand):
+                base_wi = cur_wi or {"mh": 0.0, "oh": 0.0}
+                if not wi or not _weapon_beats(vec, cur_vec, wi, base_wi, hand):
                     continue
-                gain, shown = wi[hand] - cur_wi[hand], wi[hand]
+                gain, shown = wi[hand] - base_wi[hand], wi[hand]
             else:
                 if not _pareto_beats(vec, cur_vec):
                     continue
@@ -778,11 +813,19 @@ async def _builtin_gear(ctx: dict) -> dict:
                 champ = (gain, it, shown)
         if champ:
             it = champ[1]
-            if hand:
+            if hand and not cur:
+                why = (f"fills an empty hand — white-DPS index {champ[2]} "
+                       f"({hand.upper()}) from gear you already own. Procs "
+                       "are excluded from the index, so a proccing weapon "
+                       "can still beat this")
+            elif hand:
                 why = (f"higher white-DPS index at its owned +N — "
-                       f"{champ[2]} vs {cur_wi[hand]} ({hand.upper()}) with no "
+                       f"{champ[2]} vs {base_idx} ({hand.upper()}) with no "
                        "other stat lower. Procs are excluded from the index, "
                        "so a proccing weapon can still beat this")
+            elif not cur:
+                why = ("fills an empty slot from gear you already own "
+                       "(stats shown at its owned +N)")
             else:
                 why = ("strictly better at its owned +N — every "
                        "listed stat equal or higher (wiki "

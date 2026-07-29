@@ -4,6 +4,22 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.1.8 — 2026-07-29
+
+**Empty slots get suggestions.** Gear advice without a model only ever
+looked at slots you had something in, so an empty off-hand, hands or
+waist was passed over and then labelled "nothing owned equips here" —
+again a verdict on a comparison that never happened. Every slot is now
+checked, and an empty one is filled by anything owned that fits and your
+classes can use. Slots that still read "nothing owned equips here" have
+actually been looked at.
+
+**A two-handed weapon no longer gets an off-hand partner.** The rule that
+a two-hander occupies both hands existed only on the model-backed path.
+That was harmless while weapons were skipped entirely, and became a real
+risk the moment an empty off-hand could be filled. The deterministic path
+now leaves the off-hand alone behind a two-handed primary and says why.
+
 ## v2.1.7 — 2026-07-29
 
 **Weapon upgrades are found without an LLM.** Gear advice running with no

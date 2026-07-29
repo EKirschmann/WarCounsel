@@ -704,6 +704,16 @@ whenever the Inventory parse changes.
   not modeled — that row SAYS it was not compared rather than letting the
   backfill claim nothing better was found). Both sides scale to their
   owned +N first, so a MERGE re-decides the swap in either direction.
+  The loop walks CANON_SLOTS, **not `worn.items()`** — an EMPTY slot is
+  absent from `worn`, so iterating it meant empty slots were never
+  compared while `_full_slot_table` backfilled "nothing owned equips
+  here", a verdict on a comparison that never ran (same shape as the
+  RANGE message above). An empty slot compares against a ZERO baseline.
+  CANON_SLOTS is ordered Primary before Secondary because the builtin
+  path now needs its own 2H guard: "a 2H primary drops the secondary
+  rec" lived ONLY in the LLM path, which was harmless while weapons were
+  skipped and became reachable the moment an empty off-hand could be
+  filled.
 - **Exaltations** (informational, NOT prescriptive moves — the real
   socketing rules per eqlwiki/eqlegendstools are now known): a stone shows
   its granted effect, ACTIVE vs DORMANT-until-LN (Effect "at Level N" vs
@@ -997,7 +1007,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v2.1.7**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.1.8**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
 builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**
