@@ -4,16 +4,19 @@ Seed events (log history replayed at startup) establish zone/level/class
 and pre-fill the ledger buffer; only LIVE events count toward session
 stats (kills, damage, DPS) so numbers reflect this play session.
 """
+import logging
 import re
 from collections import deque
 from datetime import datetime, timedelta
 from typing import Optional
 
-from backend import alerts, spell_file
+from backend import alerts, builds_data, spell_file
 from backend.alert_data import (ABILITY_COOLDOWNS, COOLDOWN_SHAVES,
                                 SPELL_TIMERS)
 from backend.log_system import events as ev
 from backend.log_system.parser import CLASS_ABBREV, strip_tier
+
+logger = logging.getLogger(__name__)
 
 DPS_WINDOW_SECONDS = 60
 COMBAT_TIMEOUT_SECONDS = 8
@@ -147,6 +150,12 @@ class CharacterTracker:
         # mechanics) and fired tracked-rule alerts — transient, never
         # persisted
         self.active_timers: list = []
+        # cast names already reported as having no SPELL_TIMERS entry —
+        # diagnostic only, so it is never persisted or snapshotted
+        self._timer_misses: set = set()
+        # timers a kill removed, held until their original expiry so a
+        # later tick can prove the kill was a same-named impostor
+        self._reaped: list = []
         self.alerts: deque = deque(maxlen=8)
         self._alert_seq = 0
         self._alert_cooldown: dict = {}
@@ -354,6 +363,17 @@ class CharacterTracker:
                         secs = SPELL_TIMERS.get(base)
                         if secs:
                             self._start_timer(e.spell, secs, "spell", e.ts)
+                        elif base not in self._timer_misses:
+                            # A miss is SILENT otherwise — no timer simply
+                            # never appears, which is indistinguishable from
+                            # a spell that has no duration. SPELL_TIMERS is a
+                            # raid trigger pack and its low-level coverage is
+                            # thin, so this is the only way to find out which
+                            # of YOUR spells it does not know. Once per name
+                            # per session: casts repeat constantly.
+                            self._timer_misses.add(base)
+                            logger.debug("no SPELL_TIMERS entry for %r "
+                                         "(cast, no timer started)", base)
         elif isinstance(e, ev.Composition):
             # the log's own trio line — authoritative like /who
             from backend.log_system.parser import CLASS_ABBREV as _CA
@@ -438,6 +458,8 @@ class CharacterTracker:
                     self._encounter_ability(e.ts, self._fx_label(e.spell),
                                             "dot", e.damage, e.target,
                                             crit=e.crit)
+                    # first tick names the victim — bind the running timer
+                    self._bind_timer_target(e.spell, e.target, e.ts)
                 # own lifetaps log NO heal line — synthesize the self-heal
                 # 1:1 from the damage (the client spell file flags taps)
                 spell = getattr(e, "spell", None)
@@ -547,6 +569,7 @@ class CharacterTracker:
                 self._mob(mob)["kills"] += 1
                 self._last_kill = (mob, e.ts)
                 self._absorb_pending_rewards(mob, e.ts)
+                self._cancel_timers_for_target(e.target)
                 if self.pet_owners.pop(e.target, None):  # charm pet died
                     self.pet_owners_dirty = True
                 if self.encounter and (e.ts - self.encounter["last"]).total_seconds() <= COMBAT_TIMEOUT_SECONDS:
@@ -563,6 +586,8 @@ class CharacterTracker:
                     self._mob(mob)["kills"] += 1
                 self._last_kill = (mob, e.ts)
                 self._absorb_pending_rewards(mob, e.ts)
+                # someone else's killing blow ends OUR DoT just the same
+                self._cancel_timers_for_target(e.victim)
                 if self.pet_owners.pop(e.victim, None):  # mapped pet slain
                     self.pet_owners_dirty = True
                 if (self.encounter and
@@ -711,9 +736,72 @@ class CharacterTracker:
                      ts: datetime) -> None:
         self.active_timers = [t for t in self.active_timers
                               if t["name"] != name][-9:]
+        # `target` is CONFIRMED (a tick named it); `provisional` is a guess
+        # from whatever we last damaged, recorded only for spells the
+        # snapshot calls hostile. A hostile spell that never ticks — root,
+        # snare, fear, charm — has no other way to learn its victim, and a
+        # DoT can have its mob die before the first tick lands. The guess is
+        # only ever consulted while `target` is still None, and a wrong one
+        # self-corrects (see _bind_timer_target).
+        hostile = kind == "spell" and builds_data.is_hostile(
+            strip_tier(name)) is True
         self.active_timers.append({
-            "name": name, "kind": kind, "seconds": seconds,
+            "name": name, "kind": kind, "seconds": seconds, "target": None,
+            "provisional": self.last_target if hostile else None,
             "ends": ts + timedelta(seconds=seconds)})
+
+    def _bind_timer_target(self, spell: Optional[str], target: str,
+                           ts: datetime) -> None:
+        """Adopt the victim a DoT actually landed on — or undo a bad reap.
+
+        "You begin casting X." names NOTHING, so a DoT timer starts
+        targetless and the tick line ("a dread bone has taken 8 damage from
+        your Clinging Darkness.") is the first hard evidence of what it is
+        on. A tick also PROVES the spell is still running, so it resurrects
+        a timer a kill reaped by mistake — which is the only defence
+        against two mobs sharing a name, since the log carries no mob IDs
+        and `_foe_key` necessarily folds them together.
+        """
+        if not spell:
+            return
+        low = strip_tier(spell).lower()
+        foe = _foe_key(target)
+        for t in self.active_timers:
+            if (t["kind"] == "spell"
+                    and strip_tier(t["name"]).lower() == low):
+                t["target"] = foe          # confirmed beats any guess
+                return
+        # nothing live under that name — was it reaped a moment ago?
+        self._reaped = [r for r in self._reaped if r["ends"] > ts]
+        for r in self._reaped:
+            if strip_tier(r["name"]).lower() == low:
+                self._reaped.remove(r)
+                r["target"] = foe
+                self.active_timers = [t for t in self.active_timers
+                                      if t["name"] != r["name"]][-9:]
+                self.active_timers.append(r)
+                logger.debug("timer %r resurrected by a tick on %r "
+                             "(reaped by a same-named kill)", r["name"], foe)
+                return
+
+    def _cancel_timers_for_target(self, name: str) -> None:
+        """The mob died, so everything we put ON it is gone.
+
+        Removes timers CONFIRMED on this foe, plus hostile ones still only
+        guessing at it. Buffs, songs and ability cooldowns carry neither
+        field and are never touched. Reaped rows are kept until their
+        original expiry so a tick can undo the removal — losing a timer
+        that is still running is the worse error, and a same-named kill
+        makes that genuinely ambiguous.
+        """
+        foe = _foe_key(name)
+        keep, reap = [], []
+        for t in self.active_timers:
+            hit = (t["target"] == foe if t.get("target") is not None
+                   else t.get("provisional") == foe)
+            (reap if hit else keep).append(t)
+        self.active_timers = keep
+        self._reaped = ([r for r in self._reaped if r not in reap] + reap)[-10:]
 
     def _cancel_timer(self, spell: Optional[str]) -> None:
         """Fizzle/interrupt/resist: the effect never landed."""
@@ -730,7 +818,7 @@ class CharacterTracker:
                               if t["ends"] > now]
         return sorted(
             ({"name": t["name"], "kind": t["kind"],
-              "seconds": t["seconds"],
+              "seconds": t["seconds"], "target": t.get("target"),
               "remaining": round((t["ends"] - now).total_seconds())}
              for t in self.active_timers),
             key=lambda t: t["remaining"])

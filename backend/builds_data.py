@@ -118,6 +118,27 @@ def spell_entry(name: str) -> Optional[dict]:
             "levels": dict(hit["levels"])}
 
 
+# Target types meaning "cast ON an enemy" — such a spell ends the moment
+# its target dies, however much duration was left. 4 PBAoE, 5 single
+# enemy, 8 targeted AoE, 10 undead-only, 13 lifetap (the same tap family
+# spell_file.py already treats as 13/20).
+HOSTILE_TARGET_TYPES = {4, 5, 8, 10, 13}
+
+
+def is_hostile(name: str) -> Optional[bool]:
+    """True/False when the snapshot knows the spell, None when it does not.
+
+    None is NOT False — "don't know" must not be read as "harmless", the
+    same rule spell_lines.py follows. Reads the cached index directly
+    rather than spell_entry(), which rebuilds a dict per call; this sits
+    on the cast path.
+    """
+    hit = _index().get((name or "").strip().lower())
+    if not hit:
+        return None
+    return hit["entry"].get("targetTypeId") in HOSTILE_TARGET_TYPES
+
+
 def class_spell_lines(cls_name: str, lo: int, hi: int) -> Optional[list]:
     """Compact per-level spell lines for the advisor prompt window, straight
     from the snapshot (exact levels). None = no snapshot / unknown class."""
