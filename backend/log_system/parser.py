@@ -145,6 +145,13 @@ RE_ACTIVATE = re.compile(r"^You activate (.+?)\.")
 RE_TELL = re.compile(rf"^({_PC}) tells you, '(.{{0,120}})")
 RE_GROUP_CHAT = re.compile(
     rf"^({_PC}) tells the (group|guild|raid)(?: of \d+)?, '(.{{0,160}})")
+# Group roster. NOTE "You have joined Dad Bods." is a GUILD line, so both
+# self forms anchor on "the group" explicitly -- matching loosely here would
+# silently seed the group roster with a guild name.
+RE_GROUP_JOIN = re.compile(rf"^({_PC}) has joined the group\.")
+RE_GROUP_LEFT = re.compile(rf"^({_PC}) has left the group\.")
+RE_GROUP_SELF_OUT = re.compile(
+    r"^You have been removed from the group\.|^Your group has been disbanded")
 RE_SUMMONED = re.compile(r"^You have been summoned!")
 RE_STUNNED = re.compile(r"^You are stunned!")
 RE_MEND = re.compile(r"^You mend your wounds and heal some damage\.")
@@ -328,6 +335,13 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
     if gc := RE_GROUP_CHAT.match(body):
         return ev.GroupChat(sender=gc.group(1), channel=gc.group(2),
                             text=gc.group(3).rstrip("'"), **base)
+    # roster lines are chat-shaped too -- before the guard
+    if gj := RE_GROUP_JOIN.match(body):
+        return ev.GroupMember(name=gj.group(1), joined=True, **base)
+    if gl := RE_GROUP_LEFT.match(body):
+        return ev.GroupMember(name=gl.group(1), joined=False, **base)
+    if RE_GROUP_SELF_OUT.match(body):
+        return ev.GroupMember(name=None, joined=False, **base)
     if RE_CHAT.search(body):
         return None  # speech — players quoting combat text stay out
 

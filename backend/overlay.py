@@ -85,6 +85,11 @@ CLASS_COLORS = {
 
 
 def _class_color(classes, name):
+    # Synthetic rows are parenthesised -- "(filtered - N sources)" is meta,
+    # not a participant, so it must not be handed a class colour that makes
+    # it read like one more person in the fight.
+    if name and name.startswith("("):
+        return MUTED
     ab = (classes or "").split("/")[0].strip().upper()
     if ab in CLASS_COLORS:
         return CLASS_COLORS[ab]
@@ -125,6 +130,15 @@ def compute_rows(snap, history, segment):
         rows = [(a.get("name") or "?", a.get("classes"),
                  a.get("damage", 0), a.get("dps", 0))
                 for a in _fight_rows(enc)]
+        # Damage the group filter excluded, as ONE row. Shown rather than
+        # dropped: a silently missing contributor is indistinguishable from
+        # a quiet fight, and the filter can be wrong -- an unmapped
+        # groupmate's pet has a generated name that proves nothing.
+        ua = enc.get("unattributed")
+        if ua and ua.get("damage"):
+            n = ua.get("sources") or 0
+            rows.append((f"(filtered · {n} source{'' if n == 1 else 's'})",
+                         None, ua["damage"], 0))
         foes = enc.get("foes") or []
         label = (f"{len(foes)} foes" if len(foes) > 1
                  else (enc.get("target") or "fight"))

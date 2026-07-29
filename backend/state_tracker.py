@@ -117,7 +117,17 @@ class CharacterTracker:
         self.who_roster: dict[str, dict] = {}
         # Pet name -> owner name, learned from "My leader is X" lines
         self.pet_owners: dict[str, str] = {}
-        self.pet_owners_dirty = False  # flush loop persists when set
+        self.pet_owners_dirty = False
+        # POSITIVE proof of who is grouped with us. Needed because a
+        # stranger fighting a mob that merely SHARES a name with ours is
+        # otherwise credited as an ally: the ally gate checks the TARGET
+        # ("did they hit one of our foes"), and _foe_key can only compare
+        # names because the log has no mob IDs. Gating on the CONTRIBUTOR
+        # is the only side of that comparison we can actually verify.
+        # EMPTY means "no evidence", which FAILS OPEN -- never hide rows we
+        # cannot disprove. Not persisted: a restart re-opens the filter,
+        # which is the safe direction.
+        self.group_members: set = set()  # flush loop persists when set
         self._aa_from_db = False       # roster restored from DB, not the log
         # Owned AA ranks from '/alternateadv list' (one line per rank)
         self.owned_aas: dict[str, dict] = {}
@@ -354,6 +364,19 @@ class CharacterTracker:
                         secs = SPELL_TIMERS.get(base)
                         if secs:
                             self._start_timer(e.spell, secs, "spell", e.ts)
+        elif isinstance(e, ev.GroupMember):
+            if e.name is None:
+                self.group_members.clear()   # removed/disbanded
+            elif e.joined:
+                self.group_members.add(e.name)
+            else:
+                self.group_members.discard(e.name)
+        elif isinstance(e, ev.GroupChat):
+            # Seeds the roster where join lines cannot: log in ALREADY
+            # grouped and no one ever "joined", so a join-only filter would
+            # hide your real group. Speaking in group chat proves membership.
+            if e.channel == "group" and e.sender:
+                self.group_members.add(e.sender)
         elif isinstance(e, ev.Composition):
             # the log's own trio line — authoritative like /who
             from backend.log_system.parser import CLASS_ABBREV as _CA
@@ -476,7 +499,26 @@ class CharacterTracker:
                     if (enc is not None
                             and (e.ts - enc["last"]).total_seconds() <= COMBAT_TIMEOUT_SECONDS
                             and _foe_key(e.target) in enc.get("foes", {})):
-                        if owner:
+                        # The target test above CANNOT be trusted alone:
+                        # _foe_key compares mob NAMES and the log has no mob
+                        # IDs, so a stranger fighting a DIFFERENT mob of the
+                        # same name passes it (observed live -- two "Spirit
+                        # of Dessication" at once, the other one someone
+                        # else's). Group membership is the only side of that
+                        # comparison we can positively verify.
+                        #
+                        # An EMPTY roster means no evidence, so it FAILS
+                        # OPEN and credits everyone exactly as before.
+                        # Filtered damage is LUMPED, never dropped: a
+                        # silently missing row looks identical to a quiet
+                        # fight, and this gate can be wrong (an unmapped
+                        # groupmate's pet has a generated name that proves
+                        # nothing, so it lands here too).
+                        who = owner or e.attacker
+                        if self.group_members and who not in self.group_members:
+                            ua = enc.setdefault("unattributed", {})
+                            ua[e.attacker] = ua.get(e.attacker, 0) + e.damage
+                        elif owner:
                             # An ally's pet gets its OWN row, mirroring the
                             # way our pet is split out of "You". Folded in,
                             # our view of that player would be them PLUS
@@ -954,6 +996,11 @@ class CharacterTracker:
             "trio": enc.get("trio"),
             "zone": enc.get("zone"),
             "level": enc.get("level"),
+            # one lumped row, with how many sources it covers -- enough to
+            # tell "the filter is hiding something" from "nobody helped"
+            "unattributed": ({"damage": sum((enc.get("unattributed") or {}).values()),
+                              "sources": len(enc.get("unattributed") or {})}
+                             if enc.get("unattributed") else None),
             "timeline": timeline,
             "abilities": abilities,
         }

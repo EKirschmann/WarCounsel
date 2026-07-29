@@ -469,3 +469,17 @@ class PetAttack(LogEvent):
     owner's log, so it maps the pet with zero user action."""
     type: str = "pet_attack"
     pet: str
+
+class GroupMember(LogEvent):
+    """'<Name> has joined the group.' / 'has left the group.', plus the
+    self forms. The ONLY positive proof of who is grouped with you: a
+    nearby stranger fighting a mob that merely SHARES a name with yours
+    is otherwise credited as an ally, because the log carries no mob IDs
+    and _foe_key can only match on the name.
+
+    `joined` False = left. `name` is None for the self forms ("You have
+    been removed from the group.") which clear the roster wholesale.
+    """
+    type: str = "group_member"
+    name: Optional[str] = None
+    joined: bool = True
