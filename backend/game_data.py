@@ -815,16 +815,33 @@ def class_guide_text(classes, max_chars_per: int = 2600,
 
 def _trio_usable(line: str, classes: list) -> Optional[bool]:
     """EQL rule: an item is equippable when ANY ONE of the trio's classes
-    is on its Class line (or Class: ALL). None = no class data on the item."""
+    is on its Class line (or Class: ALL). None = no class data on the item.
+
+    THREE forms appear on the wiki and all three must parse. The capture
+    used to be [A-Z ], which cannot cross the lowercase "except" in
+    "ALL except NEC WIZ MAG ENC" -- so that form matched NOTHING and
+    returned None. A None strips the [USABLE] tag in build_gear_context,
+    and the model then does the class math itself: it read the missing
+    tag on an "except ... WIZ" item as proof a Shadow Knight/Wizard
+    player could not use it, when only ONE of the two was excluded, and
+    advised handing it to the pet. A quarter of a real inventory parsed
+    this way. Do NOT tighten the capture back to [A-Z ]."""
     from backend.log_system.parser import CLASS_ABBREV
-    m = re.search(r"Class: ([A-Z ]+?)(?:;|\||$)", line)
+    m = re.search(r"Class: ([^;|\n]+)", line)
     if not m:
         return None
-    tokens = set(m.group(1).split())
-    if "ALL" in tokens:
+    raw = m.group(1).strip()
+    ex = re.match(r"ALL\s+except\s+(.+)$", raw, re.I)
+    tokens = set(raw.split())
+    if "ALL" in tokens and not ex:
         return True
     abbrs = {a for a, full in CLASS_ABBREV.items()
              if full.lower() in {c.strip().lower() for c in classes}}
+    if not abbrs:
+        return None  # classes unresolvable -- never claim NOT USABLE
+    if ex:
+        # usable when at least one of the trio is NOT on the exclusion list
+        return bool(abbrs - set(ex.group(1).split()))
     return bool(tokens & abbrs)
 
 

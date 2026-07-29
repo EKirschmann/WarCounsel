@@ -358,6 +358,13 @@ export interface TrioCompareRow {
   avg_dps: number;
   total_damage: number;
   top_zones: string[];
+  first_seen: string;
+  last_seen: string;
+  // a trio you return to keeps ONE cumulative row, so first..last can
+  // span time spent on another trio; stints counts the separate runs
+  stints: number;
+  level_min: number | null;
+  level_max: number | null;
 }
 
 export interface SessionSummary {

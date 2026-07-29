@@ -2173,3 +2173,11 @@ button.app-version:hover { color: var(--gold-bright); }
   padding: 0 4px;
 }
 
+
+.trio-when {
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}

@@ -4,7 +4,41 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
-## Unreleased
+## v2.1.6 — 2026-07-29
+
+**Fixed: the Trio comparison panel returned a server error.** It read a
+zone off the stored event, but encounters never carried one — the zone
+was being written to the character record instead. The panel failed on
+every request as soon as any fight was tagged with a trio, which is to
+say for anyone who had typed `/who`. Fights now record the zone and your
+level as they happen.
+
+**Fixed: gear advice claimed you could not use your own items.** Items
+whose class line reads "ALL except NEC WIZ MAG ENC" were not being read
+at all, so a quarter of a real inventory reached the advisor with no
+verdict on whether you could equip it — and it guessed. A Shadow
+Knight/Wizard was told to hand a mace to their pet because "your Wizard
+cannot use it", when their Shadow Knight could. Those items are now
+read correctly, and the advisor is told not to reason about class
+restrictions it has already been given the answer to.
+
+**Fixed: saving a spell set failed if you had never saved one in game.**
+The game only creates its spell-set section the first time you save a
+set yourself, and the app refused to write into a file that lacked it —
+exactly the person the feature is meant to help. It now creates the
+section. Write your set while logged out: the game rewrites this file
+when you camp.
+
+**One loadout, recorded two ways, is now one row.** Your class trio
+reaches the app from two places — `/who`, which uses the game's order,
+and the Advisor dropdowns, which use yours — so a single loadout could
+appear twice under different spellings and split its own fights in half.
+Trio comparison now groups by the classes themselves. Each row also
+shows the levels you played it at and when, so you can tell an honest
+comparison from one that is really just measuring levels. Come back to a
+trio later and it adds to the same row, with a run count so the dates
+are not mistaken for continuous play.
+
 
 **Beta pet gear is called out.** The pet's equipment list is kept between
 sessions on purpose, since pet gear survives death and re-summon — but it

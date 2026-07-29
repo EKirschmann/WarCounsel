@@ -600,7 +600,7 @@ async def lifespan(app: FastAPI):
         t.cancel()
 
 
-APP_VERSION = "2.1.5"  # bump together with frontend/lib/version.ts
+APP_VERSION = "2.1.6"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/WarCounsel"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 
@@ -1352,28 +1352,62 @@ async def trio_compare(db: Session = Depends(get_db)):
             .filter(LogEventRow.character_id == _character_id,
                     LogEventRow.event_type == "encounter")
             .order_by(LogEventRow.ts.desc()).limit(2000).all())
+    rows = list(reversed(rows))   # oldest -> newest: stints and "newest
+                                  # spelling wins" both need forward time
     agg: dict = {}
+    prev_key = None
     for r in rows:
         p = r.payload or {}
         trio = p.get("trio")
         if not trio:
             continue
-        a = agg.setdefault(trio, {"fights": 0, "damage": 0, "seconds": 0.0,
-                                  "zones": {}})
+        # ORDER-INSENSITIVE key. The same loadout reaches the DB under two
+        # spellings: the /who parse keeps the GAME's order while a manual
+        # trio edit joins the Advisor dropdowns in SLOT order. One real
+        # setup then split into two rows that could not be compared to
+        # each other -- the exact comparison this panel exists to make.
+        # Stored payloads are left alone; they record what was believed.
+        key = "/".join(sorted(c.strip() for c in trio.split("/") if c.strip()))
+        a = agg.setdefault(key, {"fights": 0, "damage": 0, "seconds": 0.0,
+                                 "zones": {}, "label": trio, "stints": 0,
+                                 "first": r.ts, "last": r.ts,
+                                 "lmin": None, "lmax": None})
         a["fights"] += 1
         a["damage"] += p.get("total_damage") or 0
         a["seconds"] += p.get("duration") or 0
-        if r.zone:
-            a["zones"][r.zone] = a["zones"].get(r.zone, 0) + 1
+        a["label"] = trio          # rows ascend, so the newest spelling wins
+        a["last"] = r.ts
+        if key != prev_key:
+            # a trio you come back to later keeps ONE cumulative row, so
+            # first..last spans time you were playing something else. The
+            # stint count is what stops that range reading as continuous.
+            a["stints"] += 1
+        prev_key = key
+        lvl = p.get("level")
+        if lvl:
+            a["lmin"] = lvl if a["lmin"] is None else min(a["lmin"], lvl)
+            a["lmax"] = lvl if a["lmax"] is None else max(a["lmax"], lvl)
+        # LogEventRow has NO zone column -- id/character_id/event_type/
+        # payload/ts only. _persist_milestone takes item["zone"] and writes
+        # it to the CHARACTER row, so r.zone raised AttributeError on every
+        # request once ANY encounter carried a trio tag. Zone rides the
+        # payload now; rows written before that carry none.
+        z = p.get("zone")
+        if z:
+            a["zones"][z] = a["zones"].get(z, 0) + 1
     out = []
-    for trio, a in agg.items():
+    for _key, a in agg.items():
         out.append({
-            "trio": trio, "fights": a["fights"],
+            "trio": a["label"], "fights": a["fights"],
             "avg_dps": round(a["damage"] / a["seconds"], 1)
             if a["seconds"] else 0,
             "total_damage": a["damage"],
             "top_zones": [z for z, _n in sorted(
                 a["zones"].items(), key=lambda kv: -kv[1])[:3]],
+            "first_seen": a["first"].isoformat(timespec="seconds"),
+            "last_seen": a["last"].isoformat(timespec="seconds"),
+            "stints": a["stints"],
+            "level_min": a["lmin"], "level_max": a["lmax"],
         })
     out.sort(key=lambda x: -x["avg_dps"])
     return {"trios": out}

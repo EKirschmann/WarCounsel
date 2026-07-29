@@ -81,7 +81,17 @@ def write_spell_set(path: Path, set_name: str, spell_ids: list) -> dict:
     lines = text.splitlines()
     start, end = _section_span(lines)
     if start is None:
-        raise ValueError("no [SpellLoadouts] section in the file")
+        # The game writes [SpellLoadouts] LAZILY: it appears only after
+        # you save a spell set in-game, so a fresh character's LO*.ini
+        # has every other section and not this one. Refusing there fails
+        # exactly the person this feature exists for -- someone with no
+        # sets yet -- so create the section instead. The .companion-backup
+        # below is still taken from the ORIGINAL file first, and no other
+        # section is touched.
+        while lines and not lines[-1].strip():
+            lines.pop()
+        lines.append("[SpellLoadouts]")
+        start, end = len(lines) - 1, len(lines)
 
     existing = read_spell_sets(path)
     target = next((s["index"] for s in existing

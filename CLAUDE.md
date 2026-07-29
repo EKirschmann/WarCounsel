@@ -359,6 +359,26 @@ hours-to-level estimate (exact only after a same-session ding).
   tier. Encounters carry "trio" (per-trio DPS comparison via
   GET /api/trio-compare) and a 2s-bucket damage "timeline" (the
   Encounter panel sparkline).
+- **`class_str` has TWO writers with DIFFERENT orderings, and anything
+  keyed on the string must expect both.** The /who parse keeps the GAME's
+  order ("[3 WIZ/BST]" -> "Wizard/Beastlord"); a manual trio edit joins
+  the Advisor dropdowns in SLOT order (AdvisorPanel `next.join("/")`).
+  One real loadout therefore reaches the DB under two spellings, which
+  split trio-compare into two rows that could not be compared to each
+  other -- the whole point of the panel. `/api/trio-compare` now keys on
+  the SORTED class set and displays the newest spelling. Stored payloads
+  are NEVER rewritten: they record what the app believed at the time.
+  The manual edit is also why a trio can change BEFORE the /who that
+  confirms it (observed: 33 minutes early) -- do not treat a clean
+  timeline break as proof of a real class change.
+- **Encounters carry `zone` and `level` in the PAYLOAD.** `LogEventRow`
+  has five columns (id/character_id/event_type/payload/ts) and no zone.
+  `_persist_milestone` takes the queue dict's `zone`/`level` and writes
+  them to the CHARACTER row, so reading `r.zone` off an event row raised
+  AttributeError on every trio-compare request once ANY encounter carried
+  a trio tag. Both are captured at encounter CREATION, not at flush time:
+  a fight is often the last thing before a zone line, so `tracker.zone`
+  has already moved on by the time `pending_encounters` drains.
 
 ## All-time totals (`GET /api/lifetime`)
 
@@ -965,7 +985,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v2.0.1**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.1.6**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
 builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**

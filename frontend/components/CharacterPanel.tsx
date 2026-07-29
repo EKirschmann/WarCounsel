@@ -29,6 +29,37 @@ const fmtCoin = (c: number) => {
   return parts.filter(([n]) => n > 0).map(([n, u]) => `${n}${u}`).join(" ") || "0c";
 };
 
+const MD = { month: "short", day: "numeric" } as const;
+
+/** "Jul 28" for a single day, "Jul 22 – Jul 28" across days, plus a run
+ *  marker: a trio you return to stays ONE cumulative row, so the span is
+ *  not necessarily continuous play. */
+function trioWhen(tr: TrioCompareRow): string {
+  const a = new Date(tr.first_seen);
+  const b = new Date(tr.last_seen);
+  if (Number.isNaN(a.valueOf()) || Number.isNaN(b.valueOf())) return "";
+  const fa = a.toLocaleDateString(undefined, MD);
+  const fb = b.toLocaleDateString(undefined, MD);
+  const span = fa === fb ? fa : `${fa} – ${fb}`;
+  return tr.stints > 1 ? `${span} · ${tr.stints} runs` : span;
+}
+
+/** Levels ride encounters recorded since this shipped, so an older trio
+ *  legitimately has none — a dash, never a fake 0. */
+function trioLevels(tr: TrioCompareRow): string {
+  const { level_min: lo, level_max: hi } = tr;
+  if (lo == null || hi == null) return "—";
+  return lo === hi ? String(lo) : `${lo}–${hi}`;
+}
+
+function trioTitle(tr: TrioCompareRow): string | undefined {
+  const parts = [tr.top_zones.join(", ")];
+  if (tr.stints > 1) {
+    parts.push(`${tr.stints} separate runs — dates span time on other trios`);
+  }
+  return parts.filter(Boolean).join(" · ") || undefined;
+}
+
 export const CharacterPanel = memo(function CharacterPanel({
   snap,
   onSnapChange,
@@ -277,14 +308,19 @@ export const CharacterPanel = memo(function CharacterPanel({
               <thead>
                 <tr>
                   <th scope="col">Trio</th>
+                  <th scope="col" title="Character level while running this trio">Lvl</th>
                   <th scope="col">Fights</th>
                   <th scope="col" title="Total damage / total fight seconds">DPS</th>
                 </tr>
               </thead>
               <tbody>
                 {trios.slice(0, 5).map((tr) => (
-                  <tr key={tr.trio} title={tr.top_zones.join(", ") || undefined}>
-                    <td className="hunt-name">{tr.trio}</td>
+                  <tr key={tr.trio} title={trioTitle(tr)}>
+                    <td className="hunt-name">
+                      {tr.trio}
+                      <div className="trio-when">{trioWhen(tr)}</div>
+                    </td>
+                    <td>{trioLevels(tr)}</td>
                     <td>{tr.fights}</td>
                     <td>{tr.avg_dps}</td>
                   </tr>

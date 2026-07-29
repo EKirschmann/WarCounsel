@@ -1667,7 +1667,13 @@ async def generate_gear_advice(ctx: dict) -> dict:
             "as {item, why} (no slot needed), best first, at most "
             f"{pet_slots} items. Pet gear PERSISTS through death/re-summon. "
             "THE PLAYER KEEPS STAT PRIORITY: never hand the pet something "
-            "better than the player's own worn gear.")
+            "better than the player's own worn gear. Every candidate above "
+            "is SPARE gear sitting in bags/bank -- it is NOT gear the "
+            "player is unable to equip, and much of it they CAN equip. "
+            "Class usability was computed deterministically for you (the "
+            "[USABLE] tags); do NOT assert or infer any class restriction "
+            "on the player in 'why'. Justify a hand-over by what it does "
+            "for the PET.")
     else:
         pet_block = ("PET LOADOUT: none — pet_gear must be []. (The player "
                      "sets their pet's slot count + class in the Advisor "

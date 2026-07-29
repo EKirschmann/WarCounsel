@@ -179,7 +179,12 @@ class CharacterTracker:
                 del self.pending_encounters[:-10]
             self.encounter = {"started": ts, "last": ts, "target": None,
                               "total_out": 0, "total_in": 0, "abilities": {},
-                              "foes": {}, "trio": self.class_str}
+                              "foes": {}, "trio": self.class_str,
+                              # captured HERE, not at flush time: a fight
+                              # is often the last thing before a zone line,
+                              # so tracker.zone has already moved on by the
+                              # time pending_encounters drains
+                              "zone": self.zone, "level": self.level}
         else:
             self.encounter["last"] = ts
 
@@ -947,6 +952,8 @@ class CharacterTracker:
                                    key=lambda kv: -kv[1])[:12]
             ],
             "trio": enc.get("trio"),
+            "zone": enc.get("zone"),
+            "level": enc.get("level"),
             "timeline": timeline,
             "abilities": abilities,
         }
