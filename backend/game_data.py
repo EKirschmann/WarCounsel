@@ -634,21 +634,9 @@ async def item_line(name: str) -> Optional[str]:
     not equipment."""
     base = _strip_upgrade(name)
     key = base.lower()
-    # A player-supplied line WINS over the wiki cache miss and over the
-    # wiki itself: launch shipped items eqlwiki has no page for, including
-    # gear people are already wearing, and the owner reading numbers off
-    # the item is a better source than nothing. Checked FIRST so it also
-    # short-circuits the network round trip.
-    try:
-        from backend import item_facts
-        supplied = item_facts.stats_for(0, base)
-    except Exception:
-        supplied = None
-    if supplied:
-        return supplied[0]
     cached = wiki_page_cache.get("item_line2", key)
     if cached is not None:
-        return cached or None
+        return cached or _supplied_line(base)
     page = await get_mcp_client().wiki_page(base, max_characters=4000)
     if page is None:
         # exact title missed — fuzzy-resolve (punctuation/case drift
@@ -668,10 +656,30 @@ async def item_line(name: str) -> Optional[str]:
         if stale:
             return stale
         wiki_page_cache.set("", 3600, "item_line2", key)
-        return None
+        return _supplied_line(base)
     line = _compact_item(page.get("text", ""))
     wiki_page_cache.set(line or "", WIKI_TTL, "item_line2", key)
-    return line
+    return line or _supplied_line(base)
+
+
+def _supplied_line(base: str) -> Optional[str]:
+    """Stats a PLAYER typed in, used ONLY where the wiki has nothing.
+
+    This is a LAST resort, not a first one. It briefly ran first, to skip
+    a network round trip, and that was backwards: the wiki carries BASE
+    (+0) values that scale correctly to any owned +N, plus the class list,
+    the proc and the drop source. A hand-entered figure is pinned to the
+    one rank it was read at and cannot scale -- so preferring it would
+    have silently overridden better data forever, and eqlwiki is actively
+    filling in the launch item block (Burnt Sheer Blade gained a page
+    within two days of being unfindable).
+    """
+    try:
+        from backend import item_facts
+        rec = item_facts.stats_for(0, base)
+    except Exception:
+        return None
+    return rec[0] if rec else None
 
 
 def _edit_distance(a: str, b: str) -> int:
