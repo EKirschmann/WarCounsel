@@ -998,12 +998,24 @@ def _parse_zem_wikitext(text: str) -> dict:
         if section == "Planes" and zone not in IN_ERA_PLANES:
             continue
         cells = [c.strip() for c in rm.group(2).split("||")]
-        ztype = cells[0].strip().title() if cells else ""
+        # The Type cell is OPTIONAL in practice: 61 of 119 rows omit it,
+        # including the whole Faydark block (Crushbone, Kaladim, Felwithe,
+        # Butcherblock, Unrest, Kedge Keep, Steamfont, Mistmoore). Assigning
+        # by position therefore put a LEVEL RANGE in `type`, left lo/hi
+        # None, and shifted every quality circle one column left -- so
+        # Crushbone read as efficient at level 1 when its row says poor,
+        # and the City exclusion silently stopped applying to half the
+        # table. Detect which shape the row is instead of trusting order.
+        first = cells[0] if cells else ""
+        if _RE_ZEM_RANGE.search(first):
+            ztype, rest = "", cells          # no Type cell: range leads
+        else:
+            ztype, rest = first.title(), cells[1:]
         lo = hi = None
-        if len(cells) > 1 and (rng := _RE_ZEM_RANGE.search(cells[1])):
+        if rest and (rng := _RE_ZEM_RANGE.search(rest[0])):
             lo, hi = int(rng.group(1)), int(rng.group(2))
         tiers = {}
-        for lvl, cell in zip(cols, cells[2:]):
+        for lvl, cell in zip(cols, rest[1:]):
             t = _cell_tier(cell)
             if t:
                 tiers[lvl] = t
@@ -1188,12 +1200,22 @@ async def hunting_candidates(level: int) -> list:
             "at_level": quality != "stretch",
             "quality": quality,
             "note": note,
+            "type": z["type"] or "",
             "marks": [m for m in marked if m in (col, col + 5)],
             "levels": marked or [l for l in range(lo, (hi or lo) + 1)
                                  if l % 5 == 0 or l == lo],
         })
     order = {"efficient": 0, "ok": 1, "stretch": 2}
-    out.sort(key=lambda z: (order[z["quality"]],
-                            abs(((int(z["band"].split("-")[0])
-                                  + int(z["band"].split("-")[1])) // 2) - level)))
+    # Dungeons rank above open zones AT EQUAL QUALITY -- a tiebreak, never
+    # a filter. Filtering to Type == "Dungeon" is tempting and wrong: 15
+    # in-era rows carry NO Type at all (the sheet omits the cell), and
+    # Crushbone is one of them, so a hard dungeon filter drops the single
+    # zone most often wanted at this level. Quality still leads, because a
+    # dungeon you cannot efficiently kill in is not a better answer.
+    def _rank(z):
+        mid = (int(z["band"].split("-")[0]) + int(z["band"].split("-")[1])) // 2
+        return (order[z["quality"]],
+                0 if z.get("type") == "Dungeon" else 1,
+                abs(mid - level))
+    out.sort(key=_rank)
     return out
