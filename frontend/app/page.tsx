@@ -209,9 +209,13 @@ export default function Home() {
             onClick={() => setSettingsOpen(true)}
           >
             <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              {/* teeth generated on a circle so they are actually
+                  even -- the hand-drawn path this replaced had
+                  irregular spacing and read as a cartoon at 15px */}
               <path
                 fill="currentColor"
-                d="M12 8.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 0 0 12 8.5zm7.4 3.5c0-.5-.05-.9-.13-1.35l2.06-1.6-2-3.46-2.45 1a7.4 7.4 0 0 0-2.33-1.35L14.2 2h-4l-.35 2.24A7.4 7.4 0 0 0 7.52 5.6l-2.45-1-2 3.46 2.06 1.6a7.7 7.7 0 0 0 0 2.7l-2.06 1.6 2 3.46 2.45-1a7.4 7.4 0 0 0 2.33 1.35L10.2 22h4l.35-2.24a7.4 7.4 0 0 0 2.33-1.35l2.45 1 2-3.46-2.06-1.6c.08-.45.13-.85.13-1.35z"
+                fillRule="evenodd"
+                d="M8.98 4.70L9.80 1.63L14.20 1.63L15.02 4.70L17.77 3.11L20.89 6.23L19.30 8.98L22.37 9.80L22.37 14.20L19.30 15.02L20.89 17.77L17.77 20.89L15.02 19.30L14.20 22.37L9.80 22.37L8.98 19.30L6.23 20.89L3.11 17.77L4.70 15.02L1.63 14.20L1.63 9.80L4.70 8.98L3.11 6.23L6.23 3.11ZM15.50 12.00A3.5 3.5 0 1 0 8.50 12.00A3.5 3.5 0 1 0 15.50 12.00Z"
               />
             </svg>
           </button>

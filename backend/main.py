@@ -1117,6 +1117,22 @@ def _describe_game_dir(path: str) -> dict:
             "reason": f"{len(found)} character log(s) found"}
 
 
+def _context_info() -> dict:
+    """context_limit() plus the guide budget it produces, for the panel."""
+    try:
+        from backend import app_config as _cfg
+        from backend.llm_runtime import context_limit
+        from backend.game_data import guide_budget
+        info = dict(context_limit())
+        info["guide_budget"] = guide_budget()
+        info["manual"] = _cfg.load().get("llm_context_limit") or ""
+        return info
+    except Exception:
+        logger.debug("context info unavailable", exc_info=True)
+        return {"limit": 8192, "source": "default", "detected": None,
+                "guide_budget": 3200, "manual": ""}
+
+
 @app.get("/api/settings")
 async def api_settings_get():
     """Everything the settings panel needs. Secrets are reported as
@@ -1143,6 +1159,12 @@ async def api_settings_get():
             "anthropic_model": settings.anthropic_model,
             "keys_set": which_are_set(),
             "available": available(),
+            # Context window we will size prompts against: probed from a
+            # local server when one answers, overridable by the player,
+            # else a conservative default. `detected` is reported even
+            # when a manual value wins, so the panel can show what the
+            # server actually has loaded next to what is pinned.
+            "context": _context_info(),
         },
         "overrides": sorted(overrides().keys()),
         # Bundled-data health. Packaged builds resolve these out of the

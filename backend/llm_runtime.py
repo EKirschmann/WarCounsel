@@ -184,7 +184,7 @@ def probe(provider: str | None = None) -> dict:
 
     provider = provider or active()["provider"]
     out: dict = {"provider": provider, "checked": True, "reachable": False,
-                 "models": [], "loaded": [], "reason": None}
+                 "models": [], "loaded": [], "reason": None, "context": None}
 
     def get(url: str):
         with urllib.request.urlopen(url, timeout=2.5) as r:
@@ -201,6 +201,13 @@ def probe(provider: str | None = None) -> dict:
                 out["models"] = [m.get("id") for m in rows if m.get("id")]
                 out["loaded"] = [m.get("id") for m in rows
                                  if m.get("state") == "loaded"]
+                # the LOADED context, which is what actually bounds a
+                # prompt -- a model's maximum is irrelevant if it was
+                # JIT-loaded at a smaller window
+                out["context"] = next(
+                    (m.get("loaded_context_length") for m in rows
+                     if m.get("state") == "loaded"
+                     and m.get("loaded_context_length")), None)
             except Exception:
                 data = get(base + "/models")          # OpenAI shape fallback
                 out["models"] = [m.get("id") for m in data.get("data", [])]
@@ -244,7 +251,65 @@ def probe(provider: str | None = None) -> dict:
     return out
 
 
+DEFAULT_CONTEXT = 8192
+_CTX_CACHE: dict = {}
+_CTX_TTL = 60.0
+
+
+def context_limit(provider: str | None = None) -> dict:
+    """How many tokens of prompt we may spend, and where that number came
+    from.
+
+    A local server already tells us its LOADED context, so asking beats
+    guessing: this machine reports 32512 while the conservative default
+    assumes 8192, and sizing the prompt to the smaller number throws away
+    three quarters of the window. But the probe is only a reading of what
+    is loaded RIGHT NOW -- a JIT reload can bring the model back smaller --
+    so a player may pin the number, and a pinned value always wins.
+
+    Cloud providers are never probed and never scaled up: their context is
+    large but their tokens are billed, so they keep the default.
+
+    -> {"limit": int, "source": "manual"|"probed"|"default", "detected": int|None}
+    """
+    # app_config.json, NOT this module's llm_config.json -- the settings
+    # panel writes every non-secret override to the former, and reading the
+    # wrong file made a pinned value silently do nothing.
+    try:
+        from backend import app_config
+        manual = str(app_config.load().get("llm_context_limit") or "").strip()
+    except Exception:
+        manual = ""
+    detected = None
+    prov = provider or active()["provider"]
+    if prov in ("lmstudio", "local"):
+        # Cached briefly: this is consulted while BUILDING a prompt, so an
+        # unreachable server would otherwise pay the probe timeout on every
+        # consult. 60s still notices a model reloaded at a different size.
+        import time as _t
+        hit = _CTX_CACHE.get(prov)
+        if hit and _t.monotonic() - hit[0] < _CTX_TTL:
+            detected = hit[1]
+        else:
+            try:
+                detected = probe(prov).get("context") or None
+            except Exception:
+                detected = None
+            _CTX_CACHE[prov] = (_t.monotonic(), detected)
+    if manual:
+        try:
+            n = int(manual)
+            if n > 0:
+                return {"limit": n, "source": "manual", "detected": detected}
+        except ValueError:
+            pass
+    if detected:
+        return {"limit": int(detected), "source": "probed", "detected": detected}
+    return {"limit": DEFAULT_CONTEXT, "source": "default", "detected": detected}
+
+
 def clear_cache() -> None:
+    _CTX_CACHE.clear()
     """Drop built chat models so the next consult picks up a new key."""
     with _lock:
         _cache.clear()

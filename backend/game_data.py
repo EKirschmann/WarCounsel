@@ -810,13 +810,40 @@ CLASS_GUIDES_DIR = bundle_path("class_guides")
 REF_GUIDES = ("races", "stances_invocations", "rituals")
 
 
-def class_guide_text(classes, max_chars_per: int = 3200,
+def guide_budget() -> int:
+    """Per-guide character budget, scaled to the context we actually have.
+
+    3200 was chosen to protect a model loaded at 8k. That is the floor,
+    not the norm: a local server reports its LOADED window and 32k is
+    common, where holding guides to 3200 discards most of what we could
+    say. Cloud providers stay at the floor deliberately -- their context
+    is ample but their tokens are billed, and nobody asked us to spend
+    four times as much per consult.
+
+    Scales with the window rather than jumping, and stops at 9000: past
+    that the guides would crowd out the gear and spell context they are
+    supposed to inform, and prompt size costs real latency (a 10k-token
+    prompt measured ~3.9s locally).
+    """
+    try:
+        from backend.llm_runtime import context_limit
+        info = context_limit()
+    except Exception:
+        return 3200
+    if info["source"] == "default":
+        return 3200
+    return max(3200, min(9000, int(info["limit"] * 0.18)))
+
+
+def class_guide_text(classes, max_chars_per: int | None = None,
                      include_refs: bool = False) -> str:
     """Curated .md guides (community wisdom, maintained by hand — see
     class_guides/README.md). general.md (cross-class mechanics + meta)
     loads FIRST for every trio, then reference files when include_refs,
     then one file per full class name (lowercase, spaces as
     underscores). Empty string when none exist."""
+    if max_chars_per is None:
+        max_chars_per = guide_budget()
     names = (["general"] + (list(REF_GUIDES) if include_refs else [])
              + [str(c).strip().lower().replace(" ", "_")
                 for c in classes or []])
