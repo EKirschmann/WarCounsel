@@ -49,15 +49,32 @@ breeze 1626 -> 1620 and sight graft 1625 -> 1620. Where the pack is
 SHORTER it stands, since it already under-promises -- cajole undead
 1140 vs 1230 is left alone, as is shaman vision 720 vs 840.
 
-NOT yet reconciled: TWELVE bard songs, every one of them 18 in the
-pack against 12 in the game data. One identical gap repeated twelve
-times reads as a pack CONVENTION, not twelve separate errors, and
-guessing wrong either shortens every song timer a bard owns or
-leaves them all long. It wants one measurement, not a sweep: sing a
-song, stop, and the gap between the cast line and "worn off" settles
-all twelve. A non-bard's log cannot supply it — songs others sing on
-you produce no fade line at all (checked against a 90MB log: 2495
-"begins singing" lines, zero song fades).
+NOT yet reconciled, and NOT to be reconciled by measurement: TWELVE
+bard songs, every one 18 in the pack against 12 in the game data.
+One identical gap repeated twelve times reads as a pack CONVENTION
+rather than twelve separate errors — but the reason to leave it
+alone is the MECHANIC, not the data.
+
+**Symphonic Aura** is a core passive bard AA that automatically
+pulses up to FIVE songs — non-single-target, zero-mana AoE ones,
+selected by their position in the LAST slots of the spellbook. So a
+bard's songs re-apply on their own, without a cast the parser can
+see as the start of anything. Two consequences:
+
+- A song may never lapse at all while the aura is up, which is why
+  a log shows no song fades (checked: 2495 "begins singing" lines
+  in one 90MB log, zero song fades). "Sing it and time the fade"
+  therefore does not measure what it looks like it measures.
+- 18-vs-12 may not be an error in either source. It could be a
+  PULSE CADENCE against a duration, in which case both numbers are
+  right about different things and picking one is picking wrong.
+
+What a timer even MEANS for an auto-pulsed song is the open
+question, and it has to be settled before any bard row goes in —
+including the eighteen bard spells still missing entirely. Do not
+"fix" these twelve by matching them to eqlbuilds; that is the same
+name-match reasoning the nimble/strengthen-death collisions below
+exist to warn against.
 
 Two entries run the other way -- nimble 12 vs 3240, strengthen death
 420 vs 3600 -- and are almost certainly NAME COLLISIONS between
