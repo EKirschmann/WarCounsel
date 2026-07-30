@@ -1572,6 +1572,20 @@ gear — front-load the decision-relevant facts). See class_guides/README.md
 for curation rules; update after patches by hand — nothing regenerates
 them.
 
+- **A spell with an EMPTY snapshot description gets one synthesized from
+  its effect data** (`builds_data.effect_summary`), because the briefing
+  line otherwise degrades to a bare name + mana cost and the model fills
+  the hole from memory: that is exactly how an invented "larger lifetap"
+  Leech reached a real consult, where a checker then correctly called it
+  unsupported. 26 of 1223 spells have no description. Effect ids
+  eqlbuilds leaves unnamed are decoded only on EVIDENCE — 457 is the
+  damage-returned-as-healing conversion in TENTHS of a percent, verified
+  against a player screenshot of the client tooltip ("100% of the
+  life-force taken is used to heal your wounds") plus its absence from
+  every plain DoT checked. Do not add entries to `_EFFECT_NOTES` from
+  memory; the client composes its tooltips from this same data, so a
+  screenshot is the cheapest ground truth available.
+
 `builds_data.py` reads the eqlbuilds.com dataset snapshot that ships inside
 the MCP clone (dist/data/eqlbuilds — CI-refreshed): per-class spell lists
 with EXACT unlock levels, AA ranks/costs, skills. When present it feeds the
