@@ -1573,10 +1573,16 @@ button.app-version {
 }
 button.app-version:hover { color: var(--gold-bright); }
 .update-msg {
-  font-size: 0.78em;
-  letter-spacing: 0.02em;
+  /* ABSOLUTE, not em: this sits inside .eyebrow, which is 10px uppercase,
+     so 0.78em rendered at ~7.8px -- a full sentence at that size is
+     unreadable. It is also the one string in the header a user has to ACT
+     on, so it gets normal casing, normal tracking and room to wrap. */
+  font-size: 12px;
+  letter-spacing: 0;
   text-transform: none;
-  color: var(--ink-dim, rgba(230, 222, 202, 0.55));
+  line-height: 1.35;
+  max-width: 46ch;
+  color: var(--ink, rgba(230, 222, 202, 0.9));
   margin-left: 8px;
 }
 .update-msg[data-newer] { color: var(--gold-bright); }

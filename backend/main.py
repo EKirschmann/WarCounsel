@@ -1029,9 +1029,13 @@ async def run_update():
         cwd=str(bat.parent),
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
     )
+    # NOT "the app restarts itself" -- update_companion.bat ends with
+    # "Updated. Start it again with start_companion.bat", so telling the
+    # user to just refresh left them waiting for something that never
+    # happens.
     return {"launched": True,
-            "note": "Updating in a separate window — the app restarts "
-                    "itself; refresh this page when the window says done."}
+            "note": "Updater opened in its own window — restart the app "
+                    "when it finishes."}
 
 
 @app.get("/api/llm")
