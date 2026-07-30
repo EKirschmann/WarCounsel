@@ -816,6 +816,22 @@ Both paths confirm the target really is an overlay first: pids are recycled.
 substring test on "overlay" also matches `--ocr-overlay`, so the combat
 toggle could kill the OCR calibrator.
 
+**Finding the reload worker at all: never grep its command line.** uvicorn
+`--reload` runs the app in a MULTIPROCESSING SPAWN child whose argv is
+`python -c "from multiprocessing.spawn import spawn_main; spawn_main(...)"
+--multiprocessing-fork` — containing neither `uvicorn` nor `backend.main`.
+Every search for those strings returns nothing while the server is plainly
+serving, and `netstat` credits the LISTEN socket to the reloader PARENT,
+which may already be dead: `taskkill /PID <that>` answers "process not
+found" while the port stays bound and answers HTTP. Symptoms are a stale
+version served forever and a fresh launch dying on `[Errno 10048]`. Find it
+by walking the process tree — its MCP `node` child names it via
+ParentProcessId — or from the parent pid netstat reports, then kill the
+tree. Two corollaries learned the hard way: a process match on command-line
+text also matches the SHELL RUNNING THE SEARCH (this killed the debugging
+shell twice), and Git Bash rewrites `/PID` into a path, so `taskkill` must
+run from PowerShell or cmd.
+
 ## LLM runtime (backend/llm_runtime.py)
 
 - Providers: `none` (deterministic) | `lmstudio` | `openai` | `custom` (any
