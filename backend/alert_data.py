@@ -12,10 +12,12 @@ Entries marked `[eqlbuilds]` come from the eqlbuilds.com snapshot's
 `durationTicks` (x6 = seconds) instead, NOT the alerts pack — that
 pack is a raid trigger list and carries almost nothing below the
 high-end, so most low-level content is simply absent from it. The
-42 marked rows are every NECROMANCER spell cast at an enemy that
-has a duration (hostile targetTypeId + durationTicks > 0): DoTs,
-plus the roots, snares, fears and charms, which need timers just
-as much and never tick. Other classes are still pack-only.
+marked rows are every NECROMANCER and SHAMAN spell cast at an enemy
+that has a duration (hostile targetTypeId + durationTicks > 0):
+DoTs, plus the roots, snares, fears, charms, slows and resist
+debuffs, which need timers just as much and never tick — a shaman
+has no other way to know when a slow or a malaise has dropped.
+Other classes are still pack-only.
 
 These values are exact rather than community-measured, so a
 regenerate must PRESERVE them; they are also CC BY-SA (see
@@ -27,8 +29,11 @@ value wins: a timer that outlives its effect is the one failure this
 table must not have, and the pack's own rule was already "keep the
 shortest on collision". Six necro rows were lowered on that basis
 (asystole, boil blood, chilling embrace, envenomed bolt, scourge,
-venom of the snake). Where the pack is SHORTER it stands, since it
-already under-promises -- cajole undead 1140 vs 1230 is left alone.
+venom of the snake), and one shaman row (plague 132 -> 78; the
+spell is Shaman-only, so there is no cross-class reading of that
+name to preserve). Where the pack is SHORTER it stands, since it
+already under-promises -- cajole undead 1140 vs 1230 is left alone,
+as is shaman vision 720 vs 840.
 
 NOT yet reconciled: 19 more rows where the pack runs long, mostly
 bard songs sharing a systematic 18-vs-12 gap that looks like a pack
@@ -41,6 +46,7 @@ import re
 SPELL_TIMERS = {
     "aanya's q": 1440,
     "aegis of ro": 420,
+    "affliction": 84,          # [eqlbuilds] 14 ticks
     "agilmente's aria of eagles": 18,
     "angstlich's assonance": 60,
     "anthem de arms": 18,
@@ -59,6 +65,7 @@ SPELL_TIMERS = {
     "bewitching bravura": 18,
     "bind sight": 720,
     "bind wound": 10,
+    "blinding luminance": 24,  # [eqlbuilds] 4 ticks
     "boil blood": 42,          # [eqlbuilds] 7 ticks
     "bond of death": 54,
     "boon of the garou": 360,
@@ -85,6 +92,7 @@ SPELL_TIMERS = {
     "clinging darkness": 48,   # [eqlbuilds] 8 ticks
     "coe": 3600,
     "coth cool down timer": 15,
+    "curse": 30,               # [eqlbuilds] 5 ticks
     "curse of the spirits": 87,
     "dark soul": 30,           # [eqlbuilds] 5 ticks
     "defensive": 180,
@@ -92,6 +100,7 @@ SPELL_TIMERS = {
     "di": 600,
     "dictate": 48,
     "disease cloud": 360,      # [eqlbuilds] 60 ticks
+    "disempower": 120,         # [eqlbuilds] 20 ticks
     "divine aura": 18,
     "divine barrier": 18,
     "divine favor": 300,
@@ -104,6 +113,7 @@ SPELL_TIMERS = {
     "dread": 48,
     "drifting death": 60,
     "drones": 60,
+    "drowsy": 210,             # [eqlbuilds] 35 ticks
     "duelist": 12,
     "elemental rhythms": 18,
     "elixir | ${2} <--": 4,
@@ -111,11 +121,13 @@ SPELL_TIMERS = {
     "enthrall": 48,
     "entrance": 72,
     "envenomed bolt": 36,      # [eqlbuilds] 6 ticks
+    "envenomed breath": 42,    # [eqlbuilds] 7 ticks
     "eternities torment": 126, # [eqlbuilds] 21 ticks
     "evade": 10,
     "evasive": 180,
     "fascination": 36,
     "fear": 18,                # [eqlbuilds] 3 ticks
+    "flash of light": 12,      # [eqlbuilds] 2 ticks
     "flying kick!": 4,
     "fufil's": 18,
     "furious": 9,
@@ -129,10 +141,14 @@ SPELL_TIMERS = {
     "ignite blood": 42,        # [eqlbuilds] 7 ticks
     "ignite bones": 12,        # [eqlbuilds] 2 ticks
     "immo": 66,
+    "incapacitate": 390,       # [eqlbuilds] 65 ticks
     "infectious cloud": 126,   # [eqlbuilds] 21 ticks
     "innerflame": 12,
+    "insidious fever": 840,    # [eqlbuilds] 140 ticks
+    "insidious malady": 840,   # [eqlbuilds] 140 ticks
     "insidious retrogression": 96,  # [eqlbuilds] 16 ticks
     "insipid ditty": 18,
+    "instill": 96,             # [eqlbuilds] 16 ticks
     "invoke fear": 42,         # [eqlbuilds] 7 ticks
     "jaxan's jig o' vigor": 18,
     "jonthan's inspiration": 18,
@@ -142,8 +158,12 @@ SPELL_TIMERS = {
     "largo's absonant": 18,
     "lay on hands": 900,
     "leech": 54,               # [eqlbuilds] 9 ticks
+    "listless power": 390,     # [eqlbuilds] 65 ticks
     "lugubrious lament": 12,
     "lyssa's solidarity of vision": 18,
+    "malaise": 840,            # [eqlbuilds] 140 ticks
+    "malaisement": 840,        # [eqlbuilds] 140 ticks
+    "malosi": 840,             # [eqlbuilds] 140 ticks
     "mend": 90,
     "mesmerize": 24,
     "negation of life": 90,    # [eqlbuilds] 15 ticks
@@ -160,7 +180,7 @@ SPELL_TIMERS = {
     "panic the dead": 54,      # [eqlbuilds] 9 ticks
     "paralyzing earth": 180,   # [eqlbuilds] 30 ticks
     "pick pocket": 10,
-    "plague": 132,
+    "plague": 78,              # [eqlbuilds] 13 ticks
     "poison bolt": 24,         # [eqlbuilds] 4 ticks
     "pox": 110,
     "precision": 180,
@@ -198,6 +218,7 @@ SPELL_TIMERS = {
     "shroud of hate": 600,
     "shroud of pain": 600,
     "shroud of undeath": 1200,
+    "sicken": 84,              # [eqlbuilds] 14 ticks
     "sight graft": 1625,
     "siphon strength": 360,    # [eqlbuilds] 60 ticks
     "solon's charismatic concord": 18,
@@ -213,8 +234,11 @@ SPELL_TIMERS = {
     "stonestance": 12,
     "strengthen death": 420,
     "surge of enfeeblement": 360,  # [eqlbuilds] 60 ticks
+    "tagar's insects": 210,    # [eqlbuilds] 35 ticks
+    "tainted breath": 42,      # [eqlbuilds] 7 ticks
     "tarew's aquatic ayre": 24,
     "taunt": 6,
+    "togor's insects": 210,    # [eqlbuilds] 35 ticks
     "tos": 96,
     "totu": 96,
     "translocate": 306,
@@ -234,6 +258,7 @@ SPELL_TIMERS = {
     "vog": 2520,
     "voice of the berserker": 1200,
     "voiddance": 8,
+    "walking sleep": 210,      # [eqlbuilds] 35 ticks
     "wave of enfeeblement": 240,  # [eqlbuilds] 40 ticks
     "weapon shield": 20,
     "whirlwind": 9,
