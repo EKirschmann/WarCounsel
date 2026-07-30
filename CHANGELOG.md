@@ -4,6 +4,28 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.1.10 — 2026-07-30
+
+**Shaman offensive spells now have timers** — thanks again to
+**@soaringswine**. Twenty spells that produced no timer at all: the DoT
+line, and just as importantly the slows, roots, blinds and resist debuffs.
+Those never tick and never announce themselves, so a timer is the only way
+to know a slow has dropped off the mob you are still fighting.
+
+**Druid too.** Nineteen more, covering the root and snare lines, the DoTs
+and the lull family — which also picks up nine ranger spells that share a
+name. Necromancer, shaman and druid now have complete coverage.
+
+**Six timers that outlived their spell were corrected.** Found by checking
+every row against the game's own data rather than only the ones being
+edited: `spirit of the puma` ran 25 seconds long, `drifting death` six, and
+four others by a second or two. A timer that keeps counting after its
+effect has ended is the one mistake this list must not make.
+
+**Fixed: the update message in the header was unreadably small** — and it
+told you the app would restart itself, which it does not. It now says to
+restart when the updater finishes, at a size you can actually read.
+
 ## v2.1.9 — 2026-07-29
 
 Thanks to **@soaringswine** for three contributions in this release.
