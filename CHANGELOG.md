@@ -4,6 +4,40 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.1.11 — 2026-07-30
+
+**Spell timers now account for the upgrade tier.** Upgrading a spell makes
+it last longer, and timers were ignoring that entirely — a rank-10 spell
+showed roughly half its real duration. Timers scale with the tier you
+actually cast, but only for spells whose base duration comes from the
+game's own data; anything measured by the community stays as it was,
+because scaling it twice would produce a timer that outlives its spell.
+
+**The levelling chart was misreading half the table.** The community
+levels sheet leaves the "Type" column out on many rows, and the parser was
+reading columns by position — so those zones had their quality ratings
+shifted by one, seven lost their level range entirely and were dropped,
+and the rule that hides cities stopped applying to them. Crushbone was
+being rated as an efficient level-1 zone when the sheet says the opposite.
+Eight more zones now appear at all, and dungeons rank above open zones
+when the quality is equal.
+
+**The advisor uses more of your model's context.** If you run a local
+model, the app already knew how large a window it had loaded but sized its
+questions for a much smaller one. It now scales to what is actually
+available, and Settings takes an override if you would rather cap it — the
+detected value is shown next to the field. Paid models are unchanged on
+purpose, since more context there means a larger bill.
+
+**Class guides say more in less space.** The enchanter guide was more than
+twice the length the advisor could read, so a third of it — the spell
+priorities, the trio synergies, both patch updates — was never being used.
+Rewritten to fit, along with the necromancer guide. Druid and shaman
+gained control mechanics: what charms what, that raid bosses cannot be
+rooted or snared, and that slows do not stack.
+
+**The settings icon looks like a gear now.**
+
 ## v2.1.10 — 2026-07-30
 
 **Shaman offensive spells now have timers** — thanks again to
