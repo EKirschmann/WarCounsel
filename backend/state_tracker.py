@@ -11,10 +11,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from backend import alerts, spell_file
-from backend.alert_data import (ABILITY_COOLDOWNS, COOLDOWN_SHAVES,
-                                SPELL_TIMERS)
+from backend.alert_data import (ABILITY_COOLDOWNS, BASE_DURATION_ROWS,
+                                COOLDOWN_SHAVES, SPELL_TIMERS,
+                                TIER_DURATION_RATE)
 from backend.log_system import events as ev
-from backend.log_system.parser import CLASS_ABBREV, strip_tier
+from backend.log_system.parser import CLASS_ABBREV, spell_tier, strip_tier
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,28 @@ RE_MOTE = re.compile(r"^Mote of (.+?) Potential$")
 # raid token, launch-day patch: merges like a mote for +1 rank
 RE_VOID_TOKEN = re.compile(r"^(?:A )?Void[-\s]?touched Potential$",
                            re.IGNORECASE)
+
+
+def _tier_scaled(base: str, secs: int, cast_name: str) -> int:
+    """Duration at the tier actually cast, where that is knowable.
+
+    Upgrading a spell lengthens it (eqltools /learn/spell-upgrades), and
+    the log names the tier as a roman-numeral suffix, so a flat base
+    duration was showing a rank-10 spell at HALF its real length.
+
+    Scaled ONLY for BASE_DURATION_ROWS -- rows taken from the game's own
+    durationTicks. A community-measured pack row was timed at some
+    unknown tier, and scaling it again would compound a tier already
+    baked in, producing a timer that outlives its spell. That is the one
+    failure this table must not have, so an unknown row stays flat.
+
+    Rounded DOWN, and at the DoT rate rather than the debuff rate, both
+    for the same reason: every remaining error points at under-promising.
+    """
+    tier = spell_tier(cast_name)
+    if tier <= 0 or base not in BASE_DURATION_ROWS:
+        return secs
+    return int(secs * (1 + TIER_DURATION_RATE * tier))
 
 
 def _foe_key(name: str) -> str:
@@ -372,6 +395,7 @@ class CharacterTracker:
                     else:
                         secs = SPELL_TIMERS.get(base)
                         if secs:
+                            secs = _tier_scaled(base, secs, e.spell)
                             self._start_timer(e.spell, secs, "spell", e.ts)
                         elif base not in self._timer_misses:
                             # A miss is SILENT otherwise — no timer simply

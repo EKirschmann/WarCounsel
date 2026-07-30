@@ -236,6 +236,29 @@ def strip_tier(name: str) -> str:
     return re.sub(r"\s+[IVX]{1,5}$", "", name or "")
 
 
+_ROMAN = {"I": 1, "V": 5, "X": 10}
+
+
+def spell_tier(name: str) -> int:
+    """'Lay on Hands VI' -> 6; no suffix -> 0.
+
+    The mirror of strip_tier(): that drops the suffix, this reads it.
+    Same caveat, and it is why callers must treat the result as a HINT --
+    a classic base name can genuinely end in a numeral (Yaulp II), so a
+    tier here can be part of the spell's real name. Consumers scale
+    conservatively for that reason.
+    """
+    m = re.search(r"\s+([IVX]{1,5})$", name or "")
+    if not m:
+        return 0
+    tok, total, prev = m.group(1), 0, 0
+    for ch in reversed(tok):
+        v = _ROMAN[ch]
+        total = total - v if v < prev else total + v
+        prev = max(prev, v)
+    return total
+
+
 def _verb_root(verb: str) -> Optional[str]:
     v = verb.lower()
     if v in MELEE_VERBS:

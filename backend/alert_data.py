@@ -326,6 +326,123 @@ SPELL_TIMERS = {
 }
 
 # (name, compiled pattern, seconds)
+
+# Rows whose value is the GAME's base duration (eqlbuilds durationTicks x6),
+# as opposed to a community measurement taken at an unknown upgrade tier.
+# Only these may be tier-scaled: scaling a pack row would compound a tier
+# that may already be baked into it, and this table's one hard rule is that
+# a timer must never outlive its effect. Keep in sync with the
+# `# [eqlbuilds]` markers above -- a row added without being listed here
+# simply never scales, which is the safe failure.
+BASE_DURATION_ROWS = frozenset({
+    "affliction",
+    "asystole",
+    "auspice",
+    "beguile undead",
+    "blinding luminance",
+    "boil blood",
+    "breeze",
+    "cancelling of life",
+    "cascading darkness",
+    "cessation of life",
+    "chilling embrace",
+    "clinging darkness",
+    "creeping crud",
+    "curse",
+    "dark soul",
+    "disease cloud",
+    "disempower",
+    "dominate undead",
+    "dooming darkness",
+    "drifting death",
+    "drones of doom",
+    "drowsy",
+    "engulfing darkness",
+    "engulfing roots",
+    "ensnare",
+    "ensnaring roots",
+    "enveloping roots",
+    "envenomed bolt",
+    "envenomed breath",
+    "eternities torment",
+    "fear",
+    "fire",
+    "fixation of ro",
+    "flame lick",
+    "flash of light",
+    "glimpse",
+    "grasping roots",
+    "harmony",
+    "harmony of nature",
+    "harmshield",
+    "heart flutter",
+    "heat blood",
+    "hungry earth",
+    "ice",
+    "ignite blood",
+    "ignite bones",
+    "immolate",
+    "incapacitate",
+    "infectious cloud",
+    "insidious fever",
+    "insidious malady",
+    "insidious retrogression",
+    "instill",
+    "invoke fear",
+    "leech",
+    "listless power",
+    "malaise",
+    "malaisement",
+    "malosi",
+    "negation of life",
+    "numb the dead",
+    "pact of shadow",
+    "panic the dead",
+    "paralyzing earth",
+    "plague",
+    "poison bolt",
+    "rest the dead",
+    "root",
+    "scent of darkness",
+    "scent of dusk",
+    "scent of shadow",
+    "scourge",
+    "shackle of bone",
+    "shackle of spirit",
+    "shadow compact",
+    "shadow vortex",
+    "sicken",
+    "sight graft",
+    "siphon strength",
+    "snare",
+    "spirit of the puma",
+    "spook the dead",
+    "stinging swarm",
+    "sunbeam",
+    "surge of enfeeblement",
+    "tagar's insects",
+    "tainted breath",
+    "tangling weeds",
+    "togor's insects",
+    "vampiric curse",
+    "vengeance of the wild",
+    "venom of the snake",
+    "walking sleep",
+    "wave of enfeeblement",
+})
+
+# Duration gained per upgrade tier (eqltools.com /learn/spell-upgrades,
+# 2026-07-30): +10%/tier for buffs and debuffs, +5%/tier for DoTs and HoTs,
+# both measured from base, so rank 10 reaches 200% and 150%.
+#
+# We apply the LOWER rate to everything. Telling a DoT from a debuff needs
+# data the snapshot does not carry, and picking wrong in the +10% direction
+# would over-promise -- the one failure this table must not have. Under the
+# 5% rate a rank-6 debuff shows 130% of base when it really lasts 160%:
+# short, which is safe, and still far better than the flat base it showed
+# before.
+TIER_DURATION_RATE = 0.05
+
 MECHANICS = [
     ("Lava Breath",
      re.compile("^(Your body combusts as the lava hits you\\.|([\\w -'`]+)'s body combusts as the lava hits them\\.|You resist the Lava Breath spell\\!)$"),
