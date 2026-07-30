@@ -646,6 +646,18 @@ whenever the Inventory parse changes.
 
 ## Gear advisor
 
+- **An ANY SLOT item is not swung: it contributes STATS ONLY.** No damage,
+  no delay, no white-DPS index — those apply to Primary and Secondary
+  alone. `item_stat_vector` includes DMG and DELAY, so comparing the raw
+  vector let a weapon win an Any Slot on damage it will never deal:
+  reported live, where a 3.5-index blade was offered over a Cracked Femur
+  for a slot that swings neither. Stripped of DMG/DELAY the femur has
+  `SV_DISEASE 5` and the blade has NOTHING, which is the real comparison.
+  The gear prompt states this too — the model was reading the index
+  annotations, which are emitted for any 1H weapon regardless of slot.
+  ONE exception: a Piercing dagger in an Any Slot enables Backstab for a
+  trio containing a Rogue. The deterministic path does not model backstab
+  and will therefore under-recommend a dagger there — the safe direction.
 - The slot table ALWAYS shows the full 24-slot EQL roster (CANON_SLOTS):
   two generic **Any Slots** (any equippable item, stats live), paired
   Ear/Wrist/Fingers, Ammo, Held — **no Charm or Power Source in EQL**.

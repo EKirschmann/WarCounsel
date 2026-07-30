@@ -835,10 +835,21 @@ async def _builtin_gear(ctx: dict) -> dict:
                     continue
                 gain, shown = wi[hand] - base_wi[hand], wi[hand]
             else:
-                if not _pareto_beats(vec, cur_vec):
+                a_vec, b_vec = vec, cur_vec
+                if base_slot == "any slot":
+                    # An Any Slot item is NOT swung: it contributes stats
+                    # and nothing else. Leaving DMG/DELAY in the vector let
+                    # a weapon win the slot on damage it will never deal --
+                    # reported from live play, where a 3.5-index blade was
+                    # offered over a femur for a slot that swings neither.
+                    a_vec = {k: v for k, v in vec.items()
+                             if k not in ("DMG", "DELAY")}
+                    b_vec = {k: v for k, v in cur_vec.items()
+                             if k not in ("DMG", "DELAY")}
+                if not _pareto_beats(a_vec, b_vec):
                     continue
-                gain = sum(vec.get(k, 0.0) - cur_vec.get(k, 0.0)
-                           for k in set(vec) | set(cur_vec) if k != "DELAY")
+                gain = sum(a_vec.get(k, 0.0) - b_vec.get(k, 0.0)
+                           for k in set(a_vec) | set(b_vec) if k != "DELAY")
                 shown = None
             if champ is None or gain > champ[0]:
                 champ = (gain, it, shown)
@@ -1288,6 +1299,7 @@ Reply with ONLY a JSON object (no fences, no prose):
 Rules:
 - slots: go slot by slot; only include a slot when there is something to say — a better OWNED item sitting in bags/bank than what is worn ("recommend" = that owned item, exactly as named above), an empty slot they own a filler for, or a confirmation that the worn item is their best ("recommend" = the worn item). Recommend only [USABLE] items; the tag is authoritative. Race restrictions DO NOT EXIST in EQL. Anything marked [worn] is being worn RIGHT NOW and is proven equippable — never claim a worn item is unusable.
 - Stat-delta language: you know the character's totals ONLY when CHARACTER lists them (Max HP / Max mana / recent combat). NEVER label a stat change "huge", "massive", "tiny", "minor" or similar on its own authority — give the numbers. When Max HP is listed, express HP deltas as a rough percentage of it ("+75 HP ≈ +5.6% of your 1342"); when recent-combat numbers are listed, you may translate HP deltas into average incoming hits ("+75 HP ≈ 2 average hits of survival"). With neither, state the delta neutrally and let the numbers speak.
+- ANY SLOT gives STATS ONLY. A weapon placed there contributes NO damage, NO delay and NO white-DPS index -- it is not swung. Judge an Any Slot purely on AC, attributes, resists and effects, and NEVER compare white-DPS indices for it; those numbers apply to Primary and Secondary alone. The ONE exception: a Piercing dagger in an Any Slot enables Backstab when the trio contains a class that can backstab (Rogue), so say so if that applies. A weapon can still be the best Any Slot item when its STATS beat the alternatives.
 - Hands: a weapon with a 2H skill (2H Slash/2H Blunt/2H Piercing) occupies BOTH Primary and Secondary. Never recommend a 2H weapon together with any Secondary item; compare 1H+1H (or 1H+shield) as a package against the 2H alone.
 - farm: 3-6 realistic upgrade targets for their level. STRONGLY prefer items whose drop data appears above or that you know drop in zones near their level; give the zone and the mob/vendor in "source". Never invent stats; mark uncertainty briefly in "why" when relying on memory.
 - Weapons: consider the classes' usable weapon skills; for a Monk trio prefer fist/blunt options. 1H weapon lines carry deterministic [white-DPS index: MH x / OH y] — USE THEM instead of raw damage/delay ratio: the main-hand damage bonus is a flat, delay-independent add (fast MH weapons carry it more often), the off-hand gets NO bonus and swings only part of the time, so the best MH is often NOT the best OH. Procs are NOT in the index — a strong proc can outweigh a small index gap (off-hand procs fire less often). For 2H: compare its DPS against the MH index + OH index SUM plus the stat difference.
