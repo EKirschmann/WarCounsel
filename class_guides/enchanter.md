@@ -1,101 +1,56 @@
 # Enchanter (EQL)
 
-Source: distilled from "All The Things I Learned About Enchanter On EQL's
-Open Beta" by u/TimeToMakeTheDonuts3 (Cavepig of Qeynos), r/EQLegends,
-posted ~2026-07-19, plus thread corrections. Open-beta era knowledge —
-re-verify after patches.
+Source: "All The Things I Learned About Enchanter On EQL's Open Beta" by
+u/TimeToMakeTheDonuts3, r/EQLegends ~2026-07-19 + thread corrections;
+patches 7/07, 7/14. Re-verify after patches.
 
 ## Charm — the core of the class
+- Each charm tier raises the resist mod AND max target level by +1
+  (Beguile caps at 37, so Beguile V holds a 42). Tier charm to 5-6.
+  With Tash + Over Channel a charm 10-15 levels above you holds 20+ min.
+- Over Channel is needed only WHILE LANDING it; the resist mod sticks.
+- Charm-break recovery, faster than a fresh mez: mez, swap to Over
+  Channel, Tash, cast Whirl Till You Hurl, one auto-attack round (breaks
+  mez, mob stays stunned), re-charm — the stun expires as charm lands.
+- No invis or FD with a charmed pet. "Leave" breaks charm instantly.
+  Click magic-resist buffs OFF the pet. Re-haste after every re-charm.
+  Keep mez memorised at all times.
+- Best targets are melee multi-class mobs (ROG/BER/MNK/WAR); avoid
+  casters. Reliable: Teir`Dal Rogue (Befallen basement 22-25), froglok
+  ghoul knights (Lower Guk 39-43), rock golems (The Hole 48-54).
 
-- Tier charm spells to ~5-6. Each tier raises the resist mod AND the max
-  target level by +1 per tier (Beguile caps at 37, so Beguile V holds a
-  level 42). With Tash + the Over Channel invocation, a charm on a mob
-  10-15 levels above you can hold 20+ minutes.
-- Over Channel is only needed WHILE LANDING the charm; the stuck resist
-  mod persists after.
-- Charm-break recovery (beats waiting out a fresh mez): mez normally,
-  swap to Over Channel, Tash the mob, cast Whirl Till You Hurl, one
-  auto-attack round (breaks mez, mob stays stunned), then re-charm — the
-  stun expires right as charm lands.
-- You cannot invis or feign death with a charmed pet (Animation still has
-  uses). "Leave" on the pet window breaks charm instantly. Left-click
-  buffs OFF the pet if a magic-resist buff lands on it. Re-haste the pet
-  after every re-haste/re-charm. Keep mez memorized at all times.
-- Best charm targets are melee multi-class mobs: ROG/BER/MNK/WAR combos
-  are the dream (backstab/frenzy/kick/cleave). Avoid caster mobs.
-- Known good pets by zone: Tier`Dal Rogue (Befallen basement, 22-25),
-  froglok bok/dar ghoul knights (Lower Guk, 39-43), rock golems (The
-  Hole, 48-54 — trivializes the zone), imp protectors (Sol B, 44-48),
-  Innoruuk's Chosen (Hate, 54-56), thunder spirit princess / spirocs /
-  "the middle bee" (Sky).
+## Charm-pet gear
+- The pet swings for weapon damage x2 IF that beats its natural max hit,
+  else the weapon contributes only PROCS. Delay and ratio are irrelevant
+  to a pet — biggest damage number wins. Level 13+ pets dual wield, so a
+  2H disables that.
+- From ~pet level 30 two PROC weapons win: Gnoll Hide Lariat (Stun, pet
+  lv25) -> Short Sword of the Ykesha (pet lv37); Shimmering Ruby
+  Stiletto (Ignite, lv1). Ghoulbane's exaltation is PRIMARY-only. The
+  pet must meet the proc's level.
+- Haste ladder: Kitchen Toolbelt -> Flowing Black Silk Sash -> Runed
+  Bolster Belt -> Cloak of Flames -> Sky belts.
+- Charm pets equip from the pet inventory slots; gear returns on break.
 
-## Charm-pet gear (also applies to the gear consult)
-
-- Pet weapon rule: the pet swings for weapon damage ×2 IF that beats its
-  natural max hit; otherwise the weapon adds nothing but procs. DELAY AND
-  RATIO ARE IRRELEVANT for pets — biggest damage number wins. Level 13+
-  pets dual wield (a 2H weapon disables that; early on a huge 2H can
-  still out-damage).
-- From ~pet level 30, two PROC weapons win: Gnoll Hide Lariat (Stun,
-  works from pet lv 25) -> Short Sword of the Ykesha (needs pet lv 37);
-  Shimmering Ruby Stiletto (Ignite, lv 1); Ghoulbane's Dismiss Undead
-  exaltation is PRIMARY-only. The pet must meet the proc's level.
-- Haste item ladder: Kitchen Toolbelt (10-20%) -> Flowing Black Silk Sash
-  (21-31%) -> Runed Bolster Belt (31-41%) -> Cloak of Flames (36-46%) ->
-  Sky belts (41-51%, class-matched).
-- NEGATIVE magic-resist items may lower charm-break chance (community
-  belief): Rusty Spiked Shoulderpads (-10, farm at +0 — tiers WEAKEN
-  negative stats), 2× Adamantite Band (-10 each, Lower Guk), Astral Cloak
-  of the Titans (-5, conflicts with Cloak of Flames), Astral Leggings
-  (-5, NEC WIZ ENC MAG only). Weapons > extra negative-MR items.
-
-## Spell priorities
-
-- Tier first: Mesmerization and Whirl Till You Hurl to 5 early, 7+ later
-  (Mesmerization hits up to 30 targets and skips you; Whirl at high tier
-  is a 7.5s stun whose reuse is SHORTER than the stun — chain-cast
-  stunlock that most nameds are vulnerable to, riposte-proof from
-  behind). Current-content charm to 5+, Allure eventually 7-9 for Sky.
-- Then: Shiftless Deeds 5+ (for un-Whirlable mobs), Wandering Mind 5
-  (mana degen on target + ~Clarity-sized regen on you; tier 5 duration
-  outlasts reuse = permanent), Pacify, Theft of Thought (350 mana steal
-  at 50), Clarity/Swift Like The Wind for duration.
-- SKIP higher-line duplicates: Mesmerization replaces Mesmerize at 16
-  (also skip Enthrall/Entrance/Dazzle); Dyn's Dizzying Draught is
-  strictly worse than Whirl. Tashania comes from the Coin of Tash quest
-  and is worth it.
-- Pillage Enchantment strips damage shields that chew charm pets in D4
-  30+; the Golem Metal Wand clicky exaltation (Befallen) also dispels
-  (4-min cooldown). Mana-draining D4 raid bosses (Theft of Thought +
-  Wandering Mind + Mana Sieve) is viable strategy.
-
-## Focuses worth farming
-
-Black Alloy Medallion (Mana Preservation II, Runnyeye nameds — bottom
-floor nameds sit still, placeholders run), Mithril-Runed Tunic (Spell
-Haste II), Moonstone Ring (Extended Range II, frenzied ghoul in Lower
-Guk), Rokyl's Channelling Crystal (Extended Enhancement III, Nagafen
-raid, awkward Any-slot host).
+## Spell tier priorities
+- First to 5 (7+ later): Mesmerization (up to 30 targets, skips you) and
+  Whirl Till You Hurl — at high tier a 7.5s stun whose reuse is SHORTER
+  than the stun, i.e. chain stunlock, riposte-proof from behind.
+- Then Shiftless Deeds 5+ (un-Whirlable mobs), Wandering Mind 5 (tier-5
+  duration outlasts reuse = permanent mana drain + self-regen), Pacify,
+  Theft of Thought, Clarity.
+- SKIP: Mesmerization replaces Mesmerize/Enthrall/Entrance/Dazzle; Dyn's
+  Dizzying Draught is strictly worse than Whirl.
+- Summon-pet TIER adds to pet level (cap player-1; each level = +6% HP,
+  +1 base damage). Tiers also raise the level cap of pacify/fear/stun.
 
 ## Synergies
-
-Permanent Illusion AA + Illusion: Fire Elemental = permanent 10-pt damage
-shield (stacks with Feedback). Monk: mez the room, then FD safely.
-Paladin: Lay on Hands the pet. Pet-class buffs land on charm pets. Bard
-mana song stacks with Clarity; Necro lich lines do NOT. DoTs break mez.
-Enchanter spell haste (Swift Like The Wind 60%) nearly caps any melee
-trio's haste alone (175% cap at 50). Incapacitate (-30 AC) is worth
-casting on nameds. Augmentation is a rare enchanter endurance-regen
-source. Mez/pacify/memblur beats killing the Sky bees.
-
-## Patch updates folded in (2026-07-07 / 07-14)
-- Summon-pet spell TIER adds to pet level (cap player-1; each pet level
-  = +6% HP, +1 base damage, +5 skill points) — tier pet summons for
-  leveling speed. Upgraded pets keep the upgrade across zoning/camping
-  and cast at their upgraded level.
-- Charm pets equip from the pet inventory slots and report their
-  inventory; the gear returns when charm breaks.
-- Spell tiers now raise the level cap of pacify/fear/stun too (mez and
-  charm already scaled per tier).
-- OverChannel resist interactions were FIXED in the 7/14 patch — the
-  charm advice above held up post-patch.
+- Swift Like The Wind (60% spell haste) nearly caps a melee trio alone.
+- Permanent Illusion AA + Illusion: Fire Elemental = permanent 10-pt
+  damage shield, stacks with Feedback. Monk: mez then FD. Paladin: Lay
+  on Hands the pet. Bard mana song stacks with Clarity; Necro lich does
+  NOT. DoTs break mez. Incapacitate (-30 AC) is worth it on nameds.
+- Pillage Enchantment strips damage shields that shred charm pets in D4.
+- Focuses worth farming: Black Alloy Medallion (Mana Preservation II),
+  Mithril-Runed Tunic (Spell Haste II), Moonstone Ring (Extended Range
+  II), Rokyl's Channelling Crystal (Extended Enhancement III).

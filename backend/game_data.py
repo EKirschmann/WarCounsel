@@ -810,7 +810,7 @@ CLASS_GUIDES_DIR = bundle_path("class_guides")
 REF_GUIDES = ("races", "stances_invocations", "rituals")
 
 
-def class_guide_text(classes, max_chars_per: int = 2600,
+def class_guide_text(classes, max_chars_per: int = 3200,
                      include_refs: bool = False) -> str:
     """Curated .md guides (community wisdom, maintained by hand — see
     class_guides/README.md). general.md (cross-class mechanics + meta)
@@ -832,6 +832,15 @@ def class_guide_text(classes, max_chars_per: int = 2600,
         except OSError:
             continue
         if txt:
+            # Why a cap at all, since it used to be a bare 2600 with no
+            # rationale: guides are the LARGEST single slice of the
+            # advisor prompt (13k chars of ~25k), and _lmstudio_budget in
+            # advisor.py subtracts the prompt from the model's LOADED
+            # context to size max_tokens. On a local model loaded at 8k
+            # the prompt is already tight, so this bounds it. 3200 fits
+            # the two densest guides after trimming rather than silently
+            # dropping their back half -- which is where the NEWEST
+            # material lives, since new notes get appended.
             cap = 3400 if nm in ("general",) + REF_GUIDES else max_chars_per
             title = ("General (all trios)" if nm == "general"
                      else nm.replace("_", " ").title())
