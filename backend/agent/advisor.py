@@ -1363,14 +1363,23 @@ CANON_SLOTS = [
     "Any Slot 1", "Any Slot 2", "Ear 1", "Ear 2", "Head", "Face", "Neck",
     "Shoulders", "Arms", "Back", "Wrist 1", "Wrist 2", "Range", "Hands",
     "Primary", "Secondary", "Fingers 1", "Fingers 2", "Chest", "Legs",
-    "Feet", "Waist", "Ammo", "Held",
+    "Feet", "Waist", "Ammo",
 ]
+# "Held" is deliberately ABSENT. The client writes the location in the
+# inventory export, but the in-game UI has no such slot and nothing is
+# known to go in it, so a permanently-empty row saying "nothing owned
+# equips here" was pure noise in a 24-row table. _fits_slot still requires
+# an explicit HELD token, and _full_slot_table appends any worn slot it
+# does not know about -- so the day an item turns up in Held, the row
+# comes back on its own without anyone re-adding it here.
 
 
 def _full_slot_table(slots: List[dict], worn: Optional[dict]) -> List[dict]:
-    """Merge LLM recommendations onto the fixed 23-slot roster: unaddressed
-    slots keep the worn item, empty slots say so. Non-canonical slot names
-    from the LLM are appended rather than lost."""
+    """Merge LLM recommendations onto the canonical roster: unaddressed
+    slots keep the worn item, empty slots say so. Slot names outside the
+    roster are appended rather than lost -- both from the LLM and from the
+    export, so a slot we deliberately do not list (Held) still surfaces the
+    moment something is actually in it."""
     def norm(s):
         return "".join(ch for ch in (s or "").casefold() if ch.isalnum())
     by = {}
@@ -1395,6 +1404,13 @@ def _full_slot_table(slots: List[dict], worn: Optional[dict]) -> List[dict]:
                                if cur else "empty — nothing owned equips here",
                         "where": "worn" if cur else None})
     out.extend(by.values())
+    # anything WORN in a slot outside the roster: never silently dropped
+    listed = {norm(r["slot"]) for r in out}
+    for slot, cur in (worn or {}).items():
+        if cur and norm(slot) not in listed:
+            out.append({"slot": slot, "current": cur, "recommend": cur,
+                        "why": "keep — not a slot this advisor ranks",
+                        "where": "worn"})
     return out
 
 

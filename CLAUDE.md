@@ -658,9 +658,15 @@ whenever the Inventory parse changes.
   ONE exception: a Piercing dagger in an Any Slot enables Backstab for a
   trio containing a Rogue. The deterministic path does not model backstab
   and will therefore under-recommend a dagger there — the safe direction.
-- The slot table ALWAYS shows the full 24-slot EQL roster (CANON_SLOTS):
-  two generic **Any Slots** (any equippable item, stats live), paired
-  Ear/Wrist/Fingers, Ammo, Held — **no Charm or Power Source in EQL**.
+- The slot table shows the 23-slot EQL roster (CANON_SLOTS): two generic
+  **Any Slots** (any equippable item, stats live), paired Ear/Wrist/
+  Fingers, Ammo — **no Charm or Power Source in EQL**, and **no Held**.
+  The client writes a Held location in the export, but the in-game UI has
+  no such slot and nothing is known to fit it, so a row permanently
+  reading "nothing owned equips here" was noise. It is not deleted so much
+  as unlisted: `_fits_slot` still demands an explicit HELD token, and
+  `_full_slot_table` appends any WORN slot outside the roster, so the row
+  returns by itself the day an item appears there.
   Unaddressed slots backfill as keep/empty rows (`_full_slot_table`).
 - Wiki item stats are BASE (+0) values, and the eqlwiki Item Level
   slider's formula (ext.itemLevelSlider JS) is PORTED into game_data.py
