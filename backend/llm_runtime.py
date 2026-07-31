@@ -54,7 +54,13 @@ def model_for(provider: str) -> str:
         return cfg.get("ollama_model") or settings.ollama_model
     if provider == "anthropic":
         return cfg.get("anthropic_model") or settings.anthropic_model
-    return settings.model                      # lmstudio
+    # lmstudio. set_active() has always PERSISTED cfg["model"] for this
+    # provider, but this function read straight past it to settings.model,
+    # so a model chosen at runtime was written and then ignored -- and
+    # because the app keeps sending the stale id, LM Studio JIT-loads it
+    # and evicts whatever the user loaded by hand. Read the same key that
+    # is written, exactly as the two providers above already do.
+    return cfg.get("model") or settings.model
 
 
 def active() -> dict:

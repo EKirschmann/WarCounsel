@@ -2187,3 +2187,16 @@ button.app-version:hover { color: var(--gold-bright); }
   margin-top: 2px;
   letter-spacing: 0.02em;
 }
+
+/* Inline action inside a note — reads as part of the sentence, not a
+   separate control competing with Save. */
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--gold-bright, #e7cd92);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-btn:hover { color: #fff; }

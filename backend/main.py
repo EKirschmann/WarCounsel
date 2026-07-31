@@ -1219,8 +1219,16 @@ async def api_settings_set(body: dict):
             clear_find_cache()
 
     if "llm_provider" in config_in:
-        set_active(str(config_in["llm_provider"]),
-                   config_in.get("openai_model") or config_in.get("custom_model"))
+        # Forward the model under the key THIS provider uses. Only openai
+        # and custom were passed before, so for the others set_active saw
+        # None and left llm_config.json untouched -- while the panel wrote
+        # app_config.json. model_for() prefers llm_config, so a stale value
+        # there silently outranked what the user had just saved.
+        prov = str(config_in["llm_provider"])
+        per_provider = {"openai": "openai_model", "custom": "custom_model",
+                        "local": "ollama_model", "anthropic": "anthropic_model",
+                        "lmstudio": "model"}
+        set_active(prov, config_in.get(per_provider.get(prov, "")))
         global _advice_cache, _gear_cache
         _advice_cache = None
         _gear_cache = None

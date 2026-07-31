@@ -248,6 +248,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         body.custom_base_url = customUrl.trim();
       }
       if (provider === "anthropic") body.anthropic_model = model;
+      if (provider === "lmstudio") body.model = model.trim();
       if (provider === "local") {
         body.ollama_model = model;
         body.ollama_base_url = ollamaUrl.trim();
@@ -441,6 +442,48 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     probing={probing}
                     onCheck={() => runProbe("lmstudio")}
                   />
+                  <div className="set-row">
+                    <input
+                      value={model}
+                      spellCheck={false}
+                      list="lmstudio-models"
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="model id, e.g. gemma-4-26b-a4b-it"
+                      aria-label="LM Studio model"
+                    />
+                    {/* Chat models only: the server also lists embedding
+                        models, which would silently fail as a counsel
+                        model if picked. */}
+                    <datalist id="lmstudio-models">
+                      {(probe?.provider === "lmstudio"
+                        ? probe.models ?? []
+                        : []
+                      )
+                        .filter((m) => !m.toLowerCase().includes("embed"))
+                        .map((m) => (
+                          <option key={m} value={m} />
+                        ))}
+                    </datalist>
+                  </div>
+                  {probe?.provider === "lmstudio" &&
+                    (probe.loaded ?? []).length > 0 &&
+                    !(probe.loaded ?? []).includes(model.trim()) && (
+                      <p className="set-note" data-ok="0">
+                        LM Studio currently has{" "}
+                        <strong>{(probe.loaded ?? []).join(", ")}</strong>{" "}
+                        loaded, but counsel is set to{" "}
+                        <strong>{model.trim() || "nothing"}</strong>. Requests
+                        name the model, so LM Studio will load that one back
+                        and unload what you picked.{" "}
+                        <button
+                          type="button"
+                          className="link-btn"
+                          onClick={() => setModel((probe.loaded ?? [])[0])}
+                        >
+                          Use the loaded one
+                        </button>
+                      </p>
+                    )}
                 <p className="set-note">
                   Uses LM Studio&apos;s local server at{" "}
                   <code>{data.llm.lmstudio_base_url}</code>. No key needed.

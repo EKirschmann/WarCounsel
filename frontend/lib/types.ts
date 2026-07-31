@@ -547,5 +547,7 @@ export interface LlmProbe {
   loaded: string[];
   /** whether the configured model appears in the server's list */
   model_present?: boolean;
+  /** loaded context window, where the server reports one */
+  context?: number | null;
   reason?: string | null;
 }
