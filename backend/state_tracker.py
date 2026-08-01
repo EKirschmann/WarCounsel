@@ -72,6 +72,11 @@ def _tier_scaled(base: str, secs: int, cast_name: str) -> int:
     return int(secs * (1 + TIER_DURATION_RATE * tier))
 
 
+# "A froglok ghoul", "the guard" -- an attacker carrying an article is an
+# NPC, never a player.
+_NPC_NAME = re.compile(r"^(?:[Aa]n?|[Tt]he) ")
+
+
 def _foe_key(name: str) -> str:
     """Log lines capitalize the article at sentence start ("A dread bone
     kicks YOU") but not mid-sentence ("You crush a dread bone") -- fold the
@@ -603,6 +608,17 @@ class CharacterTracker:
                         # wrongly-excluded contributor stays visible, and
                         # one line of group chat fixes it.
                         who = owner or e.attacker
+                        # An NPC attacker we cannot tie to us is ambient
+                        # combat -- mobs fighting each other, or someone
+                        # else's charmed pet. Parsing those is what makes a
+                        # CHARMED pet of ours visible at all, but they must
+                        # not land in the filtered bucket: that number means
+                        # "contributors we hid from you", and burying it
+                        # under thousands of mob-vs-mob swings would make it
+                        # meaningless. Dropped outright, not counted.
+                        if (who not in self.group_members
+                                and _NPC_NAME.match(who or "")):
+                            return
                         if who not in self.group_members:
                             ua = enc.setdefault("unattributed", {})
                             ua[e.attacker] = ua.get(e.attacker, 0) + e.damage
