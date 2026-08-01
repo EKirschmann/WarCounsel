@@ -10,7 +10,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Optional
 
-from backend import alerts, spell_file
+from backend import alerts, builds_data, spell_file
 from backend.alert_data import (ABILITY_COOLDOWNS, BASE_DURATION_ROWS,
                                 COOLDOWN_SHAVES, SPELL_TIMERS,
                                 TIER_DURATION_RATE)
@@ -174,6 +174,11 @@ class CharacterTracker:
         # nearly every fight -- so the count is the tell, and the player is
         # the only one who can read it. Survives restarts with the roster.
         self.filtered_seen: dict = {}
+        # class -> the class-unique spell that proved it. Evidence only:
+        # never written into class_str (see _infer_class).
+        self.inferred_classes: dict = {}
+        self._infer_at: dict = {}
+        self._infer_seen: set = set()
         self.session_fights = 0
         self._aa_from_db = False       # roster restored from DB, not the log
         # Owned AA ranks from '/alternateadv list' (one line per rank)
@@ -256,6 +261,45 @@ class CharacterTracker:
             # may hold the fight open. Kept apart from "last" so their
             # damage cannot bootstrap its own extension window.
             self.encounter["last_own"] = ts
+
+    def _infer_class(self, spell: str, ts=None) -> None:
+        """Learn a class from a spell only WE could have cast.
+
+        Class stays unknown until someone types /who, which gates the whole
+        advisor -- but 80% of the ~1200 spells in the builds dataset belong
+        to exactly one class, and casting one is proof. EQLogParser
+        (Apache-2.0) ranks its class signals roster > targeting > /who >
+        class-unique spell for the same reason; this is that last rung.
+
+        Deliberately does NOT write class_str. A cast proves a class is IN
+        the trio, never which of three slots it fills nor what the other
+        two are, so writing a partial trio would state more than the
+        evidence supports -- and class_str already has two writers whose
+        orderings disagree. This records the evidence and lets the player
+        confirm it.
+        """
+        if not spell:
+            return
+        base = strip_tier(spell)
+        if base.lower() in self._infer_seen:
+            return
+        self._infer_seen.add(base.lower())
+        try:
+            owners = builds_data.spell_levels(base) or {}
+        except Exception:
+            return
+        if len(owners) != 1:
+            return  # shared spell lines prove nothing
+        cls = next(iter(owners))
+        self.inferred_classes[cls] = base
+        self._infer_at[cls] = ts or self._infer_at.get(cls)
+
+    def inferred_view(self) -> list[dict]:
+        """Classes proven this session, most recently proven first."""
+        rows = [{"cls": c, "spell": sp, "at": self._infer_at.get(c)}
+                for c, sp in self.inferred_classes.items()]
+        rows.sort(key=lambda r: (r["at"] is not None, r["at"]), reverse=True)
+        return [{"cls": r["cls"], "spell": r["spell"]} for r in rows[:3]]
 
     def _adopt_pet_damage(self, pet: str) -> None:
         """Move damage this pet already dealt out of the ALLY bucket.
@@ -447,6 +491,7 @@ class CharacterTracker:
             if e.spell:  # log evidence for proc-vs-cast disambiguation
                 self.spell_casts.add(e.spell.lower())
                 self.spell_casts.add(strip_tier(e.spell).lower())
+                self._infer_class(e.spell, e.ts)
                 if live:
                     base = strip_tier(e.spell).lower()
                     if base in ABILITY_COOLDOWNS:
@@ -1074,6 +1119,14 @@ class CharacterTracker:
         self.loot_count = 0
         self.stuns_taken = self.overheal = 0
         self.stuns_landed = self.mez_applied = 0
+        # NOT durable knowledge, unlike cast evidence: classes are swapped
+        # freely in EQL, so accumulating these across a log names every
+        # class ever played (nine, on the reporting character) instead of
+        # the three slotted now. A cast only proves a class is slotted at
+        # the time of the cast.
+        self.inferred_classes = {}
+        self._infer_at = {}
+        self._infer_seen = set()
         self.mods = {}
         self.motes = {}
         self.loots.clear()
@@ -1450,6 +1503,19 @@ class CharacterTracker:
     def _sync_hints(self, book: Optional[dict]) -> list:
         """In-game commands worth running, with why. Rendered in Vitals."""
         hints = []
+        # Class gates the whole advisor and is unknown until /who is typed.
+        # A class-unique cast proves one WITHOUT it, so say what we already
+        # worked out -- it makes the ask concrete instead of generic, and
+        # tells the player what we will not otherwise get right.
+        if not self.class_str:
+            inf = self.inferred_view()
+            if inf:
+                names = ", ".join(r["cls"] for r in inf)
+                hints.append({"command": "/who",
+                              "reason": f"Your spells this session point to "
+                                        f"{names} — /who confirms the trio "
+                                        f"and your level, which the advisor "
+                                        f"needs"})
         # Distinguish "logging was never turned on" from "logging is on but
         # quiet": both look like no data, and only one is the user's to fix.
         try:
@@ -1572,6 +1638,7 @@ class CharacterTracker:
             "encounter": self.encounter_snapshot(),
             "encounters": self.encounters_snapshot(),
             "filtered": self.filtered_view(),
+            "inferred_classes": self.inferred_view(),
             "ability_summary": self.ability_summary(),
             "session": {
                 "damage_dealt": self.damage_dealt,
