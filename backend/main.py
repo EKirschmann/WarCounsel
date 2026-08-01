@@ -965,6 +965,22 @@ async def get_events(limit: int = 100):
     return {"events": items}
 
 
+def _launch_bound() -> str:
+    """String bound separating this era's rows from beta ones.
+
+    Beta play belongs to a character that need not have survived launch, so
+    it must not describe the one playing now. This lived only inside
+    /api/lifetime, which meant lifetime totals excluded beta while the
+    encounter list, session history and trio comparison all still showed
+    it -- the same rows, two different stories.
+
+    Stored ts uses a SPACE separator ("2026-07-05 13:16:57") and the
+    setting is ISO with a "T"; compared as strings the mismatch silently
+    matches nothing, which has bitten this codebase more than once.
+    """
+    return (settings.eql_launch_iso or "").replace("T", " ") or "0000"
+
+
 @app.get("/api/encounters")
 async def get_encounters(limit: int = 50, db: Session = Depends(get_db)):
     """Persisted fight history for this character (newest first)."""
@@ -972,7 +988,8 @@ async def get_encounters(limit: int = 50, db: Session = Depends(get_db)):
         return {"encounters": []}
     rows = (db.query(LogEventRow)
             .filter(LogEventRow.character_id == _character_id,
-                    LogEventRow.event_type == "encounter")
+                    LogEventRow.event_type == "encounter",
+                    LogEventRow.ts >= _launch_bound())
             .order_by(LogEventRow.id.desc()).limit(limit).all())
     return {"encounters": [r.payload for r in rows]}
 
@@ -1410,7 +1427,8 @@ async def trio_compare(db: Session = Depends(get_db)):
         return {"trios": []}
     rows = (db.query(LogEventRow)
             .filter(LogEventRow.character_id == _character_id,
-                    LogEventRow.event_type == "encounter")
+                    LogEventRow.event_type == "encounter",
+                    LogEventRow.ts >= _launch_bound())
             .order_by(LogEventRow.ts.desc()).limit(2000).all())
     rows = list(reversed(rows))   # oldest -> newest: stints and "newest
                                   # spelling wins" both need forward time
@@ -1482,7 +1500,8 @@ async def get_sessions(limit: int = 12, db: Session = Depends(get_db)):
     if _character_id:
         q = (db.query(LogEventRow)
              .filter(LogEventRow.character_id == _character_id,
-                     LogEventRow.event_type == "session")
+                     LogEventRow.event_type == "session",
+                     LogEventRow.ts >= _launch_bound())
              .order_by(LogEventRow.ts.desc()).limit(limit).all())
         rows = [r.payload for r in q]
     return {"current": current, "history": rows}
@@ -1509,7 +1528,7 @@ async def get_lifetime(db: Session = Depends(get_db)):
     # numbers with someone else's history. Stored ts uses a SPACE separator
     # ("2026-07-05 13:16:57") while the setting is ISO with a "T" — compared
     # as strings, the mismatch silently matches nothing.
-    since = (settings.eql_launch_iso or "").replace("T", " ") or "0000"
+    since = _launch_bound()
 
     def count(kind: str) -> int:
         return (db.query(LogEventRow)
