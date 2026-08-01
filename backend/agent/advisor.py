@@ -1003,15 +1003,28 @@ def _gate_aas(items: List[dict], owned: dict, meta: dict) -> List[dict]:
     the eqlbuilds ladder (the log's rank counter is unreliable — it just
     counts list-bursts), so maxed AAs (Mnemonic Retention 6/6) and
     already-owned ranks are dropped, and ranks beyond max are dropped."""
-    if not owned:
-        return items
-    omap = {k.lower(): v for k, v in owned.items()}
+    omap = {k.lower(): v for k, v in owned.items()} if owned else {}
     out = []
     for it in items:
         name = str(it.get("name") or "")
         m = re.search(r"^(.*?)[\s(]+ranks?\s*(\d+)\s*[)]?\s*$", name, re.I)
         base = (m.group(1) if m else name).strip().rstrip("(").strip()
         want = int(m.group(2)) if m else None
+        # The AA must EXIST. This gate only ever checked RANKS, so an
+        # invented name sailed through both here and, before that, via the
+        # `if not owned: return items` shortcut that skipped verification
+        # entirely for anyone who had never typed /alternateadv list.
+        # Observed live: "General - 3 pts" and "Horizon Prep - 12 pts",
+        # neither of which is an AA in any class's list -- they read like
+        # the model echoing an ability CATEGORY and this prompt's own
+        # "horizon" section label back as if they were purchasable.
+        # Enforced only when the snapshot is present: with no data we
+        # cannot tell an invented name from an unlisted one, and the house
+        # rule is that absence of data is not evidence.
+        if meta and base.lower() not in meta:
+            logger.info("Dropped AA rec — not an AA in the class data: %s",
+                        name)
+            continue
         o = omap.get(base.lower())
         mt = meta.get(base.lower()) or {}
         cap = mt.get("max")
