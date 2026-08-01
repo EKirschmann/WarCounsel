@@ -182,3 +182,29 @@ def spell_duration_ticks(name: str) -> Optional[int]:
     timed buffs carry real ticks (Spirit of Wolf = 360)."""
     e = spell_entry(name)
     return None if e is None else (e.get("durationTicks") or 0)
+
+
+def has_skill(cls_name: str, skill: str) -> Optional[bool]:
+    """Does this class train a skill? None when we have no data at all.
+
+    None and False are NOT the same here: a missing dataset must not read
+    as "this class cannot dual wield", which would silently strip valid
+    off-hand advice from every install without the builds clone.
+    """
+    d = classes_data()
+    if not d:
+        return None
+    rec = d.get(_class_key(cls_name))
+    if not rec:
+        return None
+    want = skill.strip().lower()
+    return any((s.get("name") or "").strip().lower() == want
+               for s in (rec.get("skillList") or []))
+
+
+def any_has_skill(classes: list, skill: str) -> Optional[bool]:
+    """True if ANY class in the trio trains it; None if nothing is known."""
+    seen = [has_skill(c, skill) for c in (classes or []) if c]
+    if not seen or all(v is None for v in seen):
+        return None
+    return any(v is True for v in seen)

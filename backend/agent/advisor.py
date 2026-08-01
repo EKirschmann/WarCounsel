@@ -32,6 +32,7 @@ except ImportError:  # deterministic/lite build ships no langchain
 
 
 from backend.llm_runtime import active as llm_active, get_llm
+from backend import builds_data
 from backend.config import settings
 from backend.game_data import (build_wiki_context, hunting_candidates, is_resurrection,
                                is_travel_ritual, same_spell_line,
@@ -757,6 +758,15 @@ async def _builtin_gear(ctx: dict) -> dict:
                              "where": "worn"})
             continue
         hand = {"primary": "mh", "secondary": "oh"}.get(base_slot)
+        if base_slot == "secondary" and _dual_wields(classes) is False:
+            # No Dual Wield: an off-hand WEAPON never swings, so its
+            # white-DPS index describes damage that will not be dealt. A
+            # shield or stat item in that slot is still perfectly good, so
+            # this drops the weapon model rather than the slot.
+            hand = None
+            no_oh_weapon = True
+        else:
+            no_oh_weapon = False
         if base_slot == "secondary":
             # a 2H weapon occupies BOTH hands. The LLM path already dropped
             # the secondary row behind a 2H primary; this path never did,
@@ -826,6 +836,8 @@ async def _builtin_gear(ctx: dict) -> dict:
                 continue
             if not await _fits_slot(nm, slot):
                 continue
+            if no_oh_weapon and _is_weapon(line):
+                continue
             if classes and _trio_usable(line, classes) is False:
                 continue
             scaled = scale_item_line(line, _item_rank(nm))
@@ -878,6 +890,14 @@ async def _builtin_gear(ctx: dict) -> dict:
                 shown = None
             if champ is None or gain > champ[0]:
                 champ = (gain, it, shown)
+        if (base_slot == "secondary" and no_oh_weapon and champ is None
+                and fallback is None and not cur):
+            recs.append({"slot": slot, "current": cur, "recommend": None,
+                         "where": None,
+                         "why": "— your classes do not train Dual Wield, so "
+                                "an off-hand weapon would never swing; only "
+                                "a shield or stat item helps here"})
+            continue
         if champ is None and fallback is not None:
             fb, fb_why = fallback
             recs.append({"slot": slot, "current": cur,
@@ -1335,7 +1355,7 @@ Rules:
 - slots: go slot by slot; only include a slot when there is something to say — a better OWNED item sitting in bags/bank than what is worn ("recommend" = that owned item, exactly as named above), an empty slot they own a filler for, or a confirmation that the worn item is their best ("recommend" = the worn item). Recommend only [USABLE] items; the tag is authoritative. Race restrictions DO NOT EXIST in EQL. Anything marked [worn] is being worn RIGHT NOW and is proven equippable — never claim a worn item is unusable.
 - Stat-delta language: you know the character's totals ONLY when CHARACTER lists them (Max HP / Max mana / recent combat). NEVER label a stat change "huge", "massive", "tiny", "minor" or similar on its own authority — give the numbers. When Max HP is listed, express HP deltas as a rough percentage of it ("+75 HP ≈ +5.6% of your 1342"); when recent-combat numbers are listed, you may translate HP deltas into average incoming hits ("+75 HP ≈ 2 average hits of survival"). With neither, state the delta neutrally and let the numbers speak.
 - ANY SLOT gives STATS ONLY. A weapon placed there contributes NO damage, NO delay and NO white-DPS index -- it is not swung. Judge an Any Slot purely on AC, attributes, resists and effects, and NEVER compare white-DPS indices for it; those numbers apply to Primary and Secondary alone. The ONE exception: a Piercing dagger in an Any Slot enables Backstab when the trio contains a class that can backstab (Rogue), so say so if that applies. A weapon can still be the best Any Slot item when its STATS beat the alternatives.
-- Hands: a weapon with a 2H skill (2H Slash/2H Blunt/2H Piercing) occupies BOTH Primary and Secondary. Never recommend a 2H weapon together with any Secondary item; compare 1H+1H (or 1H+shield) as a package against the 2H alone.
+__DUAL_WIELD__- Hands: a weapon with a 2H skill (2H Slash/2H Blunt/2H Piercing) occupies BOTH Primary and Secondary. Never recommend a 2H weapon together with any Secondary item; compare 1H+1H (or 1H+shield) as a package against the 2H alone.
 - farm: 3-6 realistic upgrade targets for their level. STRONGLY prefer items whose drop data appears above or that you know drop in zones near their level; give the zone and the mob/vendor in "source". Never invent stats; mark uncertainty briefly in "why" when relying on memory.
 - Weapons: consider the classes' usable weapon skills; for a Monk trio prefer fist/blunt options. 1H weapon lines carry deterministic [white-DPS index: MH x / OH y] — USE THEM instead of raw damage/delay ratio: the main-hand damage bonus is a flat, delay-independent add (fast MH weapons carry it more often), the off-hand gets NO bonus and swings only part of the time, so the best MH is often NOT the best OH. Procs are NOT in the index — a strong proc can outweigh a small index gap (off-hand procs fire less often). For 2H: compare its DPS against the MH index + OH index SUM plus the stat difference.
 - exaltations: review where each exaltation is socketed vs what it grants. Recommend moves ONLY when clearly better (an unused bank exaltation with a strong effect, or an effect wasted on unused gear); "move_to" = the item to socket it into. Skip trivial shuffles; note uncertainty about socket compatibility.
@@ -1394,6 +1414,33 @@ async def _exalt_effect(base_item: str) -> Optional[str]:
 # every equippable slot in the EQL inventory export — the gear table always
 # shows all 24, backfilling slots the LLM didn't address. "Any Slot" x2 are
 # EQL's generic slots (hold any equippable item); no Charm/Power Source here.
+def _dual_wields(classes: List[str]) -> Optional[bool]:
+    """Can this trio swing an off-hand weapon at all?
+
+    Only some classes train Dual Wield -- a Paladin/Necromancer/Wizard
+    trains none of it, so a weapon in the off-hand never swings and its
+    white-DPS index describes damage that will not be dealt. Reported live:
+    an off-hand blade was offered for its "2.7 off-hand index" to exactly
+    that trio, the same mistake as valuing an Any Slot item by its DMG.
+
+    None when the builds dataset is absent -- unknown must not read as
+    "cannot", or every install without the clone loses off-hand advice.
+    """
+    try:
+        return builds_data.any_has_skill(classes or [], "Dual Wield")
+    except Exception:
+        return None
+
+
+def _is_weapon(line: str) -> bool:
+    """A thing that SWINGS, as opposed to a shield or a stat item."""
+    if not line:
+        return False
+    if re.search(r"\bSkill:\s*(1H|2H|H2H|Piercing|Archery|Throwing)", line, re.I):
+        return True
+    return "DMG:" in line.upper() and "DELAY:" in line.upper()
+
+
 CANON_SLOTS = [
     "Any Slot 1", "Any Slot 2", "Ear 1", "Ear 2", "Head", "Face", "Neck",
     "Shoulders", "Arms", "Back", "Wrist 1", "Wrist 2", "Range", "Hands",
@@ -1927,11 +1974,28 @@ async def generate_gear_advice(ctx: dict) -> dict:
         pet_block = ("PET LOADOUT: none — pet_gear must be []. (The player "
                      "sets their pet's slot count + class in the Advisor "
                      "tab, or the app reads slots from /pet inventory check.)")
+    # Only some classes train Dual Wield. Without it an off-hand weapon
+    # never swings, and the model WILL reason from the white-DPS index
+    # annotations otherwise -- it offered an off-hand blade for its "2.7
+    # off-hand index" to a Paladin/Necromancer/Wizard. The deterministic
+    # gate drops such picks; saying it here stops the prose being written
+    # in the first place.
+    _dw = _dual_wields(classes)
+    dw_rule = ""
+    if _dw is False:
+        dw_rule = ("- This trio does NOT train Dual Wield. An off-hand WEAPON "
+                   "would never swing, so NEVER recommend one for Secondary "
+                   "and never cite an off-hand white-DPS index. A shield or "
+                   "a stat item in Secondary is still worth recommending." + chr(10))
+    elif _dw is True:
+        dw_rule = ("- This trio trains Dual Wield, so an off-hand weapon does "
+                   "swing and its off-hand index counts." + chr(10))
     prompt = (GEAR_PROMPT
               .replace("__PET_BLOCK__", pet_block)
               .replace("__CONTEXT__", chr(10).join(lines))
               .replace("__GEAR__", chr(10).join(gear["lines"]))
-              .replace("__EXALTS__", chr(10).join(exalt_lines) or "none owned"))
+              .replace("__EXALTS__", chr(10).join(exalt_lines) or "none owned")
+              .replace("__DUAL_WIELD__", dw_rule))
     budget = await asyncio.to_thread(_lmstudio_budget, len(prompt))
     llm = get_llm()
     bound = llm
