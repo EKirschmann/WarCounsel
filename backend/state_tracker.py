@@ -582,15 +582,28 @@ class CharacterTracker:
                         # else's). Group membership is the only side of that
                         # comparison we can positively verify.
                         #
-                        # An EMPTY roster means no evidence, so it FAILS
-                        # OPEN and credits everyone exactly as before.
-                        # Filtered damage is LUMPED, never dropped: a
-                        # silently missing row looks identical to a quiet
-                        # fight, and this gate can be wrong (an unmapped
-                        # groupmate's pet has a generated name that proves
-                        # nothing, so it lands here too).
+                        # EQL does not allow shared damage: once a mob is
+                        # tagged, only the tagger and their group can hurt
+                        # it. So a non-groupmate landing hits is not helping
+                        # on our mob -- they are DEFINITIONALLY on a
+                        # different one that happens to share a name. There
+                        # is no case where crediting a stranger is correct.
+                        #
+                        # This gate therefore fails CLOSED. It used to fail
+                        # open on an empty roster, which read as "no
+                        # evidence, so credit everyone" -- but the game rule
+                        # IS the evidence, and a solo player has no allies
+                        # by definition. Randoms kept appearing in the
+                        # overlay for exactly that reason.
+                        #
+                        # The cost is a real groupmate landing in the bucket
+                        # when we never saw them join (logging in already
+                        # grouped, before anyone speaks). That is why the
+                        # damage is LUMPED and shown rather than dropped: a
+                        # wrongly-excluded contributor stays visible, and
+                        # one line of group chat fixes it.
                         who = owner or e.attacker
-                        if self.group_members and who not in self.group_members:
+                        if who not in self.group_members:
                             ua = enc.setdefault("unattributed", {})
                             ua[e.attacker] = ua.get(e.attacker, 0) + e.damage
                         elif owner:

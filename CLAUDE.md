@@ -832,6 +832,17 @@ and exact. Stats stay wiki-only and are still REFUSED when missing.
 
 ## Group-filtered meter rows
 
+**EQL DOES NOT ALLOW SHARED DAMAGE.** Once a mob is tagged, only the tagger
+and their group can damage it. That single game rule is what makes the
+meter tractable: a non-groupmate landing hits on something that looks like
+our mob is DEFINITIONALLY on a different one that shares a name. There is
+no case where crediting a stranger is correct, so the gate fails CLOSED —
+an empty roster means solo, and a solo player has no allies.
+
+It used to fail OPEN on an empty roster, reasoning "no evidence, credit
+everyone". That was wrong: the game rule IS the evidence. Randoms kept
+appearing in the overlay for precisely that reason.
+
 The ally gate checks the TARGET ("did they hit one of our foes"), and
 `_foe_key` can only compare mob NAMES because the log carries no mob IDs —
 so a stranger fighting a DIFFERENT mob of the same name is credited as an
@@ -844,7 +855,11 @@ contributor.
   so a join-only filter would hide a real group.
 - **"You have joined Dad Bods." is a GUILD line** — both self forms anchor
   on "the group" or the roster gets seeded with a guild name.
-- **An empty roster FAILS OPEN** and credits everyone, exactly as before.
+- **An empty roster credits NOBODY but you and your pets** — see the game
+  rule above. The cost is a real groupmate landing in the bucket when we
+  never saw them join (logging in already grouped, before anyone speaks),
+  which is why filtered damage is lumped and SHOWN: a wrongly-excluded
+  contributor stays visible and one line of group chat fixes it.
 - Filtered damage is LUMPED, never dropped: a silently missing contributor
   is indistinguishable from a quiet fight, and the gate CAN be wrong (an
   unmapped groupmate's pet has a generated name that proves nothing).
