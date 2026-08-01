@@ -459,7 +459,21 @@ class CharacterTracker:
                 self.class_str = e.class_str
                 self.unknown_casts.clear()
                 self.loadout_hint = None
-            self.race = self.race or e.race
+            if e.race:
+                # Take EVERY race /who reports, not just the first. This was
+                # write-once, guarding against raid /who rows -- which print
+                # the group number where a zone /who prints the race, so the
+                # parser sets race None there and an overwrite would blank
+                # it. Testing for a value covers that without latching.
+                #
+                # Race genuinely changes: a character need not survive a
+                # launch, and the name gets reused. The reporting player
+                # was an Iksar in beta and is an Ogre now, and the beta
+                # value -- restored from the character row at startup --
+                # outranked fourteen /who lines that said otherwise. The
+                # advisor gates gear and race-influenced class advice on
+                # this, so it was wrong in a way that reached real output.
+                self.race = e.race
         elif isinstance(e, ev.OtherCharInfo):
             self.who_roster[e.name] = {"level": e.level, "classes": e.classes}
         elif isinstance(e, ev.PetInvHeader):
