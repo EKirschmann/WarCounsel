@@ -1,7 +1,14 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import type { AbilitySummary, DeathRecap, Encounter, EncounterAbility } from "@/lib/types";
+import type {
+  AbilitySummary,
+  DeathRecap,
+  Encounter,
+  EncounterAbility,
+  FilteredContributor,
+} from "@/lib/types";
+import { trustMember } from "@/lib/api";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -72,11 +79,16 @@ export const EncounterPanel = memo(function EncounterPanel({
   encounters,
   summary,
   lastDeath,
+  filtered,
 }: {
   encounters: Encounter[];
   summary: AbilitySummary | null;
   lastDeath: DeathRecap | null;
+  filtered?: FilteredContributor[];
 }) {
+  // Names the player has ruled on this render, so a row leaves immediately
+  // instead of lingering until the next snapshot lands.
+  const [ruled, setRuled] = useState<Record<string, boolean>>({});
   // Anchor the viewed pull by its start time so history shifting underneath
   // (a new fight starting) doesn't yank the panel to a different fight.
   const [viewStarted, setViewStarted] = useState<string | null>(null);
@@ -251,6 +263,63 @@ export const EncounterPanel = memo(function EncounterPanel({
                     <AbilityTable abilities={summary.heals} />
                   </>
                 )}
+              </div>
+            )}
+
+            {(filtered ?? []).some((f) => !ruled[f.name]) && (
+              <div className="enc-agg enc-filtered">
+                <h3>Not counted</h3>
+                <p className="enc-filtered-why">
+                  Damage from people we can&apos;t confirm are in your group. EQL only lets
+                  the tagger&apos;s group hurt a mob, so anyone in most of your fights is
+                  grouped — a passer-by on a same-named mob shows up once or twice.
+                </p>
+                <table className="enc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Name</th>
+                      <th scope="col">In your fights</th>
+                      <th scope="col">Damage</th>
+                      <th scope="col">
+                        <span className="sr-only">Add to group</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(filtered ?? [])
+                      .filter((f) => !ruled[f.name])
+                      .map((f) => (
+                        <tr key={f.name}>
+                          <td className="enc-name">
+                            <span className="enc-rule" aria-hidden />
+                            {f.name}
+                          </td>
+                          <td>
+                            {f.fights} <span className="enc-share">({f.share}%)</span>
+                          </td>
+                          <td>{fmt(f.damage)}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="enc-trust"
+                              onClick={() => {
+                                setRuled((r) => ({ ...r, [f.name]: true }));
+                                trustMember(f.name, true).catch(() =>
+                                  setRuled((r) => {
+                                    const n = { ...r };
+                                    delete n[f.name];
+                                    return n;
+                                  }),
+                                );
+                              }}
+                            >
+                              Add to group
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
               </div>
             )}
 

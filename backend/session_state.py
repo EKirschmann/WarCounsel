@@ -49,6 +49,8 @@ PERSIST_FIELDS = [
     # someone happened to speak in group chat again. In dev that is every
     # time a .py file is touched.
     "group_members",
+    # ...and who we HID, so the approve list is not blank after a reload.
+    "filtered_seen", "session_fights",
 ]
 _DEQUES = {"loots": 20, "ledger": 300, "encounter_history": 5}
 

@@ -71,6 +71,14 @@ export interface MobStat {
   loot_drops?: number;
 }
 
+export interface FilteredContributor {
+  name: string;
+  damage: number;
+  fights: number;
+  /** Percent of this session's fights they appeared in. */
+  share: number;
+}
+
 export interface EncounterAlly {
   name: string;
   damage: number;
@@ -178,6 +186,8 @@ export interface ZoneGeometry3D {
 }
 
 export interface Snapshot {
+  /** Contributors hidden from the meter — not known to be in your group. */
+  filtered?: FilteredContributor[];
   pet_slots?: number | null;
   pet_classes?: string | null;
   /** User-reported from the in-game UI — the log never prints them. */

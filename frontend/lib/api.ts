@@ -37,3 +37,11 @@ export async function apiSend<T>(
   }
   return res.json();
 }
+
+/** Say by hand whether someone is grouped with you. */
+export async function trustMember(name: string, trust: boolean) {
+  return apiSend<{ name: string; trusted: boolean; adopted?: number; group: string[] }>(
+    "/api/group/trust",
+    { name, trust },
+  );
+}

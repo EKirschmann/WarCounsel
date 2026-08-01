@@ -2200,3 +2200,41 @@ button.app-version:hover { color: var(--gold-bright); }
   cursor: pointer;
 }
 .link-btn:hover { color: #fff; }
+
+/* --- Not counted: contributors held off the meter ------------------------
+   Deliberately quieter than the group table it sits under. This is a
+   question, not a result -- an unanswered one must not compete with the
+   numbers a player is actually reading mid-fight. */
+.enc-filtered { opacity: .82; }
+.enc-filtered-why {
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-dim, rgba(226, 222, 214, .62));
+}
+.enc-share { color: var(--ink-dim, rgba(226, 222, 214, .62)); }
+.enc-trust {
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  color: var(--gold, #c8aa6e);
+  background: transparent;
+  border: 1px solid rgba(200, 170, 110, .34);
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.enc-trust:hover { background: rgba(200, 170, 110, .12); }
+.enc-trust:focus-visible { outline: 2px solid var(--gold, #c8aa6e); outline-offset: 1px; }
+
+/* Header a screen reader needs and sighted users do not: the button column
+   is self-evident on screen, unlabelled to anything else. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

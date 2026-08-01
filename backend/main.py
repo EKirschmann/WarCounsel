@@ -656,6 +656,32 @@ async def health():
                               if growth else None)}
 
 
+@app.get("/api/group")
+async def get_group():
+    """The roster, plus the contributors we are hiding from the meter."""
+    return {"group": sorted(tracker.group_members),
+            "filtered": tracker.filtered_view(),
+            "fights": tracker.session_fights}
+
+
+@app.post("/api/group/trust")
+async def post_group_trust(body: dict):
+    """Say by hand whether someone is grouped with you.
+
+    Every automatic signal for this is momentary -- an invite accepted, a
+    join line, a line of group chat -- so a group formed by invite that
+    plays quietly emits nothing at all and its damage stays hidden. The
+    player knows; this is the seam where they can say so.
+    """
+    res = tracker.trust_member(body.get("name", ""),
+                               bool(body.get("trust", True)))
+    if not res.get("ok"):
+        raise HTTPException(400, res.get("error", "bad request"))
+    session_state.save(tracker, watcher.log_file if watcher else "",
+                       watcher.offset if watcher else 0)
+    return res
+
+
 @app.get("/api/character")
 async def get_character():
     snap = tracker.snapshot()

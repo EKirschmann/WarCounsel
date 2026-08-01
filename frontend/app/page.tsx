@@ -290,6 +290,7 @@ export default function Home() {
           encounters={snap?.encounters ?? []}
           summary={snap?.ability_summary ?? null}
           lastDeath={snap?.last_death ?? null}
+          filtered={snap?.filtered}
         />
       </div>
       {settingsOpen && (

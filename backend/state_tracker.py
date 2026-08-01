@@ -159,6 +159,13 @@ class CharacterTracker:
         # cannot disprove. Not persisted: a restart re-opens the filter,
         # which is the safe direction.
         self.group_members: set = set()  # flush loop persists when set
+        # Everyone whose damage we HID, with enough context to judge them:
+        # how many of our fights they turned up in. A groupmate who never
+        # speaks is invisible to every automatic signal, but they are in
+        # nearly every fight -- so the count is the tell, and the player is
+        # the only one who can read it. Survives restarts with the roster.
+        self.filtered_seen: dict = {}
+        self.session_fights = 0
         self._aa_from_db = False       # roster restored from DB, not the log
         # Owned AA ranks from '/alternateadv list' (one line per rank)
         self.owned_aas: dict[str, dict] = {}
@@ -224,6 +231,7 @@ class CharacterTracker:
                 self.pending_encounters.append(
                     self._encounter_view(self.encounter, live=False))
                 del self.pending_encounters[:-10]
+            self.session_fights += 1
             self.encounter = {"started": ts, "last": ts, "target": None,
                               "total_out": 0, "total_in": 0, "abilities": {},
                               "foes": {}, "trio": self.class_str,
@@ -621,7 +629,13 @@ class CharacterTracker:
                             return
                         if who not in self.group_members:
                             ua = enc.setdefault("unattributed", {})
+                            first = e.attacker not in ua
                             ua[e.attacker] = ua.get(e.attacker, 0) + e.damage
+                            seen = self.filtered_seen.setdefault(
+                                e.attacker, {"damage": 0, "fights": 0})
+                            seen["damage"] += e.damage
+                            if first:
+                                seen["fights"] += 1
                         elif owner:
                             # An ally's pet gets its OWN row, mirroring the
                             # way our pet is split out of "You". Folded in,
@@ -1184,6 +1198,56 @@ class CharacterTracker:
             return None
         return self._encounter_view(self.encounter, live=True)
 
+    def filtered_view(self) -> list[dict]:
+        """Contributors we hid, and how to judge them.
+
+        `fights` over `session_fights` is the whole signal: EQL only lets
+        the tagger's group damage a mob, so someone appearing in most of
+        our pulls is almost certainly grouped -- while a passer-by fighting
+        a same-named mob shows up once or twice. That is a judgement the
+        player makes instantly and no log line states outright.
+        """
+        out = [{"name": n, "damage": v["damage"], "fights": v["fights"],
+                "share": (round(100 * v["fights"] / self.session_fights)
+                          if self.session_fights else 0)}
+               for n, v in self.filtered_seen.items()]
+        return sorted(out, key=lambda r: r["damage"], reverse=True)[:12]
+
+    def trust_member(self, name: str, trust: bool = True) -> dict:
+        """Add or remove someone from the group roster by hand.
+
+        The automatic signals -- an invite accepted, a join line, a line of
+        group chat -- are all momentary, and a group that formed by invite
+        and plays quietly emits NONE of them. The player always knows the
+        answer, so let them say it.
+
+        Trusting ADOPTS what we already hid in the current fight, the same
+        move `_adopt_pet_damage` makes on mapping: otherwise approving
+        mid-pull shows nothing until the next one and reads as broken.
+        """
+        name = (name or "").strip()
+        if not name:
+            return {"ok": False, "error": "no name"}
+        if not trust:
+            self.group_members.discard(name)
+            return {"ok": True, "name": name, "trusted": False,
+                    "group": sorted(self.group_members)}
+        self.group_members.add(name)
+        self.filtered_seen.pop(name, None)
+        moved = 0
+        for enc in ([self.encounter] if self.encounter else []) + list(
+                self.encounter_history):
+            ua = enc.get("unattributed") or {}
+            if name in ua:
+                dmg = ua.pop(name)
+                allies = enc.setdefault("allies", {})
+                allies[name] = allies.get(name, 0) + dmg
+                moved += dmg
+                if not ua:
+                    enc.pop("unattributed", None)
+        return {"ok": True, "name": name, "trusted": True, "adopted": moved,
+                "group": sorted(self.group_members)}
+
     def encounters_snapshot(self) -> list[dict]:
         """Current/last pull first, then previous pulls (5 total max)."""
         out = []
@@ -1459,6 +1523,7 @@ class CharacterTracker:
             "position": self.position,
             "encounter": self.encounter_snapshot(),
             "encounters": self.encounters_snapshot(),
+            "filtered": self.filtered_view(),
             "ability_summary": self.ability_summary(),
             "session": {
                 "damage_dealt": self.damage_dealt,
