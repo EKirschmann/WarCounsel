@@ -4,6 +4,24 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.1.13 — 2026-08-01
+
+**Strangers no longer appear on your damage meter.** Someone fighting
+nearby could show up as if they were helping, because their mob shared a
+name with yours and nothing could tell the two apart.
+
+EverQuest Legends does not allow shared damage — once a mob is tagged, only
+the tagger and their group can hurt it. So anyone who is not in your group
+is, by definition, fighting something else. The meter now credits your
+group and your pets, and nobody else. Previously, with no group, it
+credited everyone present.
+
+Anything excluded still shows as one "filtered" line rather than vanishing.
+That matters if you logged in already grouped and the app has not seen your
+group yet — a real groupmate would sit in that line until someone speaks in
+group chat, and you can see it happening rather than wondering where their
+damage went.
+
 ## v2.1.12 — 2026-07-31
 
 **Your pet's damage was partly going to a stranger.** A pet fights before
