@@ -150,6 +150,12 @@ RE_GROUP_CHAT = re.compile(
 # silently seed the group roster with a guild name.
 RE_GROUP_JOIN = re.compile(rf"^({_PC}) has joined the group\.")
 RE_GROUP_LEFT = re.compile(rf"^({_PC}) has left the group\.")
+# Accepting an invite is the ONLY line that names someone already in the
+# group. "<X> has joined the group." fires for people joining AFTER you, so
+# a player who accepts an invite into an existing group learns nobody --
+# the roster starts empty and fills only as members happen to speak.
+RE_GROUP_ACCEPT = re.compile(
+    rf"^You notify ({_PC}) that you agree to join the group")
 RE_GROUP_SELF_OUT = re.compile(
     r"^You have been removed from the group\.|^Your group has been disbanded")
 RE_SUMMONED = re.compile(r"^You have been summoned!")
@@ -192,7 +198,12 @@ RE_AA_COST = re.compile(r"^Cost per Level: (\d+)$")
 RE_AA_DESC = re.compile(r"^Description: (.+)$")
 
 # Other players' damage (group DPS). PC names are one capitalized word;
-# NPCs carry articles/spaces so they fall through these attacker groups.
+# `_ACTOR` allows an ARTICLE, so an NPC attacker parses. NPCs used to fall
+# through these groups deliberately -- but a CHARMED pet is an NPC, so its
+# damage was invisible: you could map "A froglok ghoul" with /pet leader and
+# it still contributed nothing to the meter. Mob-vs-mob damage now parses
+# too; the tracker decides what to do with it, and only credits an attacker
+# it can tie to you or your group.
 # "(?: pet)?": pets swing under "<Owner> pet" (e.g. "Officer Grush pet") —
 # the tracker folds the character's own pet into player-side damage.
 RE_OTHER_MELEE = re.compile(
@@ -201,6 +212,30 @@ RE_OTHER_DOT = re.compile(
     rf"^(.+?) has taken (\d+) damage from (.+?) by ({_PC}(?: pet)?)\.")
 RE_OTHER_SPELL = re.compile(
     rf"^({_PC}(?: pet)?) hit (.+?) for (\d+) points? of ([-\w\s]+?) damage by (.+?)[.!]")
+
+# A CHARMED pet is an NPC, and NPC attackers carry an article, so they fell
+# through the player-shaped groups above -- their damage was invisible. You
+# could map "A froglok ghoul" with /pet leader and it still contributed
+# nothing to the meter.
+#
+# Deliberately NARROW rather than widening the group above: widening it made
+# the actor group swallow the verb ("A froglok ghoul slashes a") and broke
+# ordinary pet parsing outright. Requiring BOTH a leading article AND a known
+# melee verb leaves nothing ambiguous. The tracker decides attribution -- it
+# credits only an attacker it can tie to you or your group.
+def _conj(v: str) -> str:
+    if v.endswith(("s", "sh", "ch", "x", "z")):
+        return v + "es"
+    if v.endswith("y") and v[-2] not in "aeiou":
+        return v[:-1] + "ies"
+    return v + "s"
+
+
+_MELEE_CONJ = "|".join(sorted(_conj(v) for v in MELEE_VERBS))
+RE_NPC_MELEE = re.compile(
+    rf"^((?:[Aa]n?|[Tt]he) [\w`' ]+?) ({_MELEE_CONJ})"
+    rf"(?: on)? (.+?) for (\d+) points? of damage[.!]")
+
 NOT_PLAYERS = {"You", "Your", "It", "The", "That", "This", "Something", "Someone"}
 
 FILENAME_RE = re.compile(r"eqlog_(?P<name>[^_]+)_(?P<server>.+)\.txt$", re.IGNORECASE)
@@ -363,6 +398,8 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
         return ev.GroupMember(name=gj.group(1), joined=True, **base)
     if gl := RE_GROUP_LEFT.match(body):
         return ev.GroupMember(name=gl.group(1), joined=False, **base)
+    if ga := RE_GROUP_ACCEPT.match(body):
+        return ev.GroupMember(name=ga.group(1), joined=True, **base)
     if RE_GROUP_SELF_OUT.match(body):
         return ev.GroupMember(name=None, joined=False, **base)
     if RE_CHAT.search(body):
@@ -572,6 +609,17 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
             return ev.OtherDamageOut(
                 attacker=o.group(1), target=o.group(3),
                 damage=int(o.group(4)), source=root, crit=crit, **base)
+
+    # NPC attacker (charmed pet, or a mob hitting a groupmate). Runs AFTER
+    # the player-shaped rule so it can never pre-empt it, and after the
+    # MeleeIn branch, so "... slashes YOU" is never mistaken for someone
+    # else's outgoing damage.
+    if o := RE_NPC_MELEE.match(body):
+        root = _verb_root(o.group(2))
+        if root and o.group(3) != "YOU":
+            return ev.OtherDamageOut(attacker=o.group(1), target=o.group(3),
+                                     damage=int(o.group(4)), source=root,
+                                     crit=crit, **base)
 
     if o := RE_OTHER_DOT.match(body):
         return ev.OtherDamageOut(
