@@ -4,6 +4,61 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.2.0 — 2026-08-01
+
+**You can now tell the app who is in your group.** It could only ever
+guess, from signals that are all momentary — a join line, an invite, a
+word in group chat. A group that formed by invite and plays quietly emits
+none of them, so real groupmates sat under "not counted" while their
+damage went uncredited. The Encounter panel now lists them with the one
+number that decides it — how many of your fights they turned up in — and
+Add / Ignore buttons, plus Add all / Ignore all. Ignore holds only until a
+join, invite or group line proves otherwise. Names drop off on their own
+five minutes after they stop fighting, and likely pets are marked and
+listed last rather than burying the names you can actually act on.
+
+**Fixed: a backend reload emptied your party.** The roster was never
+saved, which was harmless while unknown contributors were credited by
+default and became a disappearing act once they were not.
+
+**Fixed: the advisor could have your race wrong forever.** Race was
+recorded once and never updated, so a value left over from beta outranked
+every /who since. It reached real output — the advisor states race, and
+class advice is race-influenced.
+
+**Gear advice got several things right that it had been getting wrong:**
+
+- An off-hand weapon is no longer suggested to classes that cannot Dual
+  Wield. It would never swing, so its damage was never going to happen.
+- Items whose wiki page lists no stats can now fill an EMPTY slot. An
+  earring in an empty ear beats nothing, whatever the page says.
+- Resist lines written as "SV Cold" instead of "SV COLD" are no longer
+  dropped. Affected items compared as though they had no resist at all.
+- **Trade-offs are shown instead of hidden.** A candidate that wins some
+  stats and loses others used to be discarded silently while the row read
+  "no better owned option flagged". It now says what you would gain and
+  what you would give up, and leaves the call to you.
+- **You can correct an item's stats yourself** — the "stats?" button beside
+  any worn item. Some wiki pages are stubs and some carry stats from the
+  original EverQuest for items EQL rebalanced; nothing in the app can catch
+  that, but you are holding the item.
+
+**Charmed pets count properly.** A charm fights before it identifies
+itself, and everything it did before `/pet leader` used to be thrown away.
+
+**Group fights no longer split into fragments** when you go OOM, step away
+to heal, or die — confirmed groupmates hold the fight open for up to 20
+seconds past your own last action.
+
+**Your class can be inferred from your spells.** 80% of spells belong to
+exactly one class, so casting one is proof. Shown as a /who hint rather
+than written in: a cast proves a class is slotted, not what the other two
+slots hold.
+
+**Beta play no longer shows up as this character's history.** Lifetime
+totals already excluded it; the encounter list, session history and trio
+comparison did not.
+
 ## v2.1.13 — 2026-08-01
 
 **Strangers no longer appear on your damage meter.** Someone fighting

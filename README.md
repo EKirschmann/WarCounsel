@@ -308,6 +308,35 @@ own licence. Both are listed in [NOTICE.md](NOTICE.md), along with credits
 for the projects this is built on and a note on where each kind of number
 in the app comes from.
 
+## Who's in your group
+
+The log never says. It records what people *do*, not who they are, and that
+turns out to be the hardest thing this app does.
+
+EQL only lets the tagger's group damage a mob, which sounds like it settles
+the question — anyone hitting your target is with you. But the log carries no
+mob IDs, so a stranger fighting a *different* mob of the same name is
+indistinguishable from a groupmate helping with yours. Two
+`Spirit of Dessication` up at once and the meter has nothing to separate
+them.
+
+So the app watches for the signals that do exist — a join line, an invite
+accepted, a word in group chat — and credits nobody it can't place. Every one
+of those is momentary. A group that formed by invite and plays quietly emits
+none of them, and its damage sits under **Not counted** until someone happens
+to speak. That's why the panel lets you say so by hand.
+
+Pets make it worse. A summoned pet with a generated name reads exactly like a
+player — `Jabeker hits a froglok` could be either — and the possessive
+form we *can* recognise (``Kenkyo`s warder``) is the minority case.
+The app falls back on absence of evidence: never in a `/who`, never spoke,
+probably a pet. It's a guess, and it's marked as one.
+
+None of this is settled. If you've parsed EQ logs before and know a line that
+names a group member, or a way to separate pets from players more reliable
+than *"they never talk"*, [open an issue](../../issues). The mechanics here
+are community knowledge, and this is where the app leans on it most thinly.
+
 ## Notes
 
 - Sessions survive backend restarts (state snapshots to `data/`)
