@@ -21,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 DPS_WINDOW_SECONDS = 60
 COMBAT_TIMEOUT_SECONDS = 8
+
+# How far past YOUR last action a groupmate's swings may hold the fight
+# open. A group fight does not pause because you ran out of mana, went to
+# heal, or died -- but an unbounded extension would let a busy zone hold
+# one "encounter" open all night, and the DPS clock would run through
+# every quiet stretch. Bounded per EQBuddy, which uses ~20s for the same
+# reason. Only CONFIRMED groupmates extend: before the roster was
+# trustworthy this could not be done at all.
+GROUP_EXTEND_SECONDS = 20
 LEDGER_SIZE = 300
 REWARD_WINDOW_SECONDS = 3  # XP/coin <-> kill attribution window
 
@@ -232,7 +241,8 @@ class CharacterTracker:
                     self._encounter_view(self.encounter, live=False))
                 del self.pending_encounters[:-10]
             self.session_fights += 1
-            self.encounter = {"started": ts, "last": ts, "target": None,
+            self.encounter = {"started": ts, "last": ts, "last_own": ts,
+                              "target": None,
                               "total_out": 0, "total_in": 0, "abilities": {},
                               "foes": {}, "trio": self.class_str,
                               # captured HERE, not at flush time: a fight
@@ -242,6 +252,10 @@ class CharacterTracker:
                               "zone": self.zone, "level": self.level}
         else:
             self.encounter["last"] = ts
+            # ...and OUR clock, which is what bounds how long a groupmate
+            # may hold the fight open. Kept apart from "last" so their
+            # damage cannot bootstrap its own extension window.
+            self.encounter["last_own"] = ts
 
     def _adopt_pet_damage(self, pet: str) -> None:
         """Move damage this pet already dealt out of the ALLY bucket.
@@ -668,6 +682,22 @@ class CharacterTracker:
                             allies = enc.setdefault("allies", {})
                             allies[e.attacker] = (
                                 allies.get(e.attacker, 0) + e.damage)
+                        if who in self.group_members or owner:
+                            # A CONFIRMED groupmate (or our own pet) keeps
+                            # the fight open past our own last swing. A
+                            # group fight does not end because we went OOM,
+                            # stepped away to heal or died -- but until the
+                            # roster could be trusted, honouring that meant
+                            # letting any passer-by hold the clock, so it
+                            # was refused outright and long fights split
+                            # into fragments whenever we stopped acting.
+                            #
+                            # Bounded by OUR last action, never by theirs,
+                            # so a fight cannot walk itself forward on
+                            # other people's damage indefinitely.
+                            own = enc.get("last_own") or enc["last"]
+                            if (e.ts - own).total_seconds() <= GROUP_EXTEND_SECONDS:
+                                enc["last"] = max(enc["last"], e.ts)
             elif isinstance(e, (ev.MeleeIn, ev.SpellDamageIn)):
                 self.damage_taken += e.damage
                 thr = alerts.bighit_threshold()
