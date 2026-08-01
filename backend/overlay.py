@@ -131,25 +131,23 @@ def compute_rows(snap):
     """
     enc = (snap or {}).get("encounter")
     if not enc:
-        return [], "no encounter"
+        return [], "no encounter", None
     rows = [(a.get("name") or "?", a.get("classes"),
              a.get("damage", 0), a.get("dps", 0))
             for a in _fight_rows(enc)]
-    # Damage the group filter excluded, as ONE row. Shown rather than
-    # dropped: a silently missing contributor is indistinguishable from
-    # a quiet fight, and the filter can be wrong -- an unmapped
-    # groupmate's pet has a generated name that proves nothing.
-    ua = enc.get("unattributed")
-    if ua and ua.get("damage"):
-        n = ua.get("sources") or 0
-        rows.append((f"(filtered · {n} source{'' if n == 1 else 's'})",
-                     None, ua["damage"], 0))
     foes = enc.get("foes") or []
     label = (f"{len(foes)} foes" if len(foes) > 1
              else (enc.get("target") or "fight"))
     label = f"{label} · {enc.get('duration', 0):g}s"
     rows.sort(key=lambda r: r[2], reverse=True)
-    return rows[:8], label
+    # Excluded damage is NOT a row. It was one, and it read as a person:
+    # numbered, bar-charted, counted in the share percentage, and its name
+    # truncated to "(filtered · 1 s". A footnote cannot be mistaken for a
+    # contributor and cannot distort the ranking above it.
+    ua = enc.get("unattributed") or {}
+    filtered = ((ua.get("damage"), ua.get("sources") or 0)
+                if ua.get("damage") else None)
+    return rows[:8], label, filtered
 
 
 def timer_rows(snap, prefs=None):
@@ -624,7 +622,7 @@ class OverlayMeter:
         c.delete("all")
         self._sec_zones = []
 
-        rows, label = compute_rows(self.snap)
+        rows, label, filtered = compute_rows(self.snap)
         s = (self.snap or {}).get("session") or {}
         r = (self.snap or {}).get("rates") or {}
         my_dps = (self.snap or {}).get("dps", 0)
@@ -752,6 +750,13 @@ class OverlayMeter:
                         c.create_text(W - 6, y0 + ROW_H // 2, anchor="e",
                                       fill=fg, font=("Consolas", 9), text=val)
                     y += len(rows) * ROW_H
+                    if filtered:
+                        dmg, n_src = filtered
+                        c.create_text(6, y + TROW_H // 2, anchor="w",
+                                      fill=MUTED, font=("Consolas", 7),
+                                      text=f"+{_fmt(dmg)} from {n_src} "
+                                           f"not in your group")
+                        y += TROW_H
 
             for key, title in (("timers", "TIMERS"), ("session", "SESSION"),
                                ("loot", "LOOT"), ("progress", "PROGRESS")):
