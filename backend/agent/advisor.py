@@ -1526,6 +1526,29 @@ async def _clickies(items: list) -> list:
     return out
 
 
+def _pet_category(line: str) -> Optional[str]:
+    """What a pet item OCCUPIES. A pet's slots are generic, but the item
+    still has a kind: it cannot wear two chests any more than a player can.
+    Weapons collapse to one category because the limit is on weapons, not
+    on Primary vs Secondary."""
+    m = re.search(r"Slot: ([A-Z ]+)", line or "")
+    toks = set(m.group(1).split()) if m else set()
+    if not toks:
+        return None
+    if re.search(r"Skill: ", line or "") and (toks & {"PRIMARY", "SECONDARY"}):
+        return "WEAPON"
+    for t in ("HEAD", "CHEST", "LEGS", "FEET", "ARMS", "HANDS", "WAIST",
+              "BACK", "NECK", "SHOULDERS", "FACE", "EAR", "WRIST",
+              "FINGER", "FINGERS", "RANGE", "AMMO"):
+        if t in toks:
+            return t
+    return None
+
+
+def _is_2h(line: str) -> bool:
+    return bool(re.search(r"Skill: 2H", line or ""))
+
+
 async def _merge_opportunities(items: list, exalts: list,
                                loot_filter: Optional[dict] = None) -> list:
     """Duplicate owned EQUIPMENT is an EQL merge opportunity: two copies
@@ -1836,6 +1859,11 @@ async def generate_gear_advice(ctx: dict) -> dict:
             "slot. " + cur +
             "Recommend the BEST loadout of up to "
             f"{pet_slots} items total, following the pet auto-equip rules: "
+            "(0) a pet cannot wear two of the same KIND any more than a "
+            "player can: one chest, one head, one back, one waist. A robe "
+            "is a CHEST — do not offer it as a replacement for a cloak or "
+            "a belt. And a TWO-HANDED weapon fills both hands, so if the "
+            "pet holds one, do not add a second weapon at all; "
             "(1) up to TWO weapons — the pet keeps its OWN attack "
             "delay, so weapon delay and damage/delay RATIO are irrelevant "
             "to it; a weapon's damage counts only when it BEATS the pet's "
@@ -1988,6 +2016,24 @@ async def generate_gear_advice(ctx: dict) -> dict:
                 hv = _vec2(_scl2(hline, _ir2(hnm)))
                 if hv:
                     held_vecs.append((hnm, hv))
+    # What the pet ALREADY occupies. A pet is a bag of generic slots, but
+    # the items in it are not generic: two chests is as impossible for a
+    # pet as for a player, and a two-hander leaves no hand for a second
+    # weapon. Both rules were in the PROMPT only, and the model broke both
+    # in one reply -- two robes, plus a 1H sword offered to a pet already
+    # holding a 2H.
+    held_2h = False
+    held_weapons = 0
+    for _hnm in list(pet_inv.values()):
+        try:
+            _hl = await _il2(_hnm)
+        except Exception:
+            _hl = None
+        if _pet_category(_hl) == "WEAPON":
+            held_weapons += 1
+            if _is_2h(_hl):
+                held_2h = True
+    claimed: set = set()
     for ph in _clean_list(data.get("pet_gear"), ("item", "slot", "why"),
                           cap=max(0, int(pet_slots)),
                           require="item"):
@@ -2014,6 +2060,33 @@ async def generate_gear_advice(ctx: dict) -> dict:
                 logger.info("Dropped pet-gear rec - %s is strictly worse "
                             "than held %s", ph["item"], dominated_by)
                 continue
+        cat = _pet_category(rline)
+        if cat == "WEAPON":
+            # A held 2H occupies both hands; nothing else can be added.
+            if held_2h:
+                logger.info("Dropped pet-gear rec — pet holds a 2H, no room "
+                            "for %s", ph["item"])
+                continue
+            if _is_2h(rline) and (held_weapons or "WEAPON" in claimed):
+                logger.info("Dropped pet-gear rec — 2H %s cannot join "
+                            "another weapon", ph["item"])
+                continue
+            if held_weapons + sum(1 for c in claimed if c == "WEAPON") >= 2:
+                logger.info("Dropped pet-gear rec — pet already has two "
+                            "weapons: %s", ph["item"])
+                continue
+            claimed.add("WEAPON")
+            held_weapons += 1
+            if _is_2h(rline):
+                held_2h = True
+        elif cat:
+            # a SWAP for a held item of the same kind is fine; a second
+            # recommendation of that kind is not
+            if cat in claimed:
+                logger.info("Dropped pet-gear rec — %s is a second %s",
+                            ph["item"], cat)
+                continue
+            claimed.add(cat)
         ph["where"] = where
         pet_gear.append(ph)
     table = _full_slot_table(slots, ctx.get("worn"))
