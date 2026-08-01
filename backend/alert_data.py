@@ -502,6 +502,14 @@ ABILITY_COOLDOWNS = {
     "lay on hands": 900,
     "harm touch": 1200,
     "quick buff": 600,
+    # 90s, MEASURED: 547 gaps between "You mend your wounds" in a real log
+    # have a hard floor at 90 with everything above it clustered tight
+    # (90, 91, 91, 91, 92...), and the player confirms 1m30s. Unlike Lay on
+    # Hands and Harm Touch, Mend prints NO "you can use the ability again"
+    # oracle line, so nothing ever snaps this timer to the truth -- the
+    # number has to be right on its own, which is why it was measured
+    # rather than carried over from the EverQuest this reimagines.
+    "mend": 90,
 }
 # melee verb -> (cooldown timer to reduce, seconds shaved per landing)
 COOLDOWN_SHAVES = {

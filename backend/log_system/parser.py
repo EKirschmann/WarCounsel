@@ -160,7 +160,10 @@ RE_GROUP_SELF_OUT = re.compile(
     r"^You have been removed from the group\.|^Your group has been disbanded")
 RE_SUMMONED = re.compile(r"^You have been summoned!")
 RE_STUNNED = re.compile(r"^You are stunned!")
-RE_MEND = re.compile(r"^You mend your wounds and heal some damage\.")
+# Improved Mend (AA) prints "You magically mend your wounds and heal
+# considerable damage." -- same ability, same cooldown, and it fired 25
+# times in a real log while matching nothing.
+RE_MEND = re.compile(r"^You (?:magically )?mend your wounds")
 RE_HIDE_OK = re.compile(r"^You have hidden yourself from view\.")
 RE_HIDE_FAIL = re.compile(r"^You failed to hide yourself\.")
 RE_SNEAK_OK = re.compile(r"^You are as quiet as a cat stalking its prey\.")

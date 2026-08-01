@@ -4,6 +4,20 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.2.1 — 2026-08-01
+
+**Mend now shows a timer.** Monk Mend has a 90-second re-use and nothing
+was tracking it. The ability was already parsed; it simply never started a
+countdown.
+
+Improved Mend ("You magically mend your wounds...") is recognised as the
+same ability — it had been firing and matching nothing at all.
+
+Note that Mend, unlike Lay on Hands, never prints a "you can use the
+ability again in..." line, so this timer has nothing to correct itself
+against. The 90 seconds was measured across 547 uses in a real log and
+confirmed in game.
+
 ## v2.2.0 — 2026-08-01
 
 **You can now tell the app who is in your group.** It could only ever

@@ -909,6 +909,13 @@ class CharacterTracker:
                 self._start_timer(e.name, e.seconds, "raid", e.ts)
             elif isinstance(e, ev.AbilityActivate):
                 self._start_cooldown(e.name, e.ts)
+            elif isinstance(e, ev.Mend):
+                # Mend announces its RESULT, never its activation -- no cast
+                # line, and unlike Lay on Hands no "you can use the ability
+                # again" readout ever prints, so nothing will correct this
+                # timer later. The heal message is the only evidence it
+                # fired, and the duration has to stand on its own.
+                self._start_cooldown("Mend", e.ts)
             elif isinstance(e, ev.CooldownReadout):
                 # the game's own remaining-time oracle — snap to it
                 self._start_timer(f"{strip_tier(e.name)} ready", e.seconds,
