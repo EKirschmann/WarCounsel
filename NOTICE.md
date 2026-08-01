@@ -90,6 +90,26 @@ Not everything the app shows carries the same confidence, so:
 - **Deliberately absent** — ZEM multipliers. The wiki withholds them on
   purpose, so nothing here estimates them.
 
+## Design patterns adopted from other parsers
+
+No code is vendored from either project; both were read for approach after
+hitting the same problems independently, and both are credited here because
+they changed decisions in this codebase.
+
+- **EQLogParser** (kauffman12) — Apache-2.0. Its statement that the client
+  "does not tell the parser which names are players, pets, or NPCs so it
+  has to guess based on context", and its answer of user-curated Verified
+  Players / Verified Pets lists, confirmed the manual group-approval design
+  here. Its signal precedence -- roster > targeting > /who > class-unique
+  spell -- is the basis for inferring a class from casts. Its note that
+  charm pets cannot be told from an NPC of the same name matches the limit
+  documented in CLAUDE.md.
+- **EQBuddy** (DranakCorps-bot) — MIT. Already credited above for the
+  active-time rate buckets. The bounded window in which a groupmate may
+  hold an encounter open (~20s past your own last action) follows its
+  combat-clock rule; without a bound a busy zone holds one fight open all
+  night.
+
 ## Trademarks
 
 EverQuest and EverQuest Legends are trademarks of their respective owners.
