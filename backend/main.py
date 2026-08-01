@@ -31,7 +31,7 @@ from backend.agent.graph import get_agent
 from backend.agent.state import AgentState, ProfileData
 from backend.config import detect_game_dir, settings
 from backend.game_data import hunting_candidates, spell_classes
-from backend import session_state
+from backend import item_facts, session_state
 from backend.geometry_system import geometry3d_for_zone, geometry_for_zone
 from backend.log_system import LogWatcher, discover_log_file
 from backend.log_system.parser import extract_character_from_filename, parse_line
@@ -963,6 +963,32 @@ async def get_spellbook():
 async def get_events(limit: int = 100):
     items = list(tracker.ledger)[-limit:]
     return {"events": items}
+
+
+@app.post("/api/item-stats")
+async def post_item_stats(body: dict):
+    """Correct an item's stats from what the player can actually see.
+
+    eqlwiki carries some classic-era pages verbatim, and a wrong number
+    survives every gate we have: the item is owned, it fits the slot, it is
+    class-usable, so the only thing that could catch it is someone reading
+    the item. Marked as an override so it beats the page rather than only
+    filling a gap.
+    """
+    name = (body.get("name") or "").strip()
+    stats = (body.get("stats") or "").strip()
+    if not name or not stats:
+        raise HTTPException(400, "name and stats are required")
+    global _advice_cache, _gear_cache
+    item_facts.set_stats(body.get("item_id") or 0, stats,
+                         int(body.get("rank") or 0),
+                         slot=body.get("slot"), name=name,
+                         override=bool(body.get("override", True)))
+    # a consult already on screen was reasoning about the OLD numbers
+    _advice_cache = None
+    _gear_cache = None
+    _save_advice_cache()
+    return {"ok": True, "name": name, "stats": stats}
 
 
 def _launch_bound() -> str:

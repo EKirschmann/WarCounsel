@@ -633,6 +633,18 @@ async def item_line(name: str) -> Optional[str]:
     """Compact stat line for an item (wiki, cached 24h). None = no page or
     not equipment."""
     base = _strip_upgrade(name)
+    # A player CORRECTION outranks the page. _supplied_line below is the
+    # gap-filler and stays a last resort; this is the other case -- the
+    # wiki has a page and it is wrong for this game. Checked before the
+    # cache so a correction takes effect immediately rather than after the
+    # 24h item_line2 entry expires.
+    try:
+        from backend import item_facts
+        ov = item_facts.override_for(0, base)
+    except Exception:
+        ov = None
+    if ov:
+        return ov[0]
     key = base.lower()
     cached = wiki_page_cache.get("item_line2", key)
     if cached is not None:

@@ -111,8 +111,19 @@ PRESCALED = "PRE-SCALED"
 
 
 def set_stats(item_id, stats: str, rank: int, slot: Optional[str] = None,
-              name: Optional[str] = None) -> None:
+              name: Optional[str] = None, override: bool = False) -> None:
     """Record stats a PLAYER supplied for a wiki-less item.
+
+    `override` marks the reading as beating the wiki rather than merely
+    filling a gap. Normally a supplied stat is a LAST resort, because the
+    wiki carries base (+0) values that scale to any rank while a hand-read
+    figure is pinned to the rank it was read at. That is right when the
+    wiki is SILENT and wrong when it is MISTAKEN: eqlwiki carries some
+    classic-era item pages verbatim (a Leatherfoot Raider Skullcap listed
+    at AC 7 with three stats and a Ring of Commons click reads AC 4 and
+    nothing else in game), and no amount of correct scaling rescues a
+    number describing a different game. A player holding the item outranks
+    that page.
 
     `stats` is a compact wiki-shaped line ("Slot: CHEST; AC: 8; ...") so
     every existing consumer -- _fits_slot, item_stat_vector, weapon_indices,
@@ -122,11 +133,12 @@ def set_stats(item_id, stats: str, rank: int, slot: Optional[str] = None,
     """
     facts = _load()
     with _lock:
-        key = str(int(item_id))
+        key = _key_for(item_id, name)
         rec = facts.setdefault(key, {})
         rec["stats"] = stats.strip()
         rec["stats_rank"] = int(rank)
         rec["stats_source"] = "user"
+        rec["stats_override"] = bool(override)
         if slot:
             rec["slot"] = slot
         if name:
@@ -134,6 +146,50 @@ def set_stats(item_id, stats: str, rank: int, slot: Optional[str] = None,
         rec["learned"] = datetime.now().isoformat(timespec="seconds")
         _save(facts)
     reset_cache()
+
+
+def override_for(item_id, name: str = "") -> Optional[tuple]:
+    """(line, rank) only when the player marked the reading authoritative."""
+    rec = _record(item_id, name)
+    if not rec or not rec.get("stats") or not rec.get("stats_override"):
+        return None
+    return rec["stats"], int(rec.get("stats_rank") or 0)
+
+
+def _record(item_id, name: str = "") -> Optional[dict]:
+    facts = _load()
+    rec = None
+    try:
+        n = int(item_id or 0)
+    except (TypeError, ValueError):
+        n = 0
+    if n:
+        rec = facts.get(str(n))
+    if not rec and name:
+        rec = facts.get("name:" + _base(name).lower())
+    if not rec and name:
+        b = _base(name).lower()
+        rec = next((r for r in _load().values()
+                    if (r.get("name") or "").lower() == b and r.get("stats")),
+                   None)
+    return rec
+
+
+def _key_for(item_id, name: Optional[str]) -> str:
+    """Storage key: the item ID when we have one, else the item NAME.
+
+    An id is stable across +N merges and is the right key whenever the
+    export supplies one. But a correction can be made for an item we have
+    no id for, and `str(int(item_id or 0))` turned every such record into
+    the key "0" -- one shared slot that the next lookup with no id would
+    return for ANY item. Caught immediately: correcting a Leatherfoot
+    Raider Skullcap made a Ringmail Coif report the skullcap's stats.
+    """
+    try:
+        n = int(item_id or 0)
+    except (TypeError, ValueError):
+        n = 0
+    return str(n) if n else "name:" + _base(name or "").lower()
 
 
 def stats_for(item_id, name: str = "") -> Optional[tuple]:
