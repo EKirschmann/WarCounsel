@@ -818,7 +818,11 @@ async def _builtin_gear(ctx: dict) -> dict:
                     fs = (item_facts.slot_for_id(it.get("id"))
                           or item_facts.slot_for_name(nm))
                     if fs and fs.strip().lower() == base_slot:
-                        fallback = it
+                        fallback = (it, "fills an empty slot — you have worn "
+                                    "this item before, so its slot is known "
+                                    "from your own export. Its STATS are not "
+                                    "on the wiki, so this is not a stat "
+                                    "comparison")
                 continue
             if not await _fits_slot(nm, slot):
                 continue
@@ -827,6 +831,27 @@ async def _builtin_gear(ctx: dict) -> dict:
             scaled = scale_item_line(line, _item_rank(nm))
             vec = item_stat_vector(scaled)
             if not vec:
+                # The wiki page EXISTS and names the slot, but carries no
+                # numbers -- common on EQL for plain jewellery. Refusing it
+                # is right when REPLACING something (there is nothing to
+                # compare against the worn item) and wrong when FILLING:
+                # an earring in an empty ear slot beats an empty ear slot,
+                # whatever its stats turn out to be. Reported live -- a
+                # Mithril Earring +4 sat in a bag while the second ear read
+                # "nothing owned equips here", a verdict on a comparison
+                # that never ran.
+                #
+                # Weapons stay out: an unmeasurable weapon in an empty hand
+                # is a judgement call the index cannot make, and the empty
+                # off-hand already has its own reasoned path.
+                if not cur and not hand:
+                    better = (fallback is None
+                              or _item_rank(nm) > _item_rank(fallback[0]["name"]))
+                    if better:
+                        fallback = (it, "fills an empty slot — the wiki "
+                                    "lists its slot but no stats, so this "
+                                    "is not a stat comparison. Anything "
+                                    "here beats nothing")
                 continue
             if hand:
                 wi = _wpn_index(scaled, lvl)
@@ -854,14 +879,11 @@ async def _builtin_gear(ctx: dict) -> dict:
             if champ is None or gain > champ[0]:
                 champ = (gain, it, shown)
         if champ is None and fallback is not None:
+            fb, fb_why = fallback
             recs.append({"slot": slot, "current": cur,
-                         "recommend": fallback["name"],
-                         "why": "fills an empty slot — you have worn this "
-                                "item before, so its slot is known from your "
-                                "own export. Its STATS are not on the wiki, "
-                                "so this is not a stat comparison",
-                         "where": fallback["where"]})
-            used.add(fallback["name"].lower())
+                         "recommend": fb["name"], "why": fb_why,
+                         "where": fb["where"]})
+            used.add(fb["name"].lower())
             continue
         if champ:
             it = champ[1]
