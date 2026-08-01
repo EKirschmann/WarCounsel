@@ -42,6 +42,13 @@ PERSIST_FIELDS = [
     "pending_sessions", "stuns_taken", "overheal", "motes",
     "stuns_landed", "mez_applied", "mods",
     "_last_aa_seen", "_last_aa_name",
+    # WHO IS IN THE GROUP. Not persisting this was survivable while the
+    # meter gate failed OPEN -- a restart just meant crediting everyone
+    # again. Now that it fails closed, an empty roster credits NOBODY, so
+    # a reload made the player's entire party vanish from the meter until
+    # someone happened to speak in group chat again. In dev that is every
+    # time a .py file is touched.
+    "group_members",
 ]
 _DEQUES = {"loots": 20, "ledger": 300, "encounter_history": 5}
 
@@ -96,6 +103,7 @@ def restore(tracker, data: dict) -> None:
             v = deque(v, maxlen=_DEQUES[f])
         elif f == "_last_kill" and v is not None:
             v = tuple(v)
-        elif f in ("spell_casts", "_active_buckets") and v is not None:
+        elif f in ("spell_casts", "_active_buckets", "unknown_casts",
+                   "group_members") and v is not None:
             v = set(v)
         setattr(tracker, f, v)
