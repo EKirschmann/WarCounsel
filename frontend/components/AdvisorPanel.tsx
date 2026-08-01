@@ -132,6 +132,66 @@ function HuntChart({ data, picked }: { data: HuntingData; picked: string[] }) {
  *  and picks for the current zone. The backend grounds the counsel in EQL
  *  wiki data (via MCP) and generates it with the configured LLM, caching it
  *  until the character context changes. */
+
+/** Correct an item's stats from what the player can actually read in game.
+ *
+ * eqlwiki item pages are community-written: some are stubs with no stat
+ * block, some carry classic-era numbers for an item EQL rebalanced. Every
+ * gate we have -- owned, fits the slot, class-usable -- passes a wrong
+ * number happily, so the person holding the item is the only check left.
+ * Slot and Class are NOT asked for: the wiki gets those right and they are
+ * what gate the item, so a typo there would do real damage. */
+function StatFix({ name, onSaved }: { name: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="adv-statfix-open"
+        title={`Correct the stats recorded for ${name}`}
+        onClick={() => setOpen(true)}
+      >
+        stats?
+      </button>
+    );
+  }
+  const save = () => {
+    const v = draft.trim();
+    if (!v || busy) return;
+    setBusy(true);
+    apiSend("/api/item-stats", { name, stats: v, rank: 0 })
+      .then(() => {
+        setOpen(false);
+        setDraft("");
+        onSaved();
+      })
+      .finally(() => setBusy(false));
+  };
+  return (
+    <span className="adv-statfix">
+      <input
+        autoFocus
+        value={draft}
+        placeholder="AC: 6; STR: +5"
+        aria-label={`Stats for ${name}`}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") setOpen(false);
+        }}
+      />
+      <button type="button" onClick={save} disabled={busy}>
+        {busy ? "…" : "Save"}
+      </button>
+      <button type="button" onClick={() => setOpen(false)}>
+        Cancel
+      </button>
+    </span>
+  );
+}
+
 export const AdvisorPanel = memo(function AdvisorPanel({
   snap,
   onSnapChange,
@@ -845,7 +905,16 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                         }
                       >
                         <td className="adv-cls">{s.slot}</td>
-                        <td>{s.current ? <ItemHover name={s.current} /> : "—"}</td>
+                        <td>
+                          {s.current ? (
+                            <>
+                              <ItemHover name={s.current} />
+                              <StatFix name={s.current} onSaved={() => consultGear(true)} />
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td>
                           <strong>{s.recommend ? <ItemHover name={s.recommend} /> : "—"}</strong>
                           {s.where && (

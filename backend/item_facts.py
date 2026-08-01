@@ -148,12 +148,29 @@ def set_stats(item_id, stats: str, rank: int, slot: Optional[str] = None,
     reset_cache()
 
 
+def _marked(rec: dict) -> tuple:
+    """(line, rank), with PRE-SCALED applied when the numbers are not base.
+
+    A player reads stats off the item at its CURRENT +N, while the wiki
+    slider expects BASE values -- so scaling a supplied figure again
+    inflates it (AC 6 read at +4 came back as AC 10). PRESCALED was defined
+    for exactly this and never actually applied to a line, so the guard in
+    scale_item_line() had nothing to see. Applied on READ so records stored
+    before this get it too.
+    """
+    line = rec["stats"]
+    rank = int(rec.get("stats_rank") or 0)
+    if rank and PRESCALED not in line:
+        line = line + "; " + PRESCALED
+    return line, rank
+
+
 def override_for(item_id, name: str = "") -> Optional[tuple]:
     """(line, rank) only when the player marked the reading authoritative."""
     rec = _record(item_id, name)
     if not rec or not rec.get("stats") or not rec.get("stats_override"):
         return None
-    return rec["stats"], int(rec.get("stats_rank") or 0)
+    return _marked(rec)
 
 
 def _record(item_id, name: str = "") -> Optional[dict]:
@@ -206,7 +223,7 @@ def stats_for(item_id, name: str = "") -> Optional[tuple]:
                    None)
     if not rec or not rec.get("stats"):
         return None
-    return rec["stats"], int(rec.get("stats_rank") or 0)
+    return _marked(rec)
 
 
 def slot_for_id(item_id) -> Optional[str]:

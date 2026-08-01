@@ -979,6 +979,28 @@ async def post_item_stats(body: dict):
     stats = (body.get("stats") or "").strip()
     if not name or not stats:
         raise HTTPException(400, "name and stats are required")
+    # Accept just the NUMBERS ("AC: 6") and keep the wiki's Slot and Class.
+    # Those two are what gate the item -- which slot it fits, who may wear
+    # it -- and they are the parts the wiki gets right; what it misses or
+    # mis-states is the stat block. Making the player retype them would
+    # invite a typo that silently un-gates an item.
+    if "slot:" not in stats.lower():
+        try:
+            from backend.game_data import item_line
+            existing = await item_line(name)
+        except Exception:
+            existing = None
+        keep = []
+        for part in (existing or "").split(";"):
+            t = part.strip()
+            if t.lower().startswith(("slot:", "class:", "skill:", "race:")):
+                keep.append(t)
+            elif "|" in t:  # drop the drops/vendor tail
+                break
+        if keep:
+            head = [k for k in keep if k.lower().startswith("slot:")]
+            tail = [k for k in keep if not k.lower().startswith("slot:")]
+            stats = "; ".join(head + [stats] + tail)
     global _advice_cache, _gear_cache
     item_facts.set_stats(body.get("item_id") or 0, stats,
                          int(body.get("rank") or 0),

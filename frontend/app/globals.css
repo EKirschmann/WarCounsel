@@ -2238,3 +2238,50 @@ button.app-version:hover { color: var(--gold-bright); }
   white-space: nowrap;
   border: 0;
 }
+
+/* --- Correct an item's stats -------------------------------------------
+   Sits beside an item name in the gear table. Quiet by default: it is an
+   escape hatch for a wrong wiki page, not something to reach for every
+   time, so it must not compete with the recommendation it sits next to. */
+.adv-statfix-open {
+  font: inherit;
+  font-size: 10px;
+  margin-left: 6px;
+  padding: 0 4px;
+  color: var(--ink-dim, rgba(226, 222, 214, .55));
+  background: transparent;
+  border: 1px solid rgba(200, 170, 110, .22);
+  border-radius: 0;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.adv-statfix-open:hover {
+  color: var(--gold, #c8aa6e);
+  border-color: rgba(200, 170, 110, .5);
+}
+.adv-statfix-open:focus-visible {
+  outline: 2px solid var(--gold, #c8aa6e);
+  outline-offset: 1px;
+}
+.adv-statfix { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; }
+.adv-statfix input {
+  font: inherit;
+  font-size: 11px;
+  width: 15ch;
+  padding: 1px 4px;
+  color: inherit;
+  background: rgba(0, 0, 0, .3);
+  border: 1px solid rgba(200, 170, 110, .4);
+  border-radius: 0;
+}
+.adv-statfix button {
+  font: inherit;
+  font-size: 10px;
+  padding: 1px 5px;
+  color: var(--gold, #c8aa6e);
+  background: transparent;
+  border: 1px solid rgba(200, 170, 110, .34);
+  border-radius: 0;
+  cursor: pointer;
+}
+.adv-statfix button:disabled { opacity: .5; cursor: default; }
