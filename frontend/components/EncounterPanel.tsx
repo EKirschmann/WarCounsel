@@ -282,6 +282,9 @@ export const EncounterPanel = memo(function EncounterPanel({
                   the tagger&apos;s group hurt a mob, so anyone in most of your fights is
                   grouped — a passer-by on a same-named mob shows up once or twice.
                   Names drop off on their own once they stop hitting your targets.
+                  Rows marked <span className="enc-tag">pet?</span> have never shown up in a
+                  /who and have never spoken, so they are most likely someone&apos;s pet —
+                  they are listed last and are usually safe to ignore.
                 </p>
                 <table className="enc-table">
                   <thead>
@@ -298,10 +301,18 @@ export const EncounterPanel = memo(function EncounterPanel({
                     {(filtered ?? [])
                       .filter((f) => !ruled[f.name])
                       .map((f) => (
-                        <tr key={f.name}>
+                        <tr key={f.name} data-dim={f.pet ? "1" : undefined}>
                           <td className="enc-name">
                             <span className="enc-rule" aria-hidden />
                             {f.name}
+                            {f.pet && (
+                              <span
+                                className="enc-tag"
+                                title="Never appeared in a /who and has never spoken — most likely someone's pet. One word in chat clears this."
+                              >
+                                pet?
+                              </span>
+                            )}
                           </td>
                           <td>
                             {f.fights} <span className="enc-share">({f.share}%)</span>

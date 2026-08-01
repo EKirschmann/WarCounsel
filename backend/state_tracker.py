@@ -195,6 +195,8 @@ class CharacterTracker:
         # because those are the signals that would have added them anyway,
         # and a dismissal should not outlive the thing it was about.
         self.ignored_contributors: dict = {}
+        # anyone who has spoken in any channel -- pets never do
+        self._chat_seen: set = set()
         self.inferred_classes: dict = {}
         self._infer_at: dict = {}
         self._infer_seen: set = set()
@@ -280,6 +282,28 @@ class CharacterTracker:
             # may hold the fight open. Kept apart from "last" so their
             # damage cannot bootstrap its own extension window.
             self.encounter["last_own"] = ts
+
+    def _looks_like_pet(self, name: str) -> bool:
+        """No player evidence for a name that is fighting alongside us.
+
+        A groupmate's pet with a generated name ("Jabeker hits X") is
+        TEXTUALLY IDENTICAL to a player, so there is no hard signal --
+        EQLogParser reaches the same conclusion. What we do have is the
+        absence of player evidence: a real player in the zone turns up in
+        /who and usually says something eventually, while a pet does
+        neither, ever.
+
+        Only applied once we HAVE /who data. With an empty roster this
+        would call everyone a pet, which is the failure it exists to
+        prevent. And it never drops anyone -- these move to their own
+        group, because the one case it gets wrong is a silent groupmate
+        who was not in the /who, and that is precisely who the list is for.
+        """
+        if not self.who_roster:
+            return False
+        if name in self.who_roster or name in self.group_members:
+            return False
+        return name not in self._chat_seen
 
     def trust_all(self, action: str) -> dict:
         """Apply one verdict to everyone currently on the not-counted list.
@@ -577,6 +601,8 @@ class CharacterTracker:
             # Seeds the roster where join lines cannot: log in ALREADY
             # grouped and no one ever "joined", so a join-only filter would
             # hide your real group. Speaking in group chat proves membership.
+            if e.sender:
+                self._chat_seen.add(e.sender)
             if e.channel == "group" and e.sender:
                 self.group_members.add(e.sender)
                 self.ignored_contributors.pop(e.sender, None)
@@ -1377,9 +1403,14 @@ class CharacterTracker:
                 continue
             out.append({"name": n, "damage": v["damage"],
                         "fights": v["fights"],
+                        "pet": self._looks_like_pet(n),
                         "share": (round(100 * v["fights"] / self.session_fights)
                                   if self.session_fights else 0)})
-        return sorted(out, key=lambda r: r["damage"], reverse=True)[:12]
+        out.sort(key=lambda r: r["damage"], reverse=True)
+        # People first: a pet is not a decision the player can act on, and
+        # a list led by eleven of them buries the one name that is.
+        return ([r for r in out if not r["pet"]][:12]
+                + [r for r in out if r["pet"]][:12])
 
     def trust_member(self, name: str, trust: bool = True,
                      action: str = "") -> dict:

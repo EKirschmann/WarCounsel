@@ -77,6 +77,8 @@ export interface FilteredContributor {
   fights: number;
   /** Percent of this session's fights they appeared in. */
   share: number;
+  /** No player evidence — never in a /who, never spoke. Probably a pet. */
+  pet?: boolean;
 }
 
 export interface EncounterAlly {
