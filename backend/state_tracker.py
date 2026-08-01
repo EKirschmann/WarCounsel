@@ -230,6 +230,32 @@ class CharacterTracker:
         else:
             self.encounter["last"] = ts
 
+    def _adopt_pet_damage(self, pet: str) -> None:
+        """Move damage this pet already dealt out of the ALLY bucket.
+
+        A pet fights before it identifies itself: its first swings land
+        while it is still an unknown name, so they are credited to
+        `allies`, and the mapping that arrives later only redirects FUTURE
+        damage to `own_pet`. The meter then showed the same pet twice --
+        "Jabekn (pet)" for what came after, plain "Jabekn" for what came
+        before, the second looking exactly like another player.
+
+        total_out is raised by the same amount because the ally bucket
+        never fed it: the damage was ours all along and was simply filed
+        under a stranger. Without that the "You" row, computed as
+        total_out minus the pet total, would drop by whatever we adopted.
+        """
+        enc = self.encounter
+        if not enc:
+            return
+        moved = (enc.get("allies") or {}).pop(pet, 0)
+        if not moved:
+            return
+        op = enc.setdefault("own_pet", {})
+        op[pet] = op.get(pet, 0) + moved
+        enc["total_out"] = enc.get("total_out", 0) + moved
+        self.damage_dealt += moved
+
     def _mob(self, mob: str) -> dict:
         stats = self.mob_stats.setdefault(
             mob, {"kills": 0, "xp_percent": 0.0, "loots": []})
@@ -374,6 +400,8 @@ class CharacterTracker:
                 self.pet_hint = False
             if self.pet_owners.get(e.pet) != e.owner:
                 self.pet_owners[e.pet] = e.owner
+                if (e.owner or "").lower() == (self.name or "").lower():
+                    self._adopt_pet_damage(e.pet)   # /pet leader path
                 self.pet_owners_dirty = True
         elif isinstance(e, ev.PetAttack):
             # the pet tells ONLY its master — zero-config mapping, no
@@ -382,6 +410,7 @@ class CharacterTracker:
             if self.pet_owners.get(e.pet) != self.name:
                 self.pet_owners[e.pet] = self.name
                 self.pet_owners_dirty = True
+                self._adopt_pet_damage(e.pet)
         elif isinstance(e, ev.CastBegin):
             if e.spell:  # log evidence for proc-vs-cast disambiguation
                 self.spell_casts.add(e.spell.lower())
@@ -1066,7 +1095,15 @@ class CharacterTracker:
         own_pet = enc.get("own_pet", {})
         pet_total = sum(own_pet.values())
         for pname, pdmg in own_pet.items():
-            label = pname if pname.lower() != f"{self.name} pet".lower() else "Pet"
+            # A mapped pet carries a GENERATED name (Jabekn, Kobantik), which
+            # on a meter reads exactly like another player -- and the whole
+            # point of splitting it out of "You" is that you can tell them
+            # apart. Ally pets were already tagged "<owner> (pet)"; own pets
+            # were not, so they were the one contributor row with no clue
+            # what it was. The "<name> pet" convention needs no suffix: it
+            # already says pet.
+            label = ("Pet" if pname.lower() == f"{self.name} pet".lower()
+                     else f"{pname} (pet)")
             allies.append({"name": label, "damage": pdmg,
                            "dps": round(pdmg / duration, 1),
                            "level": None, "classes": None, "is_pet": True})
