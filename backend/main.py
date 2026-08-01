@@ -674,7 +674,8 @@ async def post_group_trust(body: dict):
     player knows; this is the seam where they can say so.
     """
     res = tracker.trust_member(body.get("name", ""),
-                               bool(body.get("trust", True)))
+                               bool(body.get("trust", True)),
+                               action=(body.get("action") or ""))
     if not res.get("ok"):
         raise HTTPException(400, res.get("error", "bad request"))
     session_state.save(tracker, watcher.log_file if watcher else "",

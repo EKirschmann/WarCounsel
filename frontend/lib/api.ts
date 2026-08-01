@@ -38,10 +38,17 @@ export async function apiSend<T>(
   return res.json();
 }
 
-/** Say by hand whether someone is grouped with you. */
-export async function trustMember(name: string, trust: boolean) {
-  return apiSend<{ name: string; trusted: boolean; adopted?: number; group: string[] }>(
-    "/api/group/trust",
-    { name, trust },
-  );
+/** Say by hand whether someone is grouped with you.
+ *
+ * "ignore" is not the opposite of "add" — it holds only until a join line,
+ * an invite or a word in group chat proves otherwise, since those are the
+ * signals that would have added them anyway. */
+export async function trustMember(name: string, action: "add" | "ignore") {
+  return apiSend<{
+    name: string;
+    trusted?: boolean;
+    ignored?: boolean;
+    adopted?: number;
+    group: string[];
+  }>("/api/group/trust", { name, action, trust: action === "add" });
 }

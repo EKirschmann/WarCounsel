@@ -30,6 +30,11 @@ COMBAT_TIMEOUT_SECONDS = 8
 # reason. Only CONFIRMED groupmates extend: before the roster was
 # trustworthy this could not be done at all.
 GROUP_EXTEND_SECONDS = 20
+
+# How long a filtered contributor stays on the "not counted" list after
+# their last hit. Long enough to decide, short enough that the list stays
+# a question rather than a session ledger.
+FILTERED_TTL_S = 300
 LEDGER_SIZE = 300
 REWARD_WINDOW_SECONDS = 3  # XP/coin <-> kill attribution window
 
@@ -176,6 +181,11 @@ class CharacterTracker:
         self.filtered_seen: dict = {}
         # class -> the class-unique spell that proved it. Evidence only:
         # never written into class_str (see _infer_class).
+        # Names the player said are NOT grouped. Held until EVIDENCE
+        # contradicts it -- a join line, an invite, a word in group chat --
+        # because those are the signals that would have added them anyway,
+        # and a dismissal should not outlive the thing it was about.
+        self.ignored_contributors: dict = {}
         self.inferred_classes: dict = {}
         self._infer_at: dict = {}
         self._infer_seen: set = set()
@@ -533,6 +543,10 @@ class CharacterTracker:
                 self.group_members.clear()   # removed/disbanded
             elif e.joined:
                 self.group_members.add(e.name)
+                # A join line is proof, and proof outranks a dismissal made
+                # before it: whoever was ignored has now demonstrably
+                # joined, so the ignore has nothing left to describe.
+                self.ignored_contributors.pop(e.name, None)
             else:
                 self.group_members.discard(e.name)
         elif isinstance(e, ev.GroupChat):
@@ -541,6 +555,7 @@ class CharacterTracker:
             # hide your real group. Speaking in group chat proves membership.
             if e.channel == "group" and e.sender:
                 self.group_members.add(e.sender)
+                self.ignored_contributors.pop(e.sender, None)
         elif isinstance(e, ev.Composition):
             # the log's own trio line — authoritative like /who
             from backend.log_system.parser import CLASS_ABBREV as _CA
@@ -725,6 +740,7 @@ class CharacterTracker:
                             seen = self.filtered_seen.setdefault(
                                 e.attacker, {"damage": 0, "fights": 0})
                             seen["damage"] += e.damage
+                            seen["last"] = e.ts
                             if first:
                                 seen["fights"] += 1
                         elif owner:
@@ -1322,13 +1338,27 @@ class CharacterTracker:
         a same-named mob shows up once or twice. That is a judgement the
         player makes instantly and no log line states outright.
         """
-        out = [{"name": n, "damage": v["damage"], "fights": v["fights"],
-                "share": (round(100 * v["fights"] / self.session_fights)
-                          if self.session_fights else 0)}
-               for n, v in self.filtered_seen.items()]
+        now = self.last_event_at
+        out = []
+        for n, v in self.filtered_seen.items():
+            if n in self.ignored_contributors:
+                continue
+            # A contributor who stopped contributing is a question that
+            # answered itself -- they zoned, died or moved on. Keeping them
+            # turns a short decision list into a session-long ledger.
+            # Measured in LOG time, so an idle night does not age out a
+            # group that is simply between pulls.
+            last = v.get("last")
+            if now and last and (now - last).total_seconds() > FILTERED_TTL_S:
+                continue
+            out.append({"name": n, "damage": v["damage"],
+                        "fights": v["fights"],
+                        "share": (round(100 * v["fights"] / self.session_fights)
+                                  if self.session_fights else 0)})
         return sorted(out, key=lambda r: r["damage"], reverse=True)[:12]
 
-    def trust_member(self, name: str, trust: bool = True) -> dict:
+    def trust_member(self, name: str, trust: bool = True,
+                     action: str = "") -> dict:
         """Add or remove someone from the group roster by hand.
 
         The automatic signals -- an invite accepted, a join line, a line of
@@ -1343,10 +1373,17 @@ class CharacterTracker:
         name = (name or "").strip()
         if not name:
             return {"ok": False, "error": "no name"}
+        if action == "ignore":
+            self.ignored_contributors[name] = self.last_event_at
+            self.group_members.discard(name)
+            return {"ok": True, "name": name, "ignored": True,
+                    "group": sorted(self.group_members)}
         if not trust:
             self.group_members.discard(name)
+            self.ignored_contributors.pop(name, None)
             return {"ok": True, "name": name, "trusted": False,
                     "group": sorted(self.group_members)}
+        self.ignored_contributors.pop(name, None)
         self.group_members.add(name)
         self.filtered_seen.pop(name, None)
         moved = 0

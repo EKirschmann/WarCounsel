@@ -52,6 +52,7 @@ PERSIST_FIELDS = [
     # ...and who we HID, so the approve list is not blank after a reload.
     "filtered_seen", "session_fights",
     "inferred_classes", "_infer_seen", "_infer_at",
+    "ignored_contributors",
 ]
 _DEQUES = {"loots": 20, "ledger": 300, "encounter_history": 5}
 

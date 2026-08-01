@@ -2285,3 +2285,17 @@ button.app-version:hover { color: var(--gold-bright); }
   cursor: pointer;
 }
 .adv-statfix button:disabled { opacity: .5; cursor: default; }
+
+/* Two verdicts on one row: Add counts them, Ignore hides them until the
+   log proves otherwise. Ignore is the quieter of the pair — it is the
+   reversible one, and the destructive-looking option should not be the
+   loud one. */
+.enc-trust-cell { display: flex; gap: 4px; justify-content: flex-end; }
+.enc-trust[data-act="ignore"] {
+  color: var(--ink-dim, rgba(226, 222, 214, .58));
+  border-color: rgba(200, 170, 110, .2);
+}
+.enc-trust[data-act="ignore"]:hover {
+  color: var(--ink, #e2ded6);
+  background: rgba(255, 255, 255, .05);
+}

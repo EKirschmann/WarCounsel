@@ -273,6 +273,7 @@ export const EncounterPanel = memo(function EncounterPanel({
                   Damage from people we can&apos;t confirm are in your group. EQL only lets
                   the tagger&apos;s group hurt a mob, so anyone in most of your fights is
                   grouped — a passer-by on a same-named mob shows up once or twice.
+                  Names drop off on their own once they stop hitting your targets.
                 </p>
                 <table className="enc-table">
                   <thead>
@@ -281,7 +282,7 @@ export const EncounterPanel = memo(function EncounterPanel({
                       <th scope="col">In your fights</th>
                       <th scope="col">Damage</th>
                       <th scope="col">
-                        <span className="sr-only">Add to group</span>
+                        <span className="sr-only">Add to group or ignore</span>
                       </th>
                     </tr>
                   </thead>
@@ -298,23 +299,32 @@ export const EncounterPanel = memo(function EncounterPanel({
                             {f.fights} <span className="enc-share">({f.share}%)</span>
                           </td>
                           <td>{fmt(f.damage)}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="enc-trust"
-                              onClick={() => {
-                                setRuled((r) => ({ ...r, [f.name]: true }));
-                                trustMember(f.name, true).catch(() =>
-                                  setRuled((r) => {
-                                    const n = { ...r };
-                                    delete n[f.name];
-                                    return n;
-                                  }),
-                                );
-                              }}
-                            >
-                              Add to group
-                            </button>
+                          <td className="enc-trust-cell">
+                            {(["add", "ignore"] as const).map((act) => (
+                              <button
+                                key={act}
+                                type="button"
+                                className="enc-trust"
+                                data-act={act}
+                                title={
+                                  act === "add"
+                                    ? `Count ${f.name}'s damage — they are in your group`
+                                    : `Hide ${f.name} until a join, invite or group chat proves otherwise`
+                                }
+                                onClick={() => {
+                                  setRuled((r) => ({ ...r, [f.name]: true }));
+                                  trustMember(f.name, act).catch(() =>
+                                    setRuled((r) => {
+                                      const n = { ...r };
+                                      delete n[f.name];
+                                      return n;
+                                    }),
+                                  );
+                                }}
+                              >
+                                {act === "add" ? "Add" : "Ignore"}
+                              </button>
+                            ))}
                           </td>
                         </tr>
                       ))}
