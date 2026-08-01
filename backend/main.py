@@ -659,7 +659,15 @@ async def health():
 @app.get("/api/group")
 async def get_group():
     """The roster, plus the contributors we are hiding from the meter."""
-    return {"group": sorted(tracker.group_members),
+    from backend.state_tracker import GROUP_CAP
+    roster = sorted(tracker.group_members)
+    return {"group": roster,
+            "cap": GROUP_CAP,
+            # More names than a group can hold means at least one is wrong,
+            # and a wrong name credits damage that is not yours -- the
+            # roster both gates the meter and extends the combat clock.
+            "over_cap": len(roster) > GROUP_CAP,
+            "ignored": sorted(tracker.ignored_contributors),
             "filtered": tracker.filtered_view(),
             "fights": tracker.session_fights}
 

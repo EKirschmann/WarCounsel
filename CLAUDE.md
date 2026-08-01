@@ -832,6 +832,15 @@ and exact. Stats stay wiki-only and are still REFUSED when missing.
 
 ## Group-filtered meter rows
 
+**AN EQL GROUP HOLDS FOUR.** Not the six of the EverQuest this reimagines.
+Player-supplied; nothing in the log states it, and assuming the classic
+number is the same error the wiki's classic-era item pages make. It is a
+WARNING (`over_cap` on `/api/group`), never an enforced cap: the roster
+gates the meter and extends the combat clock, so dropping a name silently
+would hide real damage, whereas an over-full roster only means something
+wants a look.
+
+
 **EQL DOES NOT ALLOW SHARED DAMAGE.** Once a mob is tagged, only the tagger
 and their group can damage it. That single game rule is what makes the
 meter tractable: a non-groupmate landing hits on something that looks like

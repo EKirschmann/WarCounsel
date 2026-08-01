@@ -35,6 +35,15 @@ GROUP_EXTEND_SECONDS = 20
 # their last hit. Long enough to decide, short enough that the list stays
 # a question rather than a session ledger.
 FILTERED_TTL_S = 300
+
+# EQL groups hold FOUR, not the six of the EverQuest this is reimagined
+# from. Player-supplied and worth writing down: nothing in the log states
+# it, and assuming the classic number is the same mistake the wiki's
+# classic-era item pages make. Used as a WARNING, never a cap -- the
+# roster gates the meter and extends the combat clock, so silently
+# dropping a name would hide damage, while an over-full roster only means
+# something needs a look.
+GROUP_CAP = 4
 LEDGER_SIZE = 300
 REWARD_WINDOW_SECONDS = 3  # XP/coin <-> kill attribution window
 
