@@ -262,6 +262,11 @@ class CharacterTracker:
         if not enc:
             return
         moved = (enc.get("allies") or {}).pop(pet, 0)
+        # A CHARMED pet was never in the ally bucket: an NPC-shaped attacker
+        # we cannot tie to us is held in npc_pending instead, so that the
+        # thousands of mob-vs-mob swings in a busy zone do not read as
+        # "contributors we hid from you". Claim it here on the same terms.
+        moved += (enc.get("npc_pending") or {}).pop(pet, 0)
         if not moved:
             return
         op = enc.setdefault("own_pet", {})
@@ -626,6 +631,19 @@ class CharacterTracker:
                         # meaningless. Dropped outright, not counted.
                         if (who not in self.group_members
                                 and _NPC_NAME.match(who or "")):
+                            # Ambient combat -- mobs fighting each other, or
+                            # someone else's charmed pet -- EXCEPT that our
+                            # OWN charmed pet looks exactly like this until
+                            # /pet leader identifies it, and it fights first
+                            # and identifies second. Held aside so mapping
+                            # can claim it, the same way _adopt_pet_damage
+                            # claims a summoned pet's opening swings out of
+                            # the ally bucket. Never displayed and never
+                            # summed: if no mapping arrives it was ambient
+                            # after all, and the encounter takes it away.
+                            pend = enc.setdefault("npc_pending", {})
+                            if who in pend or len(pend) < 40:
+                                pend[who] = pend.get(who, 0) + e.damage
                             return
                         if who not in self.group_members:
                             ua = enc.setdefault("unattributed", {})
