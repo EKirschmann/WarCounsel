@@ -260,6 +260,38 @@ snapshot, not only `/health`, so both surfaces can explain themselves.
   errors. Exercise the render sweep (56 snapshot × preset × compact
   combinations) after touching that path.
 
+## Pets on the meter
+
+- **A pet fights BEFORE it identifies itself.** Its first swings land while
+  it is still an unknown name, so they go to `allies` — which never feeds
+  `total_out` — and the mapping that arrives later only redirects FUTURE
+  damage to `own_pet`. The result was the same pet on two rows and its
+  early damage credited to a stranger and missing from the session.
+  `_adopt_pet_damage()` folds the ally bucket in on mapping and raises
+  `total_out` AND `damage_dealt` by the same amount. That adjustment is
+  REQUIRED: the "You" row is `total_out - pet_total`, so folding without it
+  drops You by whatever was adopted. Both mapping routes (pet tell and
+  `/pet leader`) call it.
+- Own pets are labelled `<name> (pet)`, matching the `<owner> (pet)` that
+  ally pets already used. A generated pet name on a meter is otherwise
+  indistinguishable from a player. The `<name> pet` convention stays plain
+  "Pet" — it already says pet.
+
+## The overlay meter is the CURRENT fight only
+
+No last-5 aggregate: that is a slower question and the web Encounter panel
+answers it with room. Removing it also removed the encounters poller —
+`section_summary` took `history`/`segment` and used NEITHER, so once the
+aggregate went, nothing read `/api/encounters` and the overlay had been
+fetching five encounters every five seconds for data it never drew. The
+whole header now toggles Damage/DPS.
+
+**Hint lines must be MEASURED against W, not eyeballed.** The interactive
+hint was 455px of Consolas 7pt in a 300px window, so the last 40% — the
+lock and close shortcuts, the two you need when the overlay is in your way
+— was off the edge with nothing hinting more existed. Two lines now, 235px
+and 255px, checked with a font metric rather than by looking.
+
 ## Sessions (rollover + history)
 
 "Welcome to EverQuest Legends!" (login banner) is the ONE session
@@ -1168,7 +1200,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v2.1.11**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.1.12**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
 builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**

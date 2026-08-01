@@ -4,6 +4,45 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.1.12 — 2026-07-31
+
+**Your pet's damage was partly going to a stranger.** A pet fights before
+it tells the app who it belongs to, so its opening swings were credited to
+an unknown name and never counted toward your session at all — and once it
+was recognised you saw it twice on the meter, as itself and as "someone".
+Its earlier damage is now claimed the moment it is recognised, and your own
+pet is labelled "(pet)" the way other people's pets already were.
+
+**The overlay meter shows the fight you are in.** It used to hide a
+last-five-fights mode behind a click on the right of the header. That is a
+slower question, and the Encounter panel in the app answers it with room to
+spare — so the overlay does one thing, and the whole header now switches
+Damage/DPS.
+
+**The overlay's shortcut list was cut off.** With Scroll Lock on, the hint
+ran past the edge of the window and everything after "opacity" was
+invisible — including how to lock it back to click-through and how to close
+it. It wraps onto two lines now.
+
+**LM Studio: you can choose the model, and the choice sticks.** Loading a
+different model, then watching the app load the old one back, was the app
+never reading the model you picked — and there was no way to pick one in
+the first place. Settings now lists what your server has, and warns when
+the loaded model is not the one counsel will use.
+
+**Gear advice fixes.**
+- Items in an "Any Slot" are judged on stats alone. A weapon there is never
+  swung, so its damage was being counted for a slot that cannot use it.
+- The "Held" row is gone. Nothing goes in it, so a row permanently reading
+  "nothing owned equips here" was noise. It returns if an item ever fits.
+- Pet suggestions respect what a pet can wear: no two chests, and no extra
+  weapon when it is already holding a two-hander.
+- An AA has to exist. Recommendations naming abilities that are not in the
+  game are dropped rather than shown.
+
+**Per-mob coin is gone from Session hunting.** Coin is useful as a session
+total, which is still there; split across a mob list it was noise.
+
 ## v2.1.11 — 2026-07-30
 
 **Spell timers now account for the upgrade tier.** Upgrading a spell makes
