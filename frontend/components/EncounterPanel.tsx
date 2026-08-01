@@ -8,9 +8,12 @@ import type {
   EncounterAbility,
   FilteredContributor,
 } from "@/lib/types";
-import { trustMember } from "@/lib/api";
+import { trustAll, trustMember } from "@/lib/api";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
+
+/** An EQL group holds four — not the six of the game it reimagines. */
+const GROUP_CAP = 4;
 
 function fightLabel(idx: number, enc: Encounter): string {
   if (idx === 0) return enc.active ? "Active" : "Last fight";
@@ -89,6 +92,11 @@ export const EncounterPanel = memo(function EncounterPanel({
   // Names the player has ruled on this render, so a row leaves immediately
   // instead of lingering until the next snapshot lands.
   const [ruled, setRuled] = useState<Record<string, boolean>>({});
+  // Adding everyone can push the roster past what a group holds, and a
+  // wrong name credits damage that is not yours -- so that one asks twice.
+  // Ignoring everyone is reversible by any join, invite or group line, so
+  // it does not.
+  const [confirmAdd, setConfirmAdd] = useState(false);
   // Anchor the viewed pull by its start time so history shifting underneath
   // (a new fight starting) doesn't yank the panel to a different fight.
   const [viewStarted, setViewStarted] = useState<string | null>(null);
@@ -330,6 +338,47 @@ export const EncounterPanel = memo(function EncounterPanel({
                       ))}
                   </tbody>
                 </table>
+                <div className="enc-bulk">
+                  <button
+                    type="button"
+                    className="enc-trust"
+                    data-act={confirmAdd ? "warn" : "add"}
+                    onClick={() => {
+                      const names = (filtered ?? []).filter((f) => !ruled[f.name]);
+                      if (!confirmAdd && names.length > GROUP_CAP) {
+                        setConfirmAdd(true);
+                        return;
+                      }
+                      setConfirmAdd(false);
+                      setRuled((r) => {
+                        const n = { ...r };
+                        names.forEach((f) => (n[f.name] = true));
+                        return n;
+                      });
+                      trustAll("add").catch(() => setRuled({}));
+                    }}
+                  >
+                    {confirmAdd
+                      ? `Add all anyway — that is more than a group of ${GROUP_CAP}`
+                      : "Add all"}
+                  </button>
+                  <button
+                    type="button"
+                    className="enc-trust"
+                    data-act="ignore"
+                    onClick={() => {
+                      setConfirmAdd(false);
+                      setRuled((r) => {
+                        const n = { ...r };
+                        (filtered ?? []).forEach((f) => (n[f.name] = true));
+                        return n;
+                      });
+                      trustAll("ignore").catch(() => setRuled({}));
+                    }}
+                  >
+                    Ignore all
+                  </button>
+                </div>
               </div>
             )}
 

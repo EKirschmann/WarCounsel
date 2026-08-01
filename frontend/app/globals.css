@@ -2299,3 +2299,18 @@ button.app-version:hover { color: var(--gold-bright); }
   color: var(--ink, #e2ded6);
   background: rgba(255, 255, 255, .05);
 }
+
+/* Bulk verdicts, under the table they apply to. Deliberately below the
+   per-row buttons: the row-by-row call is the accurate one, and these are
+   the shortcut you reach for when the list is obviously all one thing. */
+.enc-bulk {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+.enc-trust[data-act="warn"] {
+  color: #d4574a;
+  border-color: rgba(212, 87, 74, .55);
+}
+.enc-trust[data-act="warn"]:hover { background: rgba(212, 87, 74, .12); }

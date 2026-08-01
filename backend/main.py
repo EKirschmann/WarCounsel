@@ -1022,6 +1022,18 @@ async def post_item_stats(body: dict):
     return {"ok": True, "name": name, "stats": stats}
 
 
+@app.post("/api/group/trust-all")
+async def post_group_trust_all(body: dict):
+    """Add or ignore everyone on the not-counted list in one go."""
+    action = (body.get("action") or "").strip()
+    if action not in ("add", "ignore"):
+        raise HTTPException(400, "action must be add or ignore")
+    res = tracker.trust_all(action)
+    session_state.save(tracker, watcher.log_file if watcher else "",
+                       watcher.offset if watcher else 0)
+    return res
+
+
 def _launch_bound() -> str:
     """String bound separating this era's rows from beta ones.
 

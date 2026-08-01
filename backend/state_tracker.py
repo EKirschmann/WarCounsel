@@ -281,6 +281,21 @@ class CharacterTracker:
             # damage cannot bootstrap its own extension window.
             self.encounter["last_own"] = ts
 
+    def trust_all(self, action: str) -> dict:
+        """Apply one verdict to everyone currently on the not-counted list.
+
+        Server-side rather than a loop of single calls from the browser:
+        the list ages and grows as the log moves, so a client iterating a
+        snapshot it fetched a moment ago would act on names that have since
+        left it and miss ones that arrived.
+        """
+        names = [r["name"] for r in self.filtered_view()]
+        for n in names:
+            self.trust_member(n, action == "add", action=action)
+        return {"ok": True, "action": action, "names": names,
+                "group": sorted(self.group_members),
+                "over_cap": len(self.group_members) > GROUP_CAP}
+
     def _infer_class(self, spell: str, ts=None) -> None:
         """Learn a class from a spell only WE could have cast.
 
