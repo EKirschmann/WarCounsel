@@ -807,6 +807,8 @@ async def _builtin_gear(ctx: dict) -> dict:
             cur_line, cur_vec, cur_wi = None, {}, None
         base_idx = (cur_wi or {}).get(hand, 0.0) if hand else 0.0
         champ = None
+        # best "wins some, loses some" candidate for this slot
+        trade = None
         # Wiki-less items we nonetheless know the SLOT of, because the
         # player has worn them before (item_facts learns Location from the
         # export). Good enough to FILL an empty slot -- that needs no
@@ -884,6 +886,27 @@ async def _builtin_gear(ctx: dict) -> dict:
                     b_vec = {k: v for k, v in cur_vec.items()
                              if k not in ("DMG", "DELAY")}
                 if not _pareto_beats(a_vec, b_vec):
+                    # Not a clean win -- but "wins some, loses some" is a
+                    # real trade the player can judge, and dropping it
+                    # silently let a genuinely better boot sit in a bag
+                    # while the row read "no better owned option flagged".
+                    # That phrasing claims a search found nothing; what
+                    # actually happened is a candidate lost a tiebreak we
+                    # are not qualified to call. Strict Pareto still gates
+                    # the RECOMMENDATION -- weighting AC against AGI needs
+                    # class-specific numbers we do not have -- so the trade
+                    # is surfaced rather than decided.
+                    if cur:
+                        gains = {k: a_vec.get(k, 0.0) - b_vec.get(k, 0.0)
+                                 for k in set(a_vec) | set(b_vec)
+                                 if k != "DELAY"
+                                 and a_vec.get(k, 0.0) != b_vec.get(k, 0.0)}
+                        up = {k: v for k, v in gains.items() if v > 0}
+                        down = {k: -v for k, v in gains.items() if v < 0}
+                        if up and down:
+                            score = (len(up) - len(down), sum(up.values()))
+                            if trade is None or score > trade[0]:
+                                trade = (score, it, up, down)
                     continue
                 gain = sum(a_vec.get(k, 0.0) - b_vec.get(k, 0.0)
                            for k in set(a_vec) | set(b_vec) if k != "DELAY")
@@ -897,6 +920,23 @@ async def _builtin_gear(ctx: dict) -> dict:
                          "why": "— your classes do not train Dual Wield, so "
                                 "an off-hand weapon would never swing; only "
                                 "a shield or stat item helps here"})
+            continue
+        if champ is None and trade is not None:
+            _sc, ti, up, down = trade
+            fmt = lambda d: ", ".join(
+                f"{'+' if v > 0 else ''}{v:g} {k.replace('_', ' ')}"
+                for k, v in sorted(d.items(), key=lambda kv: -abs(kv[1])))
+            recs.append({"slot": slot, "current": cur,
+                         "recommend": None, "where": ti["where"],
+                         "tradeoff": {"item": ti["name"],
+                                      "gains": fmt(up),
+                                      "losses": fmt(down),
+                                      "where": ti["where"]},
+                         "why": f"trade-off — {ti['name']} gives "
+                                f"{fmt(up)} but costs {fmt(down)}. Not "
+                                f"recommended automatically because judging "
+                                f"those against each other needs weights we "
+                                f"do not have; your call"})
             continue
         if champ is None and fallback is not None:
             fb, fb_why = fallback
@@ -1631,6 +1671,105 @@ def _is_2h(line: str) -> bool:
     return bool(re.search(r"Skill: 2H", line or ""))
 
 
+async def _tradeoffs(ctx: dict) -> list:
+    """Owned items that beat a worn one on SOME stats and lose on others.
+
+    The recommendation gate is a strict Pareto win, which is right -- it
+    never claims an upgrade it cannot prove. But a candidate that fails it
+    was silently discarded, and the row then read "keep -- no better owned
+    option flagged", which states that a search found nothing. What
+    actually happened is that a real trade lost a tiebreak we are not
+    qualified to call.
+
+    Reported live: Traveling Sollerets +4 (AC 13, STA 6, SV Cold 9) sat in
+    a bag while the worn boots (AC 11, AGI 10) held the slot, and the panel
+    said nothing. Weighing AC against AGI needs class-specific numbers we
+    do not have, so this surfaces the trade instead of deciding it.
+
+    Runs on EVERY path, like merge notices and clickies -- an LLM consult
+    was the one place this mattered most and the deterministic loop it
+    lived in does not run there.
+    """
+    # Imported HERE, matching the rest of this module -- game_data pulls in
+    # the wiki client, so advisor.py keeps these calls function-local.
+    from backend.game_data import (item_line, item_stat_vector,
+                                   scale_item_line, _trio_usable)
+    worn = ctx.get("worn") or {}
+    items = ctx.get("inventory_items") or []
+    classes = [x.strip() for x in (ctx.get("class_str") or "").split("/")
+               if x.strip()]
+    spares = [i for i in items
+              if i.get("where") != "worn" and i.get("name")]
+    if not worn or not spares:
+        return []
+    out = []
+    for slot, cur in worn.items():
+        cur = (cur or "").strip()
+        if not cur:
+            continue
+        try:
+            cur_line = await item_line(cur)
+        except (LookupError, OSError, ValueError):
+            # NOT a bare Exception. It swallowed a NameError from the
+            # imports above being absent and returned an empty list for
+            # EVERY slot -- indistinguishable from "no trades found".
+            cur_line = None
+        if not cur_line:
+            continue
+        cur_vec = item_stat_vector(scale_item_line(cur_line, _item_rank(cur)))
+        if not cur_vec:
+            continue
+        best = None
+        for it in spares:
+            nm = it["name"]
+            if _item_base(nm) == _item_base(cur):
+                continue
+            try:
+                line = await item_line(nm)
+            except Exception:
+                line = None
+            if not line or "Slot:" not in line:
+                continue
+            if not await _fits_slot(nm, slot):
+                continue
+            if classes and _trio_usable(line, classes) is False:
+                continue
+            base_slot = re.sub(r"\s+\d+$", "", slot.lower())
+            if (base_slot == "secondary" and _dual_wields(classes) is False
+                    and _is_weapon(line)):
+                continue  # no Dual Wield: an off-hand weapon never swings
+            vec = item_stat_vector(scale_item_line(line, _item_rank(nm)))
+            ref = cur_vec
+            if base_slot == "any slot":
+                # an Any Slot item is not swung -- same rule the recommender
+                # follows, or a weapon "wins" on damage it will never deal
+                vec = {k: v for k, v in vec.items()
+                       if k not in ("DMG", "DELAY", "HASTE")}
+                ref = {k: v for k, v in cur_vec.items()
+                       if k not in ("DMG", "DELAY", "HASTE")}
+            if not vec or _pareto_beats(vec, ref):
+                continue  # a clean win is the recommender's business
+            diff = {k: vec.get(k, 0.0) - ref.get(k, 0.0)
+                    for k in set(vec) | set(ref)
+                    if k != "DELAY" and vec.get(k, 0.0) != ref.get(k, 0.0)}
+            up = {k: v for k, v in diff.items() if v > 0}
+            down = {k: -v for k, v in diff.items() if v < 0}
+            if not up or not down:
+                continue
+            score = (len(up) - len(down), sum(up.values()))
+            if best is None or score > best[0]:
+                best = (score, it, up, down)
+        if best:
+            _sc, ti, up, down = best
+            fmt = lambda d: ", ".join(
+                f"{v:g} {k.replace('_', ' ')}"
+                for k, v in sorted(d.items(), key=lambda kv: -abs(kv[1])))
+            out.append({"slot": slot, "current": cur, "item": ti["name"],
+                        "where": ti.get("where"),
+                        "gains": fmt(up), "losses": fmt(down)})
+    return out
+
+
 async def _merge_opportunities(items: list, exalts: list,
                                loot_filter: Optional[dict] = None) -> list:
     """Duplicate owned EQUIPMENT is an EQL merge opportunity: two copies
@@ -1717,6 +1856,9 @@ async def generate_gear_advice(ctx: dict) -> dict:
                                              ctx.get("exaltations") or [],
                                              ctx.get("loot_filter")),
         "clickies": await _clickies(items),
+        # candidates that win some stats and lose others: real
+        # trades the strict-Pareto recommender must not claim
+        "tradeoffs": await _tradeoffs(ctx),
     }
     if not items:
         return {**base, "source": "builtin", "note":
