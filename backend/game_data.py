@@ -445,7 +445,13 @@ _ILS_SCALABLE = ("HP REGEN", "SV DISEASE", "SV POISON", "SV MAGIC",
 _ILS_STAT_RE = re.compile(
     r"(\b(?:" + "|".join(re.escape(s) for s in
                          sorted(_ILS_SCALABLE, key=len, reverse=True))
-    + r")\b)(:\s*)([+\-]?)(\d+(?:\.\d+)?)(\s*%?)")
+    + r")\b)(:\s*)([+\-]?)(\d+(?:\.\d+)?)(\s*%?)", re.I)
+# CASE-INSENSITIVE deliberately. eqlwiki writes resist lines both
+# ways -- "SV Cold: +5" on one page, "SV COLD: +3" on another -- and
+# matching only the upper form dropped the mixed-case ones SILENTLY.
+# A pair of boots then compared as though it had no cold resist at
+# all, which is invisible: the stat is not zero, it is absent, so
+# nothing looks wrong. Consumers upper-case the captured name.
 
 
 def item_rank(name: str) -> int:
@@ -570,7 +576,7 @@ def item_stat_vector(line: str) -> dict:
     m = re.search(r"Atk Delay:\s*(\d+(?:\.\d+)?)", line or "")
     if m:
         out["DELAY"] = float(m.group(1))
-    m = re.search(r"SV VOID:\s*[+]?(\d+)", line or "")
+    m = re.search(r"SV VOID:\s*[+]?(\d+)", line or "", re.I)
     if m:
         out["SV_VOID"] = float(m.group(1))
     return out
