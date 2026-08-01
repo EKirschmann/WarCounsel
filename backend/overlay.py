@@ -769,17 +769,25 @@ class OverlayMeter:
                     y = self._text_rows(c, y, loot_rows(self.snap, prefs))
                 else:
                     y = self._text_rows(c, y, progress_rows(self.snap, prefs))
+        # TWO lines when interactive. The single line was 455px of
+        # Consolas in a 300px window, so everything past "opacity" -- the
+        # lock and close shortcuts, the two you most need when the thing
+        # is in your way -- was simply off the edge with nothing to
+        # suggest more existed. Both lines are measured to fit inside W.
         hint_y = y + HINT_H // 2
         if interactive:
             c.create_text(6, hint_y, anchor="w", fill=GOLD,
                           font=("Consolas", 7),
-                          text="MOVABLE · section=fold · *=pin · c=compact "
-                               "· ±=opacity · Ctrl+Alt+X=lock · dbl-click closes")
+                          text="MOVABLE · header=dmg/dps · section=fold · *=pin")
+            c.create_text(6, hint_y + HINT_H, anchor="w", fill=GOLD,
+                          font=("Consolas", 7),
+                          text="c=compact · ±=opacity · Ctrl+Alt+X=lock · dbl=close")
+            height = y + HINT_H * 2
         else:
             c.create_text(6, hint_y, anchor="w", fill=MUTED,
                           font=("Consolas", 7),
                           text="click-through · Scroll Lock ON to interact")
-        height = y + HINT_H
+            height = y + HINT_H
         self.root.geometry(f"{W}x{height}")
         c.configure(height=height)
         self.root.after(500, self._render)
