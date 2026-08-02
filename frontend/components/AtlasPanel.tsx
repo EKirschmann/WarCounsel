@@ -14,6 +14,11 @@ interface OcrStatus {
   game_running: boolean;
   last_ok: string | null;
   error: string | null;
+  /** Second, slower region over the Inventory window's stat panel. */
+  stats_enabled?: boolean;
+  stats_seen?: string | null;
+  stats_yellow?: number | null;
+  stats?: Record<string, number>;
 }
 
 /* The Atlas renders the game's own vector map files as gold ink on dark
@@ -246,6 +251,7 @@ export const AtlasPanel = memo(function AtlasPanel({
   const [ocr, setOcr] = useState<OcrStatus | null>(null);
   const [ocrHelp, setOcrHelp] = useState(false);
   const [ocrPreview, setOcrPreview] = useState<string | null>(null);
+  const [statsPreview, setStatsPreview] = useState<string | null>(null);
   const [view, setView] = useState<"chart" | "geo" | "3d">("chart");
   const [floorSel, setFloorSel] = useState<"auto" | "all" | number>("auto");
   const [geom, setGeom] = useState<ZoneGeometry | null>(null);
@@ -419,6 +425,52 @@ export const AtlasPanel = memo(function AtlasPanel({
       await apiSend("/api/ocr/overlay", {});
     } catch {
       /* backend offline */
+    }
+  };
+
+  const toggleStats = async () => {
+    try {
+      await apiSend("/api/ocr/stats-enabled", { enabled: !ocr?.stats_enabled });
+      setOcr(await apiGet<OcrStatus>("/api/ocr/status"));
+    } catch {
+      /* backend offline */
+    }
+  };
+
+  const calibrateStats = async () => {
+    try {
+      await apiSend("/api/ocr/overlay", { target: "stats" });
+    } catch {
+      /* backend offline */
+    }
+  };
+
+  const testStats = async () => {
+    setStatsPreview("reading…");
+    try {
+      const r = await apiGet<{
+        gated?: boolean; yellow?: number; yellow_min?: number;
+        hint?: string; error?: string; parsed?: Record<string, number>;
+      }>("/api/ocr/stats-preview");
+      if (r.error) {
+        setStatsPreview(r.error);
+      } else if (r.gated) {
+        // The ratio is the whole diagnosis: a closed window and a badly
+        // placed box look identical without it.
+        setStatsPreview(`${r.hint} (yellow ${r.yellow} — needs ${r.yellow_min})`);
+      } else {
+        const n = Object.keys(r.parsed ?? {}).length;
+        setStatsPreview(
+          n
+            ? `✓ read ${n} values — ${Object.entries(r.parsed ?? {})
+                .slice(0, 4)
+                .map(([k, v]) => `${k} ${v}`)
+                .join(", ")}${n > 4 ? "…" : ""}`
+            : "box is on the panel but nothing parsed — try covering the labels and their numbers together",
+        );
+      }
+    } catch {
+      setStatsPreview("backend offline");
     }
   };
 
@@ -806,6 +858,34 @@ export const AtlasPanel = memo(function AtlasPanel({
           Calibrate
         </button>
       </div>
+
+      <div className="ocr-row">
+        <span className="ocr-status" data-live={!!(ocr?.stats_enabled && ocr?.stats_seen)}>
+          {!ocr?.deps_ok
+            ? "Character stats: OCR deps missing"
+            : !ocr.stats_enabled
+              ? "Character stats: off — reads HP/mana/AC/resists from the Inventory window"
+              : ocr.stats_seen
+                ? `Character stats: read ${ocr.stats_seen}`
+                : "Character stats: waiting for the Equipment tab"}
+        </span>
+        <label className="ocr-toggle">
+          <input
+            type="checkbox"
+            checked={ocr?.stats_enabled ?? false}
+            onChange={toggleStats}
+            disabled={!ocr?.deps_ok}
+          />
+          Stats
+        </label>
+        <button type="button" onClick={calibrateStats} disabled={!ocr?.deps_ok}>
+          Place box
+        </button>
+        <button type="button" onClick={testStats} disabled={!ocr?.deps_ok}>
+          Test read
+        </button>
+      </div>
+      {statsPreview && <p className="ocr-preview">{statsPreview}</p>}
 
       {ocrHelp && (
         <div className="ocr-modal-backdrop" role="dialog" aria-modal="true" aria-label="OCR setup guide">

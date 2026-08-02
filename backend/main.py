@@ -1809,6 +1809,30 @@ async def ocr_set_enabled(body: OcrEnabled):
     return ocr_watcher.status()
 
 
+@app.get("/api/ocr/stats-preview")
+async def ocr_stats_preview():
+    """One read of the stat panel, reporting WHY it failed if it did.
+
+    The yellow ratio is returned either way: a gated-out read and a bad
+    region look identical from the outside, and the number is the only
+    thing that tells them apart.
+    """
+    from backend.ocr_system import _capture_stats, parse_stats_text
+    cfg = ocr_load_config()
+    try:
+        text, ratio = await asyncio.to_thread(_capture_stats, cfg)
+    except Exception as exc:
+        return {"error": str(exc)[:160]}
+    if text is None:
+        return {"gated": True, "yellow": round(ratio, 4),
+                "yellow_min": cfg["stats_yellow_min"],
+                "hint": "No yellow label text in the box — open the "
+                        "Inventory window, focus the Equipment tab, and "
+                        "check the box covers the stat column."}
+    return {"gated": False, "yellow": round(ratio, 4),
+            "text": (text or "")[:400], "parsed": parse_stats_text(text)}
+
+
 @app.post("/api/ocr/stats-region")
 async def post_ocr_stats_region(body: dict):
     """Place the box over the Inventory window's stat panel."""
@@ -2008,12 +2032,18 @@ async def overlay_prefs_set(body: dict):
 
 
 @app.post("/api/ocr/overlay")
-async def ocr_launch_overlay():
-    """Launch the on-screen calibration box (backend/ocr_overlay.py)."""
+async def ocr_launch_overlay(body: dict | None = None):
+    """Launch the on-screen calibration box (backend/ocr_overlay.py).
+
+    `target: "stats"` places the Inventory stat-panel box instead of the
+    position box -- same tool, same config file, different keys.
+    """
     import subprocess
     import sys as _sys
+    extra = (["--target", "stats"]
+             if (body or {}).get("target") == "stats" else [])
     subprocess.Popen(
-        child_command("backend.ocr_overlay", "--ocr-overlay"),
+        [*child_command("backend.ocr_overlay", "--ocr-overlay"), *extra],
         cwd=str(child_cwd()),
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
     )

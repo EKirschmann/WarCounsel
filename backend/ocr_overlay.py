@@ -28,6 +28,14 @@ def load() -> dict:
 
 
 def main() -> None:
+    # Which region this box is placing. The stats panel lives under
+    # stats_*-prefixed keys in the SAME config file, so one calibrator
+    # serves both rather than a near-copy that would drift.
+    import sys as _sys
+    stats = "--target=stats" in _sys.argv or (
+        "--target" in _sys.argv
+        and _sys.argv[_sys.argv.index("--target") + 1:][:1] == ["stats"])
+    pre = "stats_" if stats else ""
     # Physical-pixel coordinates so the region matches what mss captures
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
@@ -40,7 +48,9 @@ def main() -> None:
     root.attributes("-topmost", True)
     root.attributes("-alpha", 0.45)
     root.configure(bg="#c8aa6e")  # gold border via 2px padding
-    root.geometry(f"{cfg['width']}x{cfg['height']}+{cfg['left']}+{cfg['top']}")
+    _g = {k: cfg.get(pre + k, cfg.get(k, d)) for k, d in
+          (("width", 240), ("height", 130), ("left", 100), ("top", 100))}
+    root.geometry(f"{_g['width']}x{_g['height']}+{_g['left']}+{_g['top']}")
 
     inner = tk.Frame(root, bg="#12151a")
     inner.place(x=2, y=2, relwidth=1, relheight=1, width=-4, height=-4)
@@ -80,8 +90,10 @@ def main() -> None:
             root.geometry(f"+{drag['ox'] + dx}+{drag['oy'] + dy}")
 
     def save(_e=None):
-        cfg.update(left=root.winfo_x(), top=root.winfo_y(),
-                   width=root.winfo_width(), height=root.winfo_height())
+        cfg.update({pre + "left": root.winfo_x(),
+                    pre + "top": root.winfo_y(),
+                    pre + "width": root.winfo_width(),
+                    pre + "height": root.winfo_height()})
         CONFIG_PATH.parent.mkdir(exist_ok=True)
         CONFIG_PATH.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
         print(f"saved: {cfg}")
