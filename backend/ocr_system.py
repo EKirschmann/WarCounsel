@@ -186,76 +186,76 @@ def yellow_ratio(img) -> float:
     return float(hit.mean())
 
 
-_STAT_DIGITS = "0123456789OoLlIiSsBb"
 _STAT_DIGIT_FIXES = str.maketrans("OoLlIiSsBb", "0011115588")
 
-_STAT_KEYS = ("STR", "STA", "AGI", "DEX", "WIS", "INT", "CHA")
-_RESIST_KEYS = ("MAGIC", "FIRE", "COLD", "DISEASE", "POISON", "VOID")
+# The panel spells attributes OUT ("Strength 196/510"), one label per line
+# with its value on the next. Matching the three-letter forms instead found
+# "STA" inside "STATS AND RESISTS" and reported a Stamina of 5, while
+# Strength went missing entirely because "ENGTH" overran the separator.
+# Verified against a real capture -- see tests/fixtures/ocr_stats_panel.txt.
+_PANEL_FIELDS = {
+    "STRENGTH": "str", "STAMINA": "sta", "AGILITY": "agi",
+    "DEXTERITY": "dex", "WISDOM": "wis", "INTELLIGENCE": "int",
+    "CHARISMA": "cha",
+}
+_PANEL_POOLS = {"HP": "hp", "MANA": "mana", "END": "endurance"}
+# Resists print as "SV. Magic 32/1000" -- the separator has to survive the
+# full stop, and the cap is 1000 rather than the attributes' 510.
+_PANEL_RESISTS = ("MAGIC", "FIRE", "COLD", "DISEASE", "POISON", "VOID")
+
+# Labels and values are on SEPARATE LINES, so the gap is a newline plus any
+# stray punctuation OCR invents. Bounded so a label can never reach past its
+# own value to the next field's number.
+_GAP = r"[^0-9]{0,8}"
+
+
+def _num(raw: str):
+    d = raw.translate(_STAT_DIGIT_FIXES)
+    return int(d) if d.isdigit() and len(d) <= 6 else None
 
 
 def parse_stats_text(text: str) -> dict:
     """Pull character numbers out of the Inventory panel's OCR text.
 
-    Tolerant about layout -- OCR drops colons, splits columns unpredictably
-    and reflows lines -- but STRICT about what it will believe: a number
-    only counts when its own label sits beside it, so a misread never lands
-    silently in the wrong field. Anything unrecognised is left out.
+    Strict about pairing: a number counts only when its own label sits
+    beside it, so a misread lands nowhere rather than in the wrong field.
 
-    Digit repair is applied to the CAPTURED NUMBER only, never to the whole
-    text: _fix_digit_confusions maps S->5, which turns STR into 5TR and SV
-    into 5V and made every label past HP unmatchable.
+    Values are read with their CAPS where the panel prints them -- "196/510"
+    for attributes, "32/1000" for resists. The cap is the half that matters:
+    a point of Strength past 510 does nothing, and gear advice that cannot
+    see that recommends stats with no effect.
     """
     if not text:
         return {}
-    t = re.sub(r"[^A-Za-z0-9/ ]+", " ", text.upper())
+    t = re.sub(r"[^A-Za-z0-9/]+", " ", text.upper())
     out: dict = {}
 
-    def num(raw: str) -> Optional[int]:
-        d = raw.translate(_STAT_DIGIT_FIXES)
-        return int(d) if d.isdigit() else None
-
-    # "HP 1948 / 1948" -- a pair is current/max; a lone number is the max
-    for key, dest in (("HP", "hp"), ("MANA", "mana"), ("END", "endurance")):
-        m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}([0-9OoLlIiSsBb]+)\s*/\s*([0-9OoLlIiSsBb]+)", t)
+    def pair(label: str, dest: str, cap_key: Optional[str] = None) -> None:
+        m = re.search(rf"\b{label}{_GAP}([0-9OoLlIiSsBb]+)/([0-9OoLlIiSsBb]+)", t)
         if m:
-            cur, mx = num(m.group(1)), num(m.group(2))
-            if cur is not None and mx is not None and mx >= cur:
-                out[dest], out[f"max_{dest}"] = cur, mx
-                continue
-        m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}([0-9OoLlIiSsBb]+)", t)
-        if m and (v := num(m.group(1))) is not None:
-            out[f"max_{dest}"] = v
-
-    for key, dest in (("AC", "ac"), ("ATK", "atk")):
-        m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}([0-9OoLlIiSsBb]+)", t)
-        if m and (v := num(m.group(1))) is not None:
-            out[dest] = v
-
-    # Attributes print as "STR 196/510" -- current over the CAP. The cap is
-    # the useful half: a point of STR is worth nothing once you are at 510,
-    # and gear advice that cannot see that recommends stats with no effect.
-    # Reading the cap from the panel rather than hard-coding 510 means a
-    # patch that moves it does not silently invalidate every comparison.
-    for key in _STAT_KEYS:
-        dest = key.lower()
-        m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}"
-                      rf"([0-9OoLlIiSsBb]+)\s*/\s*([0-9OoLlIiSsBb]+)", t)
-        if m:
-            cur, cap = num(m.group(1)), num(m.group(2))
+            cur, cap = _num(m.group(1)), _num(m.group(2))
             if cur is not None and cap is not None and cap >= cur:
-                out[dest], out["cap_" + dest] = cur, cap
-                continue
-        m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}([0-9OoLlIiSsBb]+)", t)
-        if m and (v := num(m.group(1))) is not None:
+                out[dest] = cur
+                out[cap_key or f"max_{dest}"] = cap
+                return
+        m = re.search(rf"\b{label}{_GAP}([0-9OoLlIiSsBb]+)", t)
+        if m and (v := _num(m.group(1))) is not None:
             out[dest] = v
 
-    for key in _RESIST_KEYS:
-        m = re.search(rf"\b(?:SV\s*)?{key}[^0-9OoLlIiSsBb]{{0,4}}([0-9OoLlIiSsBb]+)", t)
-        if m and (v := num(m.group(1))) is not None:
-            out[f"sv_{key.lower()}"] = v
+    for label, dest in _PANEL_POOLS.items():
+        pair(label, dest)
+    for label, dest in _PANEL_FIELDS.items():
+        pair(label, dest, cap_key="cap_" + dest)
+    for label in _PANEL_RESISTS:
+        pair(rf"SV\.?\s*{label}", "sv_" + label.lower(),
+             cap_key="cap_sv_" + label.lower())
+    # AC and Attack print a second number that is not a cap ("303/3501155"),
+    # so only the leading value is trusted.
+    for label, dest in (("AC", "ac"), ("ATTACK", "atk")):
+        m = re.search(rf"\b{label}{_GAP}([0-9OoLlIiSsBb]+)", t)
+        if m and (v := _num(m.group(1))) is not None:
+            out[dest] = v
     return out
-
-
 
 def _stats_region(cfg: dict) -> dict:
     return {"left": cfg["stats_left"], "top": cfg["stats_top"],

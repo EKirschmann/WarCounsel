@@ -1,0 +1,55 @@
+Inventory
+Equipment
+Pet
+Loadouts
+Storage
+Nerk
+He:
+Ear
+Fis
+Arms
+Fio
+Sh
+Wair
+Fe
+Range
+mmo
+Character Vitals
+Stats and Resists
+HP
+1187/1187
+Strength
+196/510
+Mana
+672/672
+Stamina
+193/510
+End
+912/912
+Intelligence
+82/510
+AC
+303/3501155
+Wisdom
+87/510
+Attack
+1861238
+Agility
+95/510
+Attack Speed %
+117
+Dexterity
+123/510
+Velocity
+0
+Charisma
+55/510
+HP Regen
+3
+SV. Magic
+32/1000
+Mana Regen
+20
+SV. Fire
+56/1000
+End
