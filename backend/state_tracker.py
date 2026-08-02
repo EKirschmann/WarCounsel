@@ -195,6 +195,9 @@ class CharacterTracker:
         # because those are the signals that would have added them anyway,
         # and a dismissal should not outlive the thing it was about.
         self.ignored_contributors: dict = {}
+        # Inventory-panel numbers read from the screen (optional OCR)
+        self.ocr_stats: dict = {}
+        self.ocr_stats_at = None
         # anyone who has spoken in any channel -- pets never do
         self._chat_seen: set = set()
         self.inferred_classes: dict = {}
@@ -304,6 +307,30 @@ class CharacterTracker:
         if name in self.who_roster or name in self.group_members:
             return False
         return name not in self._chat_seen
+
+    def apply_ocr_stats(self, stats: dict) -> None:
+        """Adopt numbers read off the Inventory panel.
+
+        max_hp and max_mana were previously TYPED IN by the player -- the
+        log never prints them -- and everything else here (AC, ATK, the
+        attributes, the resists) had no source at all. This is the only
+        place the app can learn them without asking.
+
+        Screen-read, so treated as a reading and not as truth: values are
+        kept under `ocr_stats` with their own timestamp, and only max_hp /
+        max_mana are promoted into the fields the rest of the app uses --
+        and only when the player has not set them by hand, since a typed
+        value is a deliberate statement and a misread is not.
+        """
+        if not stats:
+            return
+        self.ocr_stats = dict(stats)
+        self.ocr_stats_at = self.last_event_at
+        for src, dest, manual in (("max_hp", "max_hp", "_max_hp_manual"),
+                                  ("max_mana", "max_mana", "_max_mana_manual")):
+            v = stats.get(src)
+            if v and v > 0 and not getattr(self, manual, False):
+                setattr(self, dest, v)
 
     def trust_all(self, action: str) -> dict:
         """Apply one verdict to everyone currently on the not-counted list.
@@ -1752,6 +1779,7 @@ class CharacterTracker:
             "encounters": self.encounters_snapshot(),
             "filtered": self.filtered_view(),
             "inferred_classes": self.inferred_view(),
+            "ocr_stats": dict(self.ocr_stats),
             "ability_summary": self.ability_summary(),
             "session": {
                 "damage_dealt": self.damage_dealt,

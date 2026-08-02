@@ -746,6 +746,11 @@ async def patch_character(patch: CharacterPatch, db: Session = Depends(get_db)):
         if value is not None:
             setattr(row, field, value)
             setattr(tracker, field, value)
+            if field in ("max_hp", "max_mana"):
+                # A typed number is a deliberate statement; a screen reading
+                # is a guess that can be wrong in ways nobody notices. Once
+                # the player has said it, the stats OCR stops overwriting it.
+                setattr(tracker, f"_{field}_manual", True)
     if patch.class_str is not None:  # manual trio edit resolves the mismatch hint
         tracker.unknown_casts.clear()
         tracker.loadout_hint = None
@@ -1802,6 +1807,31 @@ async def ocr_set_enabled(body: OcrEnabled):
     cfg["enabled"] = body.enabled
     ocr_save_config(cfg)
     return ocr_watcher.status()
+
+
+@app.post("/api/ocr/stats-region")
+async def post_ocr_stats_region(body: dict):
+    """Place the box over the Inventory window's stat panel."""
+    cfg = ocr_system.load_config()
+    for k in ("left", "top", "width", "height"):
+        if body.get(k) is not None:
+            cfg["stats_" + k] = int(body[k])
+    for k in ("stats_interval", "stats_yellow_min"):
+        if body.get(k) is not None:
+            cfg[k] = type(ocr_system.DEFAULT_CONFIG[k])(body[k])
+    ocr_system.save_config(cfg)
+    return {"ok": True, "region": {k: cfg["stats_" + k]
+                                   for k in ("left", "top", "width", "height")},
+            "stats_interval": cfg["stats_interval"],
+            "stats_yellow_min": cfg["stats_yellow_min"]}
+
+
+@app.post("/api/ocr/stats-enabled")
+async def post_ocr_stats_enabled(body: dict):
+    cfg = ocr_system.load_config()
+    cfg["stats_enabled"] = bool(body.get("enabled"))
+    ocr_system.save_config(cfg)
+    return {"ok": True, "stats_enabled": cfg["stats_enabled"]}
 
 
 @app.get("/api/ocr/preview")
