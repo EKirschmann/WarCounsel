@@ -4,6 +4,58 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.3.0 — 2026-08-02
+
+**The app can read your character sheet.** An optional second screen-reading
+box over the Inventory window picks up HP, mana, AC, your attributes and
+your resists — including the `196/510` caps. It only reads while the
+Inventory window is open with the Equipment tab focused, once every 15
+seconds, and it checks for the yellow label text before spending an OCR
+pass so a closed window is never mistaken for a screenful of zeroes.
+
+**Gear advice stops recommending stats you cannot raise.** At 510 an
+attribute is done, and further points on an item are worth nothing. The
+advisor now values each candidate at what it would ACTUALLY deliver —
+full value when there is room, the remainder when there is little, zero
+when the rest of your gear already caps it. A like-for-like swap between
+two items carrying the same capped stat correctly ties. Without a stats
+reading nothing changes.
+
+**Race unlock turn-ins are flagged as you loot them.** A Gnoll Fang reads
+as vendor trash and is 1/1200th of a Barbarian. Looting one now names the
+race, the NPC and the zone, and Vitals keeps a running tally against the
+target — `37 / 1200` tells you whether to keep going. Seven lootable
+turn-ins from the community race-unlock guide.
+
+**Spell sets are named after your trio.** They were all called "companion"
+and "prebuffs", so every trio overwrote the last one and keeping two meant
+regenerating and logging out each time you swapped. Now
+`pal/dru/mnk` and `pal/dru/mnk-buffs`, which simply coexist.
+
+**Screen-reading setup moved into Settings**, under Overlay, with a Place
+box and Test read for each region. Test read reports the measured yellow
+level next to the threshold, because a closed window and a badly placed box
+otherwise look identical. The Atlas keeps a status line.
+
+**Groundwork: reading your group window.** The in-game group box is the only
+place that states who is actually with you — the log never does — and it
+lists players without their pets. The region, capture and calibration are
+in; the reader itself is deliberately unwritten until it can be built
+against a real capture rather than a guess.
+
+**Fixed**
+
+- Item hover cards were clipped by their panel and painted behind
+  everything below them. They now float free and are fully opaque.
+- The LM Studio model box showed `o3`, an OpenAI-only model. The stored
+  settings were right all along; the panel was reading the wrong field.
+- After "Check server", the model list behaved as a filter — the dropdown
+  opened on nothing until you emptied the box. The probed models are now
+  shown as buttons, with a dot marking what is loaded.
+- The API key field no longer summons the browser's password manager.
+- Opening the UI on `127.0.0.1` instead of `localhost` left every REST
+  feature silently dead while the page looked alive. Both now work.
+
 ## v2.2.1 — 2026-08-01
 
 **Mend now shows a timer.** Monk Mend has a 90-second re-use and nothing
