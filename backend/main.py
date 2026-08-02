@@ -618,9 +618,31 @@ def _mount_static_ui() -> None:
 
 
 app.add_middleware(GZipMiddleware, minimum_size=2048)
+def _allowed_origins() -> list[str]:
+    """The configured UI origin, plus the same machine spelled the other way.
+
+    "localhost:3000" and "127.0.0.1:3000" are DIFFERENT origins to a
+    browser, so a UI opened on one while CORS allowed the other looked
+    alive -- the WebSocket carried the snapshot and kept every panel
+    populated -- while every REST feature failed silently. Consults, the
+    settings panel and the OCR status line all just did nothing.
+
+    Deliberately NOT a wildcard. allow_origins=["*"] would let any page the
+    user happens to visit read their character data off this server; these
+    two names resolve to the same loopback host and nothing else.
+    """
+    seen = [settings.frontend_origin]
+    for a, b in (("localhost", "127.0.0.1"), ("127.0.0.1", "localhost")):
+        if a in settings.frontend_origin:
+            alt = settings.frontend_origin.replace(a, b, 1)
+            if alt not in seen:
+                seen.append(alt)
+    return seen
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
