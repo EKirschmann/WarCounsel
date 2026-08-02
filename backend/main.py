@@ -32,6 +32,9 @@ from backend.agent.state import AgentState, ProfileData
 from backend.config import detect_game_dir, settings
 from backend.game_data import hunting_candidates, spell_classes
 from backend import item_facts, session_state
+from backend.log_system.parser import CLASS_ABBREV as _CA
+# full class name -> the game's own three-letter form
+_ABBREV_FOR = {v.lower(): k for k, v in _CA.items()}
 from backend.geometry_system import geometry3d_for_zone, geometry_for_zone
 from backend.log_system import LogWatcher, discover_log_file
 from backend.log_system.parser import extract_character_from_filename, parse_line
@@ -875,6 +878,30 @@ async def get_spellsets():
     return {"available": True, "file": path.name, "sets": sets}
 
 
+def _set_name_for_trio(source: str) -> str:
+    """Default spell-set name, keyed to the TRIO rather than fixed.
+
+    A loadout belongs to a class combination, so a fixed "companion" meant
+    every trio overwrote the last one -- and the only way to keep two was
+    to regenerate and log out each time you swapped. Named per trio they
+    simply coexist, which is what the player was already doing by hand
+    ("pal/dru/mnk" and "pal/dru/mnk-buffs").
+
+    Abbreviations, not full names: the game caps the field and
+    "Paladin/Druid/Monk-buffs" does not fit in 24 characters.
+    """
+    trio = (getattr(tracker, "class_str", "") or "").strip()
+    short = "/".join(
+        _ABBREV_FOR.get(p.strip().lower(), p.strip()[:3]).lower()
+        for p in trio.split("/") if p.strip()
+    )
+    if not short:
+        # class unknown until /who -- keep the old names rather than
+        # inventing a label that says nothing
+        return "prebuffs" if source == "prebuffs" else "companion"
+    return f"{short}-buffs"[:24] if source == "prebuffs" else short[:24]
+
+
 @app.post("/api/spellsets/generate")
 async def generate_spellset(body: dict | None = None):
     """Write the advisor's Memorize-now list as an in-game spell set.
@@ -885,7 +912,7 @@ async def generate_spellset(body: dict | None = None):
     from backend.game_data import _primary_effect as game_data_primary
     from backend.game_data import supersedes_for_slots
     source = ((body or {}).get("source") or "loadout").strip()
-    default_name = "prebuffs" if source == "prebuffs" else "companion"
+    default_name = _set_name_for_trio(source)
     name = ((body or {}).get("name") or default_name).strip()[:24]
     if _advice_cache is None:
         raise HTTPException(400, "no counsel cached — press Consult first")

@@ -623,7 +623,13 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                     type="button"
                     className="adv-rescan adv-gear-btn"
                     onClick={() => writeSpellSet("loadout")}
-                    title={'Write these picks as an in-game spell set ("companion") — then /memspellset companion loads the whole bar'}
+                    title={
+                      // Deliberately NOT recomputing the name here. The
+                      // backend derives it from the trio and reports it
+                      // back; a second copy of that rule in the UI is the
+                      // provider/model bug waiting to happen again.
+                      "Write these picks as an in-game spell set named after your trio (e.g. pal/dru/mnk) — then /memspellset <that name> loads the whole bar"
+                    }
                   >
                     write in-game spell set
                   </button>
@@ -692,7 +698,9 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                     type="button"
                     className="adv-rescan adv-gear-btn"
                     onClick={() => writeSpellSet("prebuffs")}
-                    title={'Write the pre-buffs as an in-game spell set ("prebuffs", permanent buffs first) — /memspellset prebuffs, buff up, then /memspellset companion for combat'}
+                    title={
+                      "Write the pre-buffs as a set named after your trio with a -buffs suffix (e.g. pal/dru/mnk-buffs), permanent buffs first — memorise it, buff up, then load your combat set"
+                    }
                   >
                     write pre-buff set
                   </button>
