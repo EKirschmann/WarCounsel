@@ -492,25 +492,45 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                       value={model}
                       spellCheck={false}
                       autoComplete="off"
-                      list="lmstudio-models"
                       onChange={(e) => setModel(e.target.value)}
                       placeholder="model id, e.g. gemma-4-26b-a4b-it"
                       aria-label="LM Studio model"
                     />
-                    {/* Chat models only: the server also lists embedding
-                        models, which would silently fail as a counsel
-                        model if picked. */}
-                    <datalist id="lmstudio-models">
-                      {(probe?.provider === "lmstudio"
-                        ? probe.models ?? []
-                        : []
-                      )
-                        .filter((m) => !m.toLowerCase().includes("embed"))
-                        .map((m) => (
-                          <option key={m} value={m} />
-                        ))}
-                    </datalist>
                   </div>
+                  {/* A <datalist> was here and behaved as a FILTER, not a
+                      picker: with a model already in the box nothing else
+                      prefix-matched, so the dropdown arrow appeared and
+                      opened on nothing until the field was cleared. The
+                      models are already probed -- showing them is simpler
+                      than making someone empty a box to discover them.
+
+                      Chat models only: the server also lists embedding
+                      models, which would fail silently as a counsel model. */}
+                  {probe?.provider === "lmstudio" &&
+                    (probe.models ?? []).filter((m) => !m.toLowerCase().includes("embed"))
+                      .length > 0 && (
+                      <div className="model-picks">
+                        {(probe.models ?? [])
+                          .filter((m) => !m.toLowerCase().includes("embed"))
+                          .map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              className="model-pick"
+                              data-on={m === model.trim() ? "1" : undefined}
+                              data-loaded={(probe.loaded ?? []).includes(m) ? "1" : undefined}
+                              title={
+                                (probe.loaded ?? []).includes(m)
+                                  ? `${m} — loaded in LM Studio right now`
+                                  : `${m} — installed; LM Studio loads it on the first request`
+                              }
+                              onClick={() => setModel(m)}
+                            >
+                              {m}
+                            </button>
+                          ))}
+                      </div>
+                    )}
                   {probe?.provider === "lmstudio" &&
                     (probe.loaded ?? []).length > 0 &&
                     !(probe.loaded ?? []).includes(model.trim()) && (

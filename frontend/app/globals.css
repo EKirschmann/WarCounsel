@@ -2373,3 +2373,32 @@ button.app-version:hover { color: var(--gold-bright); }
   -webkit-text-security: disc;
   text-security: disc;
 }
+
+/* Probed LM Studio models, as things you can click. The dot marks the ones
+   LM Studio has resident right now — picking a different one is legal but
+   makes it swap, which is worth seeing before you choose. */
+.model-picks { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 2px; }
+.model-pick {
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  color: var(--ink-dim, rgba(226, 222, 214, .72));
+  background: transparent;
+  border: 1px solid rgba(200, 170, 110, .26);
+  border-radius: 0;
+  cursor: pointer;
+}
+.model-pick:hover { background: rgba(200, 170, 110, .12); color: var(--ink, #e2ded6); }
+.model-pick[data-on] {
+  color: var(--gold, #c8aa6e);
+  border-color: rgba(200, 170, 110, .7);
+  background: rgba(200, 170, 110, .1);
+}
+.model-pick[data-loaded]::before {
+  content: "●";
+  margin-right: 5px;
+  color: #1fb38c;
+  font-size: 9px;
+  vertical-align: middle;
+}
+.model-pick:focus-visible { outline: 2px solid var(--gold, #c8aa6e); outline-offset: 1px; }
