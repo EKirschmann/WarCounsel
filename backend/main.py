@@ -1812,14 +1812,15 @@ async def ocr_set_enabled(body: OcrEnabled):
 @app.post("/api/ocr/stats-region")
 async def post_ocr_stats_region(body: dict):
     """Place the box over the Inventory window's stat panel."""
-    cfg = ocr_system.load_config()
+    cfg = ocr_load_config()
     for k in ("left", "top", "width", "height"):
         if body.get(k) is not None:
             cfg["stats_" + k] = int(body[k])
-    for k in ("stats_interval", "stats_yellow_min"):
-        if body.get(k) is not None:
-            cfg[k] = type(ocr_system.DEFAULT_CONFIG[k])(body[k])
-    ocr_system.save_config(cfg)
+    if body.get("stats_interval") is not None:
+        cfg["stats_interval"] = int(body["stats_interval"])
+    if body.get("stats_yellow_min") is not None:
+        cfg["stats_yellow_min"] = float(body["stats_yellow_min"])
+    ocr_save_config(cfg)
     return {"ok": True, "region": {k: cfg["stats_" + k]
                                    for k in ("left", "top", "width", "height")},
             "stats_interval": cfg["stats_interval"],
@@ -1828,9 +1829,9 @@ async def post_ocr_stats_region(body: dict):
 
 @app.post("/api/ocr/stats-enabled")
 async def post_ocr_stats_enabled(body: dict):
-    cfg = ocr_system.load_config()
+    cfg = ocr_load_config()
     cfg["stats_enabled"] = bool(body.get("enabled"))
-    ocr_system.save_config(cfg)
+    ocr_save_config(cfg)
     return {"ok": True, "stats_enabled": cfg["stats_enabled"]}
 
 
