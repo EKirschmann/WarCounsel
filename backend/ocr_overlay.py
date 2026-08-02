@@ -32,10 +32,18 @@ def main() -> None:
     # stats_*-prefixed keys in the SAME config file, so one calibrator
     # serves both rather than a near-copy that would drift.
     import sys as _sys
-    stats = "--target=stats" in _sys.argv or (
-        "--target" in _sys.argv
-        and _sys.argv[_sys.argv.index("--target") + 1:][:1] == ["stats"])
-    pre = "stats_" if stats else ""
+    def _target() -> str:
+        for t in ("stats", "group"):
+            if f"--target={t}" in _sys.argv:
+                return t
+            if ("--target" in _sys.argv
+                    and _sys.argv[_sys.argv.index("--target") + 1:][:1] == [t]):
+                return t
+        return ""
+
+    target = _target()
+    stats = target == "stats"
+    pre = f"{target}_" if target else ""
     # Physical-pixel coordinates so the region matches what mss captures
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)

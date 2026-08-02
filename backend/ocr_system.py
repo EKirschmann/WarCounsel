@@ -46,6 +46,17 @@ DEFAULT_CONFIG = {
     # the panel is only legible then, and an unfocused or closed window
     # would otherwise be read as a screenful of zeroes.
     "stats_yellow_min": 0.004,
+    # THIRD region: the in-game Group window. Unlike everything else here
+    # this one is AUTHORITATIVE -- the log never states who is in your
+    # group, only momentary signals that a quiet group never emits, and the
+    # game is showing the answer on screen the whole time. It also lists
+    # players WITHOUT their pets, which is the discriminator the pet
+    # heuristic has been guessing at.
+    "group_enabled": False,
+    "group_left": 100, "group_top": 600, "group_width": 220, "group_height": 180,
+    # Membership changes on a human timescale and the log already catches
+    # joins and leaves when it can; this is the backstop, not the feed.
+    "group_interval": 20,
 }
 GAME_PROCESS = "eqgame.exe"
 
@@ -260,6 +271,19 @@ def parse_stats_text(text: str) -> dict:
 def _stats_region(cfg: dict) -> dict:
     return {"left": cfg["stats_left"], "top": cfg["stats_top"],
             "width": cfg["stats_width"], "height": cfg["stats_height"]}
+
+
+def _capture_group(cfg: dict):
+    """Grab the Group window region and OCR it. Returns raw text.
+
+    No yellow gate here: the group box is legible whether or not it has
+    focus, and its EMPTY state is meaningful -- "Invite / LFG / Disband"
+    means solo, which is a fact worth reading, not a failure to read.
+    """
+    region = {"left": cfg["group_left"], "top": cfg["group_top"],
+              "width": cfg["group_width"], "height": cfg["group_height"]}
+    text, _hash = _capture_and_ocr(region)
+    return text or ""
 
 
 def _capture_stats(cfg: dict):

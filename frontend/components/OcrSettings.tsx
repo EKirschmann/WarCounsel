@@ -35,6 +35,7 @@ export function OcrSettings() {
   const [ocr, setOcr] = useState<OcrStatus | null>(null);
   const [posMsg, setPosMsg] = useState<string | null>(null);
   const [statsMsg, setStatsMsg] = useState<string | null>(null);
+  const [groupMsg, setGroupMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -61,9 +62,9 @@ export function OcrSettings() {
     }
   };
 
-  const place = async (which: "position" | "stats") => {
+  const place = async (which: "position" | "stats" | "group") => {
     try {
-      await apiSend("/api/ocr/overlay", which === "stats" ? { target: "stats" } : {});
+      await apiSend("/api/ocr/overlay", which === "position" ? {} : { target: which });
     } catch {
       /* backend offline */
     }
@@ -83,6 +84,16 @@ export function OcrSettings() {
       else setPosMsg("Box sees nothing — open the in-game map so the coordinates show");
     } catch {
       setPosMsg("Backend offline");
+    }
+  };
+
+  const testGroup = async () => {
+    setGroupMsg("reading…");
+    try {
+      const r = await apiGet<{ text?: string; error?: string }>("/api/ocr/group-preview");
+      setGroupMsg(r.error ? r.error : r.text ? `Box sees: ${r.text}` : "Box sees nothing");
+    } catch {
+      setGroupMsg("Backend offline");
     }
   };
 
@@ -208,6 +219,28 @@ export function OcrSettings() {
           </button>
         </div>
         {statsMsg && <p className="ocr-preview">{statsMsg}</p>}
+      </div>
+
+      <div className="ocr-set-row">
+        <div className="ocr-set-head">
+          <span className="ocr-toggle">Group window</span>
+          <span className="ocr-set-state">calibrating</span>
+        </div>
+        <p className="set-note">
+          The group box is the only place the game states who is actually with you
+          — the log never does, and it lists players without their pets. Place the
+          box and send the read for both states (alone, and in a group) so the
+          reader can be written against what your client really shows.
+        </p>
+        <div className="ocr-set-actions">
+          <button type="button" onClick={() => place("group")} disabled={!ocr}>
+            Place box
+          </button>
+          <button type="button" onClick={testGroup} disabled={!ocr}>
+            Test read
+          </button>
+        </div>
+        {groupMsg && <p className="ocr-preview">{groupMsg}</p>}
       </div>
     </div>
   );

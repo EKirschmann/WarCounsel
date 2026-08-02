@@ -1813,6 +1813,40 @@ async def ocr_set_enabled(body: OcrEnabled):
     return ocr_watcher.status()
 
 
+@app.get("/api/ocr/group-preview")
+async def ocr_group_preview():
+    """One raw read of the Group window, for calibration.
+
+    Returns the text verbatim and does NOT try to interpret it yet. The
+    stats parser was written from a guess at its panel's layout, passed
+    every fixture invented alongside it, and read nothing useful from the
+    actual game -- so this one gets written against a real capture of both
+    states (solo and grouped) or not at all.
+    """
+    from backend.ocr_system import _capture_group
+    cfg = ocr_load_config()
+    try:
+        text = await asyncio.to_thread(_capture_group, cfg)
+    except Exception as exc:
+        return {"error": str(exc)[:160]}
+    return {"text": (text or "")[:600],
+            "region": {k: cfg["group_" + k]
+                       for k in ("left", "top", "width", "height")}}
+
+
+@app.post("/api/ocr/group-region")
+async def post_ocr_group_region(body: dict):
+    cfg = ocr_load_config()
+    for k in ("left", "top", "width", "height"):
+        if body.get(k) is not None:
+            cfg["group_" + k] = int(body[k])
+    if body.get("group_interval") is not None:
+        cfg["group_interval"] = int(body["group_interval"])
+    ocr_save_config(cfg)
+    return {"ok": True, "region": {k: cfg["group_" + k]
+                                   for k in ("left", "top", "width", "height")}}
+
+
 @app.get("/api/ocr/stats-preview")
 async def ocr_stats_preview():
     """One read of the stat panel, reporting WHY it failed if it did.
@@ -2044,8 +2078,8 @@ async def ocr_launch_overlay(body: dict | None = None):
     """
     import subprocess
     import sys as _sys
-    extra = (["--target", "stats"]
-             if (body or {}).get("target") == "stats" else [])
+    _t = (body or {}).get("target")
+    extra = ["--target", _t] if _t in ("stats", "group") else []
     subprocess.Popen(
         [*child_command("backend.ocr_overlay", "--ocr-overlay"), *extra],
         cwd=str(child_cwd()),
