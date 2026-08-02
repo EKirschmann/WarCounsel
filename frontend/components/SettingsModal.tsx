@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet, apiSend } from "@/lib/api";
 import type { LlmProbe } from "@/lib/types";
+import { OcrSettings } from "./OcrSettings";
 import { OverlaySettings } from "./OverlaySettings";
 
 type GameVerdict = {
@@ -567,6 +568,15 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 web view, where there is room for it.
               </p>
               <OverlaySettings />
+            </section>
+
+            <section className="set-block">
+              <label>Screen reading (OCR)</label>
+              <p className="set-note">
+                Optional and Windows-only. The app reads two small boxes on your
+                screen — nothing is sent anywhere and the game is never touched.
+              </p>
+              <OcrSettings />
             </section>
 
             <section className="set-block">

@@ -249,9 +249,6 @@ export const AtlasPanel = memo(function AtlasPanel({
   const [variants, setVariants] = useState<RouteVariant[]>([]);
   const [routeMsg, setRouteMsg] = useState<string | null>(null);
   const [ocr, setOcr] = useState<OcrStatus | null>(null);
-  const [ocrHelp, setOcrHelp] = useState(false);
-  const [ocrPreview, setOcrPreview] = useState<string | null>(null);
-  const [statsPreview, setStatsPreview] = useState<string | null>(null);
   const [view, setView] = useState<"chart" | "geo" | "3d">("chart");
   const [floorSel, setFloorSel] = useState<"auto" | "all" | number>("auto");
   const [geom, setGeom] = useState<ZoneGeometry | null>(null);
@@ -410,92 +407,11 @@ export const AtlasPanel = memo(function AtlasPanel({
     };
   }, []);
 
-  const toggleOcr = async () => {
-    if (!ocr) return;
-    try {
-      const s = await apiSend<OcrStatus>("/api/ocr/enabled", { enabled: !ocr.enabled });
-      setOcr(s);
-    } catch {
-      /* backend offline */
-    }
-  };
 
-  const calibrate = async () => {
-    try {
-      await apiSend("/api/ocr/overlay", {});
-    } catch {
-      /* backend offline */
-    }
-  };
 
-  const toggleStats = async () => {
-    try {
-      await apiSend("/api/ocr/stats-enabled", { enabled: !ocr?.stats_enabled });
-      setOcr(await apiGet<OcrStatus>("/api/ocr/status"));
-    } catch {
-      /* backend offline */
-    }
-  };
 
-  const calibrateStats = async () => {
-    try {
-      await apiSend("/api/ocr/overlay", { target: "stats" });
-    } catch {
-      /* backend offline */
-    }
-  };
 
-  const testStats = async () => {
-    setStatsPreview("reading…");
-    try {
-      const r = await apiGet<{
-        gated?: boolean; yellow?: number; yellow_min?: number;
-        hint?: string; error?: string; parsed?: Record<string, number>;
-      }>("/api/ocr/stats-preview");
-      if (r.error) {
-        setStatsPreview(r.error);
-      } else if (r.gated) {
-        // The ratio is the whole diagnosis: a closed window and a badly
-        // placed box look identical without it.
-        setStatsPreview(`${r.hint} (yellow ${r.yellow} — needs ${r.yellow_min})`);
-      } else {
-        const n = Object.keys(r.parsed ?? {}).length;
-        setStatsPreview(
-          n
-            ? `✓ read ${n} values — ${Object.entries(r.parsed ?? {})
-                .slice(0, 4)
-                .map(([k, v]) => `${k} ${v}`)
-                .join(", ")}${n > 4 ? "…" : ""}`
-            : "box is on the panel but nothing parsed — try covering the labels and their numbers together",
-        );
-      }
-    } catch {
-      setStatsPreview("backend offline");
-    }
-  };
 
-  const testRead = async () => {
-    setOcrPreview("reading…");
-    try {
-      const r = await apiGet<{ text: string | null; parsed: { x: number; y: number; z: number } | null; error?: string }>(
-        "/api/ocr/preview",
-      );
-      if (r.parsed) {
-        setOcrPreview(`✓ read X:${r.parsed.x} Y:${r.parsed.y} Z:${r.parsed.z}`);
-      } else if (r.text) {
-        setOcrPreview(
-          `box sees "${r.text.slice(0, 60)}" — not an X/Y/Z readout` +
-            (ocr?.enabled && ocr?.last_ok
-              ? " this frame (live tracking is working; single frames sometimes misread)"
-              : "; move or resize the box"),
-        );
-      } else {
-        setOcrPreview(r.error ? `capture failed: ${r.error}` : "box sees nothing — is the game visible?");
-      }
-    } catch {
-      setOcrPreview("backend offline");
-    }
-  };
 
   useEffect(() => {
     if (!zone) return;
@@ -829,101 +745,28 @@ export const AtlasPanel = memo(function AtlasPanel({
       </div>
       )}
 
+      {/* Status only. The toggles, box placement and test reads moved to
+          Settings -- two regions with three controls each is a setup screen,
+          not a map ornament. Whether position tracking is ALIVE still belongs
+          in front of the map it moves, so that one line stays. */}
       <div className="ocr-row">
         <span className="ocr-status" data-live={!!(ocr?.enabled && ocr?.last_ok && !ocr?.error)}>
           {!ocr
             ? "Live position: backend offline"
             : !ocr.deps_ok
-              ? "Live position: OCR deps missing (pip install -r requirements.txt)"
-              : !ocr.game_running
-                ? "Live position: game not running"
-                : !ocr.enabled
-                  ? "Live position: off"
+              ? "Live position: OCR packages not installed"
+              : !ocr.enabled
+                ? "Live position: off — turn it on in Settings ▸ Screen reading"
+                : !ocr.game_running
+                  ? "Live position: game not running"
                   : ocr.error
                     ? `Live position: ${ocr.error}`
                     : ocr.last_ok
                       ? `Live position: reading (last ${ocr.last_ok})`
                       : "Live position: searching…"}
         </span>
-        <label className="ocr-toggle">
-          <input
-            type="checkbox"
-            checked={ocr?.enabled ?? false}
-            onChange={toggleOcr}
-            disabled={!ocr?.deps_ok}
-          />
-          OCR
-        </label>
-        <button type="button" onClick={() => { setOcrPreview(null); setOcrHelp(true); }} disabled={!ocr?.deps_ok}>
-          Calibrate
-        </button>
       </div>
 
-      <div className="ocr-row">
-        <span className="ocr-status" data-live={!!(ocr?.stats_enabled && ocr?.stats_seen)}>
-          {!ocr?.deps_ok
-            ? "Character stats: OCR deps missing"
-            : !ocr.stats_enabled
-              ? "Character stats: off — reads HP/mana/AC/resists from the Inventory window"
-              : ocr.stats_seen
-                ? `Character stats: read ${ocr.stats_seen}`
-                : "Character stats: waiting for the Equipment tab"}
-        </span>
-        <label className="ocr-toggle">
-          <input
-            type="checkbox"
-            checked={ocr?.stats_enabled ?? false}
-            onChange={toggleStats}
-            disabled={!ocr?.deps_ok}
-          />
-          Stats
-        </label>
-        <button type="button" onClick={calibrateStats} disabled={!ocr?.deps_ok}>
-          Place box
-        </button>
-        <button type="button" onClick={testStats} disabled={!ocr?.deps_ok}>
-          Test read
-        </button>
-      </div>
-      {statsPreview && <p className="ocr-preview">{statsPreview}</p>}
-
-      {ocrHelp && (
-        <div className="ocr-modal-backdrop" role="dialog" aria-modal="true" aria-label="OCR setup guide">
-          <div className="ocr-modal">
-            <h3>Live position via screen reading</h3>
-            <p className="ocr-modal-note">
-              The companion reads the map window&apos;s coordinate text off your
-              screen once a second — purely passive, nothing touches the game.
-            </p>
-            <ol>
-              <li>
-                In game, open the <strong>Map window</strong> with its location
-                readout visible — the lines starting <code>X:</code>{" "}
-                <code>Y:</code> <code>Z:</code>. The game must run{" "}
-                <strong>Windowed or Borderless</strong>, not exclusive
-                Fullscreen.
-              </li>
-              <li>
-                Press <strong>Launch calibrator</strong> — a gold box appears on
-                top of the game. Drag and resize it so it{" "}
-                <strong>tightly frames the X / Y / Z lines</strong> (nothing
-                else). Close the box to save.
-              </li>
-              <li>
-                Press <strong>Test read</strong> — it should echo your
-                coordinates. Then flip the <strong>OCR</strong> toggle on and
-                the Atlas dot follows you.
-              </li>
-            </ol>
-            <div className="ocr-modal-actions">
-              <button type="button" onClick={calibrate}>Launch calibrator</button>
-              <button type="button" onClick={testRead}>Test read</button>
-              <button type="button" onClick={() => setOcrHelp(false)}>Close</button>
-            </div>
-            {ocrPreview && <div className="ocr-modal-preview">{ocrPreview}</div>}
-          </div>
-        </div>
-      )}
     </section>
   );
 });

@@ -2327,3 +2327,37 @@ button.app-version:hover { color: var(--gold-bright); }
   background: rgba(0, 0, 0, .22);
   border-left: 2px solid rgba(200, 170, 110, .34);
 }
+
+/* --- OCR setup, in Settings ---------------------------------------------
+   Two regions, each with a toggle, a placement button and a test read. The
+   state word sits beside its toggle rather than in a status bar: with two
+   feeds, one shared line could not say which of them was working. */
+.ocr-set { display: flex; flex-direction: column; gap: 14px; }
+.ocr-set-row + .ocr-set-row {
+  padding-top: 12px;
+  border-top: 1px solid rgba(200, 170, 110, .18);
+}
+.ocr-set-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ocr-set-state {
+  font-size: 11px;
+  color: var(--ink-dim, rgba(226, 222, 214, .6));
+}
+.ocr-set-state[data-live="true"] { color: #1fb38c; }
+.ocr-set-actions { display: flex; gap: 6px; margin-top: 6px; }
+.ocr-set-actions button {
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  color: var(--gold, #c8aa6e);
+  background: transparent;
+  border: 1px solid rgba(200, 170, 110, .34);
+  border-radius: 0;
+  cursor: pointer;
+}
+.ocr-set-actions button:hover:not(:disabled) { background: rgba(200, 170, 110, .12); }
+.ocr-set-actions button:disabled { opacity: .5; cursor: default; }
