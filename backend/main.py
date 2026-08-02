@@ -1485,6 +1485,10 @@ async def get_gear(refresh: bool = False, cached: bool = False):
            "pet_classes": tracker.pet_classes,
            "pet_inventory": dict(tracker.pet_inventory),
            "max_hp": tracker.max_hp, "max_mana": tracker.max_mana,
+           # attribute caps read off the Inventory panel, when that feed is
+           # on: a point past 510 does nothing, and the comparison needs to
+           # know before it recommends an item for stats with no effect
+           "ocr_stats": dict(tracker.ocr_stats),
            "combat": tracker.combat_profile()}
     advice = await generate_gear_advice(ctx)
     _gear_cache, _gear_sig = advice, sig

@@ -226,9 +226,25 @@ def parse_stats_text(text: str) -> dict:
         if m and (v := num(m.group(1))) is not None:
             out[f"max_{dest}"] = v
 
-    simple = (("AC", "ac"), ("ATK", "atk")) + tuple(
-        (k, k.lower()) for k in _STAT_KEYS)
-    for key, dest in simple:
+    for key, dest in (("AC", "ac"), ("ATK", "atk")):
+        m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}([0-9OoLlIiSsBb]+)", t)
+        if m and (v := num(m.group(1))) is not None:
+            out[dest] = v
+
+    # Attributes print as "STR 196/510" -- current over the CAP. The cap is
+    # the useful half: a point of STR is worth nothing once you are at 510,
+    # and gear advice that cannot see that recommends stats with no effect.
+    # Reading the cap from the panel rather than hard-coding 510 means a
+    # patch that moves it does not silently invalidate every comparison.
+    for key in _STAT_KEYS:
+        dest = key.lower()
+        m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}"
+                      rf"([0-9OoLlIiSsBb]+)\s*/\s*([0-9OoLlIiSsBb]+)", t)
+        if m:
+            cur, cap = num(m.group(1)), num(m.group(2))
+            if cur is not None and cap is not None and cap >= cur:
+                out[dest], out["cap_" + dest] = cur, cap
+                continue
         m = re.search(rf"\b{key}[^0-9OoLlIiSsBb]{{0,4}}([0-9OoLlIiSsBb]+)", t)
         if m and (v := num(m.group(1))) is not None:
             out[dest] = v

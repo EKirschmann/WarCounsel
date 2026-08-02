@@ -874,16 +874,16 @@ async def _builtin_gear(ctx: dict) -> dict:
                     continue
                 gain, shown = wi[hand] - base_wi[hand], wi[hand]
             else:
-                a_vec, b_vec = vec, cur_vec
+                a_vec, b_vec = _effective_vecs(vec, cur_vec, ctx)
                 if base_slot == "any slot":
                     # An Any Slot item is NOT swung: it contributes stats
                     # and nothing else. Leaving DMG/DELAY in the vector let
                     # a weapon win the slot on damage it will never deal --
                     # reported from live play, where a 3.5-index blade was
                     # offered over a femur for a slot that swings neither.
-                    a_vec = {k: v for k, v in vec.items()
+                    a_vec = {k: v for k, v in a_vec.items()
                              if k not in ("DMG", "DELAY")}
-                    b_vec = {k: v for k, v in cur_vec.items()
+                    b_vec = {k: v for k, v in b_vec.items()
                              if k not in ("DMG", "DELAY")}
                 if not _pareto_beats(a_vec, b_vec):
                     # Not a clean win -- but "wins some, loses some" is a
@@ -1454,6 +1454,66 @@ async def _exalt_effect(base_item: str) -> Optional[str]:
 # every equippable slot in the EQL inventory export — the gear table always
 # shows all 24, backfilling slots the LLM didn't address. "Any Slot" x2 are
 # EQL's generic slots (hold any equippable item); no Charm/Power Source here.
+_CAPPED_STATS = ("STR", "STA", "AGI", "DEX", "WIS", "INT", "CHA")
+
+
+def _stat_headroom(ctx: dict) -> dict:
+    """How many points of each attribute are still worth having.
+
+    EQL caps attributes at 510 and the Inventory panel prints "STR 196/510",
+    so when the stats OCR is running we know the headroom exactly. A point
+    past the cap does nothing, and gear advice that cannot see that will
+    happily recommend an item for stats with no effect.
+
+    Empty when there is no reading -- unknown must behave exactly as before,
+    never as "no headroom", which would discard every attribute from every
+    comparison.
+    """
+    st = ctx.get("ocr_stats") or {}
+    out = {}
+    for k in _CAPPED_STATS:
+        cur, cap = st.get(k.lower()), st.get("cap_" + k.lower())
+        if isinstance(cur, int) and isinstance(cap, int) and cap > 0:
+            out[k] = max(0, cap - cur)
+    return out
+
+
+def _effective_vecs(cand: dict, worn: dict, ctx: dict) -> tuple:
+    """Rewrite both vectors as what each item would ACTUALLY deliver.
+
+    Naive clamping against the remaining headroom is wrong for a swap: the
+    current total already includes the worn item, so taking it off frees
+    room the candidate can use. The honest figure is each item's marginal
+    contribution over the total WITHOUT it --
+
+        base      = current - worn
+        effective = min(cap, base + item) - base
+
+    -- which values a +40 STR piece at 40 when there is room, at whatever
+    is left when there is little, and at 0 when the rest of your gear
+    already caps the stat. An item offering nothing but capped attributes
+    then correctly ties with an empty slot instead of winning.
+
+    Returns the pair unchanged when no reading exists: unknown must behave
+    exactly as it did before, never as "no headroom".
+    """
+    st = ctx.get("ocr_stats") or {}
+    if not st:
+        return cand, worn
+    c, w = dict(cand), dict(worn)
+    for key in _CAPPED_STATS:
+        cur, cap = st.get(key.lower()), st.get("cap_" + key.lower())
+        if not (isinstance(cur, int) and isinstance(cap, int) and cap > 0):
+            continue
+        worn_v = float(worn.get(key, 0.0))
+        base = max(0.0, cur - worn_v)
+        for vec, src in ((c, cand), (w, worn)):
+            v = float(src.get(key, 0.0))
+            if v > 0:
+                vec[key] = max(0.0, min(cap, base + v) - base)
+    return c, w
+
+
 def _dual_wields(classes: List[str]) -> Optional[bool]:
     """Can this trio swing an off-hand weapon at all?
 
@@ -1747,6 +1807,7 @@ async def _tradeoffs(ctx: dict) -> list:
                        if k not in ("DMG", "DELAY", "HASTE")}
                 ref = {k: v for k, v in cur_vec.items()
                        if k not in ("DMG", "DELAY", "HASTE")}
+            vec, ref = _effective_vecs(vec, ref, ctx)
             if not vec or _pareto_beats(vec, ref):
                 continue  # a clean win is the recommender's business
             diff = {k: vec.get(k, 0.0) - ref.get(k, 0.0)
@@ -2122,6 +2183,20 @@ async def generate_gear_advice(ctx: dict) -> dict:
     # off-hand index" to a Paladin/Necromancer/Wizard. The deterministic
     # gate drops such picks; saying it here stops the prose being written
     # in the first place.
+    # Capped attributes, so the model stops offering stats with no effect.
+    _hr = _stat_headroom(ctx)
+    if _hr:
+        full = [k for k, v in _hr.items() if v <= 0]
+        near = [f"{k} ({v} left)" for k, v in _hr.items() if 0 < v <= 20]
+        bits = []
+        if full:
+            bits.append("AT THE 510 CAP (further points do NOTHING): "
+                        + ", ".join(full))
+        if near:
+            bits.append("nearly capped: " + ", ".join(near))
+        if bits:
+            lines.append("- " + "; ".join(bits)
+                         + ". Never recommend an item FOR a capped stat.")
     _dw = _dual_wields(classes)
     dw_rule = ""
     if _dw is False:
