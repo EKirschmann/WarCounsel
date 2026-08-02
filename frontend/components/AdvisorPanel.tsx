@@ -192,6 +192,22 @@ function StatFix({ name, onSaved }: { name: string; onSaved: () => void }) {
   );
 }
 
+interface MeleeGroup {
+  verbs: string[];
+  hands: number;
+  fights: number;
+  dps: number;
+  avg_hit: number;
+  swings_per_min: number;
+  level_lo: number | null;
+  level_hi: number | null;
+}
+interface MeleeCompare {
+  groups: MeleeGroup[];
+  overlap: { level_lo: number; level_hi: number; groups: MeleeGroup[] } | null;
+  note?: string;
+}
+
 export const AdvisorPanel = memo(function AdvisorPanel({
   snap,
   onSnapChange,
@@ -292,6 +308,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
 
   const [rescanning, setRescanning] = useState(false);
   const [gear, setGear] = useState<GearAdvice | null>(null);
+  const [melee, setMelee] = useState<MeleeCompare | null>(null);
   const [gearLoading, setGearLoading] = useState(false);
   // Slots with nothing in them, so an unverifiable owned item can be shown
   // next to the gap it MIGHT fill. The app cannot match them up itself --
@@ -342,6 +359,14 @@ export const AdvisorPanel = memo(function AdvisorPanel({
     advice.nice_to_have.forEach((s) => { sel[s.name] = sel[s.name] ?? false; });
     setPickSel(sel);
   }, [advice]);
+
+  const loadMelee = async () => {
+    try {
+      setMelee(await apiGet<MeleeCompare>("/api/melee-compare"));
+    } catch {
+      setMelee(null);
+    }
+  };
 
   const consultGear = async (refresh: boolean) => {
     setGearLoading(true);
@@ -935,6 +960,58 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                   </tbody>
                 </table>
               )}
+              <div className="adv-sub" style={{ marginTop: 12 }}>
+                Melee loadouts — measured
+                <button type="button" className="link-btn" onClick={loadMelee}>
+                  {melee ? "refresh" : "compare"}
+                </button>
+              </div>
+              {melee && (
+                <>
+                  <p className="adv-note">
+                    From your own fights, not a formula: the two-handed damage bonus
+                    is not published for this game. One weapon verb reads as a
+                    two-hander, two or more as dual wield — the log never states
+                    what was equipped, so that inference is the weak link.
+                    {melee.overlap
+                      ? ` Levels ${melee.overlap.level_lo}–${melee.overlap.level_hi} only, so gear and level are not doing the work.`
+                      : " Level ranges differ between rows — compare with that in mind."}
+                  </p>
+                  <table className="enc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Weapons seen</th>
+                        <th scope="col">Fights</th>
+                        <th scope="col">DPS</th>
+                        <th scope="col">Avg</th>
+                        <th scope="col">Swings/min</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(melee.overlap?.groups ?? melee.groups)
+                        .filter((g) => g.fights >= 3)
+                        .slice(0, 6)
+                        .map((g) => (
+                          <tr key={g.verbs.join("+")}>
+                            <td className="enc-name">
+                              {g.verbs.join(" + ")}
+                              <span className="enc-tag">
+                                {g.hands === 1 ? "2H / one weapon" : "dual wield"}
+                              </span>
+                            </td>
+                            <td>{g.fights}</td>
+                            <td>
+                              <strong>{g.dps}</strong>
+                            </td>
+                            <td>{g.avg_hit}</td>
+                            <td>{g.swings_per_min}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
               {gear && (gear.merges?.length ?? 0) > 0 && (
                 <>
                   <div

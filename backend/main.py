@@ -1088,6 +1088,105 @@ async def post_group_trust_all(body: dict):
     return res
 
 
+# Verbs that are a WEAPON swinging, as opposed to a skill. Kick, bash and
+# the like land on their own timers and would credit a loadout for damage
+# it did not produce.
+_WEAPON_VERBS = {"slash", "pierce", "crush", "hit", "strike", "punch",
+                 "backstab", "slice", "bite", "maul", "gore"}
+
+
+@app.get("/api/melee-compare")
+async def melee_compare(db: Session = Depends(get_db), band: int = 3):
+    """Observed weapon DPS grouped by which weapon verbs appeared.
+
+    The question this answers -- "do I lose DPS giving up dual wield for a
+    two-hander" -- cannot be modelled honestly. eqlwiki does not publish the
+    two-handed damage bonus; it links out to a classic-EverQuest table, and
+    classic values have already been wrong for this game more than once
+    (see the item pages that list stats EQL rebalanced). So this measures
+    instead of predicting.
+
+    The verb set is a FINGERPRINT of the loadout, not a record of it: the
+    log never says what is equipped, but a two-hander swings one verb and a
+    dual-wield pair swings two. That inference is the weak link and it is
+    stated rather than hidden.
+
+    The other confound is level -- a fingerprint seen only at 27 will beat
+    one seen at 12 whatever was equipped -- so groups also report their
+    level range, and `overlap` re-runs the comparison inside the band where
+    two or more fingerprints actually coexist.
+    """
+    if not _character_id:
+        return {"groups": [], "overlap": None}
+    rows = (db.query(LogEventRow)
+            .filter(LogEventRow.character_id == _character_id,
+                    LogEventRow.event_type == "encounter",
+                    LogEventRow.ts >= _launch_bound())
+            .order_by(LogEventRow.id.desc()).limit(800).all())
+
+    def collect(lo=None, hi=None) -> list:
+        acc: dict = {}
+        for r in rows:
+            d = r.payload or {}
+            lv = d.get("level")
+            if lo is not None and (lv is None or not (lo <= lv <= hi)):
+                continue
+            verbs, dmg, hits = set(), 0, 0
+            for a in d.get("abilities") or []:
+                if (a.get("kind") or "") != "melee":
+                    continue
+                n = (a.get("name") or "").strip().lower()
+                if n in _WEAPON_VERBS:
+                    verbs.add(n)
+                    dmg += a.get("total") or 0
+                    hits += a.get("hits") or 0
+            if not verbs or not d.get("duration"):
+                continue
+            g = acc.setdefault("+".join(sorted(verbs)),
+                               {"verbs": sorted(verbs), "fights": 0,
+                                "damage": 0, "seconds": 0.0, "hits": 0,
+                                "levels": []})
+            g["fights"] += 1
+            g["damage"] += dmg
+            g["seconds"] += d["duration"]
+            g["hits"] += hits
+            if lv:
+                g["levels"].append(lv)
+        out = []
+        for g in acc.values():
+            if g["seconds"] < 60:
+                continue  # too little to say anything with
+            lv = sorted(g["levels"])
+            out.append({
+                "verbs": g["verbs"],
+                # one weapon swinging reads as a two-hander (or an empty
+                # off-hand); two or more reads as dual wield
+                "hands": 1 if len(g["verbs"]) == 1 else 2,
+                "fights": g["fights"],
+                "dps": round(g["damage"] / g["seconds"], 1),
+                "avg_hit": round(g["damage"] / max(g["hits"], 1), 1),
+                "swings_per_min": round(g["hits"] / (g["seconds"] / 60), 1),
+                "level_lo": lv[0] if lv else None,
+                "level_hi": lv[-1] if lv else None,
+            })
+        return sorted(out, key=lambda x: -x["fights"])
+
+    groups = collect()
+    overlap = None
+    lvls = [lv for r in rows if (lv := (r.payload or {}).get("level"))]
+    if lvls:
+        # the band around the levels most recently played, where a
+        # comparison is least polluted by having simply been stronger
+        recent = lvls[0]
+        inband = collect(recent - band, recent + band)
+        if len(inband) > 1:
+            overlap = {"level_lo": recent - band, "level_hi": recent + band,
+                       "groups": inband}
+    return {"groups": groups, "overlap": overlap,
+            "note": "Weapon swings only — kick and bash are separate skills. "
+                    "The verb set infers the loadout; the log never states it."}
+
+
 def _launch_bound() -> str:
     """String bound separating this era's rows from beta ones.
 
