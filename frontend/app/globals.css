@@ -2314,3 +2314,16 @@ button.app-version:hover { color: var(--gold-bright); }
   border-color: rgba(212, 87, 74, .55);
 }
 .enc-trust[data-act="warn"]:hover { background: rgba(212, 87, 74, .12); }
+
+/* Result of "Test read" for the stats box. Sits directly under its row —
+   the position box shows its equivalent inside the setup modal, but this
+   one is placed from the panel itself, so its answer belongs there too. */
+.ocr-preview {
+  margin: 4px 0 0;
+  padding: 4px 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-dim, rgba(226, 222, 214, .7));
+  background: rgba(0, 0, 0, .22);
+  border-left: 2px solid rgba(200, 170, 110, .34);
+}
