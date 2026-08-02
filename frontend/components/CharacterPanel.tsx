@@ -301,6 +301,30 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
+        {Object.keys(snap.unlock_loot ?? {}).length > 0 && (
+          <div className="loot-list unlock-list">
+            {/* Nothing in the game says a Gnoll Fang is 1/1200th of a
+                Barbarian at the moment you loot it, and the cost of not
+                knowing is not a wasted click — it is having sold four
+                hundred of them. */}
+            <h3>Race unlock turn-ins</h3>
+            <ul>
+              {Object.entries(snap.unlock_loot ?? {}).map(([item, u]) => (
+                <li key={item} title={u.note ?? undefined}>
+                  <span className="unlock-item">{item}</span>
+                  <span className="unlock-count">
+                    {u.count}
+                    {u.total ? ` / ${u.total}` : ""}
+                  </span>
+                  <span className="unlock-where">
+                    {u.race} — {u.npc}, {u.zone}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {trios.length > 1 && (
           <div className="loot-list hunt-list">
             <h3>Trio comparison</h3>

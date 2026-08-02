@@ -2402,3 +2402,15 @@ button.app-version:hover { color: var(--gold-bright); }
   vertical-align: middle;
 }
 .model-pick:focus-visible { outline: 2px solid var(--gold, #c8aa6e); outline-offset: 1px; }
+
+/* Race-unlock turn-ins seen this session. Styled as progress, not as loot:
+   the count against the target is the whole point — one fang means nothing,
+   "37 / 1200" tells you whether to keep going. */
+.unlock-list li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; }
+.unlock-item { color: var(--milestone, #c8aa6e); }
+.unlock-count { font-family: var(--mono, "IBM Plex Mono", monospace); font-size: 11px; }
+.unlock-where {
+  grid-column: 1 / -1;
+  font-size: 10.5px;
+  color: var(--muted, rgba(226, 222, 214, .55));
+}

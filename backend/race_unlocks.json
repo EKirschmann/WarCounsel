@@ -1,0 +1,77 @@
+{
+  "_source": "eqlwiki.com — User:Alanna/Alanna's Race Unlock Guide (CC BY-SA 4.0)",
+  "_url": "https://eqlwiki.com/User:Alanna/Alanna%27s_Race_Unlock_Guide",
+  "_note": "LOOTABLE turn-ins only. The guide's other paths (Red Wine, Muffin, Bandages, Bat Wing, Grub Locker, Lion Meat Shipment) are vendor purchases or quest hand-outs — they never appear in a loot line, so they cannot fire a loot alert and are deliberately absent. Curated by hand: the page is freeform prose and a regex over it produced one usable row out of a known nine.",
+  "items": [
+    {
+      "item": "Gnoll Fang",
+      "race": "Barbarian",
+      "npc": "Lysbith McNaff",
+      "zone": "Halas",
+      "per_turnin": 3,
+      "total": 1200,
+      "factions": ["Rogues of the White Rose", "Wolves of the North", "Merchants of Halas"],
+      "note": "Gnoll Bounty quest. The long road — the guide calls it an alternative to Lion Meat Shipment."
+    },
+    {
+      "item": "Phosphorous Powder",
+      "race": "Froglok",
+      "npc": "Zok Zribb",
+      "zone": "Rathe Mountains",
+      "per_turnin": 2,
+      "total": 800,
+      "factions": ["Protectors of Gukta", "Guktan Elders", "Guktan Suppliers"],
+      "note": "Drops from high-level ghouls in the Ruins of Old Guk — near 100% for two from the dar/zol/bok ghoul knights."
+    },
+    {
+      "item": "Kobold Molar",
+      "race": "Erudite",
+      "npc": "Tiam Khonsir",
+      "zone": "Erudin",
+      "per_turnin": 1,
+      "total": 400,
+      "factions": ["Deepwater Knights", "High Council of Erudin"],
+      "note": "Turn in for the GOOD quest only. The guide warns the Heretics turn-in costs -7 Deepwater Knights."
+    },
+    {
+      "item": "Deathfist Slashed Belt",
+      "race": "Troll",
+      "npc": "Bregna",
+      "zone": "Grobb",
+      "per_turnin": 1,
+      "total": 400,
+      "factions": ["Da Bashers", "Grobb Merchants", "Dark Ones"],
+      "note": "From Deathfist orcs in the Commonlands. The guide expects ~2000 kills for 400 belts."
+    },
+    {
+      "item": "Black Wolf Skin",
+      "race": "Halfling",
+      "npc": "Beek Guinders",
+      "zone": "Rivervale",
+      "per_turnin": 1,
+      "total": 400,
+      "factions": ["Guardians of the Vale", "Merchants of Rivervale", "Priests of Mischief"],
+      "note": "Paired with Berries. ~2000 wolf kills for the skins."
+    },
+    {
+      "item": "Ruined Wolf Pelt",
+      "race": "Halfling",
+      "npc": "Beek Guinders",
+      "zone": "Rivervale",
+      "per_turnin": 2,
+      "total": 800,
+      "factions": ["Guardians of the Vale", "Merchants of Rivervale", "Priests of Mischief"],
+      "note": "Every wolf drops them, and they stack — worth keeping even when you are short on skins."
+    },
+    {
+      "item": "Berries",
+      "race": "Halfling",
+      "npc": "Beek Guinders",
+      "zone": "Rivervale",
+      "per_turnin": 1,
+      "total": 400,
+      "factions": ["Guardians of the Vale", "Merchants of Rivervale", "Priests of Mischief"],
+      "note": "Foraged, or picked off the ground in Misty Thicket — three respawn on a 5-minute timer."
+    }
+  ]
+}

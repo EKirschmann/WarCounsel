@@ -90,6 +90,15 @@ Not everything the app shows carries the same confidence, so:
 - **Deliberately absent** — ZEM multipliers. The wiki withholds them on
   purpose, so nothing here estimates them.
 
+- **`backend/race_unlocks.json`** — hand-curated from eqlwiki's
+  *User:Alanna/Alanna's Race Unlock Guide*. Wiki content, so **CC BY-SA
+  4.0**, and credited to its author. Only the LOOTABLE turn-ins are
+  vendored: the guide's vendor-purchase and quest-hand-out routes never
+  appear in a loot line. Curated by hand rather than scraped because the
+  page is freeform prose — a regex over it produced one usable row out of
+  a known nine, which is exactly the kind of near-miss this project treats
+  as worse than no data.
+
 ## Design patterns adopted from other parsers
 
 No code is vendored from either project; both were read for approach after

@@ -188,6 +188,16 @@ export interface ZoneGeometry3D {
 }
 
 export interface Snapshot {
+  /** Looted items that are race-unlock turn-ins, with a running tally. */
+  unlock_loot?: Record<string, {
+    count: number;
+    race: string;
+    npc: string;
+    zone: string;
+    total?: number | null;
+    factions?: string[];
+    note?: string | null;
+  }>;
   /** Contributors hidden from the meter — not known to be in your group. */
   filtered?: FilteredContributor[];
   pet_slots?: number | null;

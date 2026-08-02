@@ -10,7 +10,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Optional
 
-from backend import alerts, builds_data, spell_file
+from backend import alerts, builds_data, race_unlocks, spell_file
 from backend.alert_data import (ABILITY_COOLDOWNS, BASE_DURATION_ROWS,
                                 COOLDOWN_SHAVES, SPELL_TIMERS,
                                 TIER_DURATION_RATE)
@@ -196,6 +196,9 @@ class CharacterTracker:
         # and a dismissal should not outlive the thing it was about.
         self.ignored_contributors: dict = {}
         # Inventory-panel numbers read from the screen (optional OCR)
+        # race-unlock turn-ins seen this session: item -> tally + where it goes
+        self.unlock_loot: dict = {}
+        self._unlock_alerted: set = set()
         self.ocr_stats: dict = {}
         self.ocr_stats_at = None
         # anyone who has spoken in any channel -- pets never do
@@ -285,6 +288,38 @@ class CharacterTracker:
             # may hold the fight open. Kept apart from "last" so their
             # damage cannot bootstrap its own extension window.
             self.encounter["last_own"] = ts
+
+    def _note_unlock_loot(self, item: str, count: int, ts: datetime) -> None:
+        """Flag loot that is a race-unlock turn-in, and keep a running tally.
+
+        Nothing in the game says this at the moment it matters. A Gnoll Fang
+        reads as vendor trash and is 1/1200th of a Barbarian, and the cost of
+        not knowing is not a wasted click -- it is having sold four hundred
+        of them.
+
+        Alerted ONCE per item per session. These drop in bulk by design, so
+        alerting per loot would bury every other alert under the very grind
+        it is describing; the tally on the panel carries the repeats.
+        """
+        rec = race_unlocks.match(item)
+        if not rec:
+            return
+        prog = self.unlock_loot.setdefault(
+            rec["item"], {"count": 0, "race": rec["race"], "npc": rec["npc"],
+                          "zone": rec["zone"], "total": rec.get("total"),
+                          "factions": rec.get("factions") or [],
+                          "note": rec.get("note")})
+        prog["count"] += count
+        if rec["item"] in self._unlock_alerted:
+            return
+        self._unlock_alerted.add(rec["item"])
+        need = rec.get("total")
+        self._push_alert(
+            "unlock",
+            f"{rec['item']} — {rec['race']} unlock turn-in "
+            f"({rec['npc']}, {rec['zone']}"
+            + (f"; {need} needed)" if need else ")"),
+            ts)
 
     def _looks_like_pet(self, name: str) -> bool:
         """No player evidence for a name that is fighting alongside us.
@@ -1024,6 +1059,7 @@ class CharacterTracker:
                 self.loots.appendleft(label)
                 self.loot_count += max(e.count, 1)
                 self._fire_alerts("loot", e.item, e.ts)
+                self._note_unlock_loot(e.item, max(e.count, 1), e.ts)
                 # loot lines name the corpse: exact per-mob attribution
                 # Upgrade currency. The 2026-07-28 launch patch added
                 # "Void-touched Potential", a raid token that merges exactly
@@ -1780,6 +1816,7 @@ class CharacterTracker:
             "filtered": self.filtered_view(),
             "inferred_classes": self.inferred_view(),
             "ocr_stats": dict(self.ocr_stats),
+            "unlock_loot": dict(self.unlock_loot),
             "ability_summary": self.ability_summary(),
             "session": {
                 "damage_dealt": self.damage_dealt,
