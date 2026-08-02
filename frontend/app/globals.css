@@ -2363,3 +2363,13 @@ button.app-version:hover { color: var(--gold-bright); }
 }
 .ocr-set-actions button:hover:not(:disabled) { background: rgba(200, 170, 110, .12); }
 .ocr-set-actions button:disabled { opacity: .5; cursor: default; }
+
+/* An API key is a secret, not a login. Masking it with text-security keeps
+   it out of the browser's password manager entirely — a type="password"
+   field attracts Chrome's save/generate UI no matter what the autocomplete
+   hint says. Browsers without this property get a real password field
+   instead (see SettingsModal), and none of those ship that UI. */
+.set-secret {
+  -webkit-text-security: disc;
+  text-security: disc;
+}

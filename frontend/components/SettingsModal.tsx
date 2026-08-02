@@ -152,6 +152,13 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [provider, setProvider] = useState("none");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
+  // Can this browser mask a plain text field? Checked once, at mount: if it
+  // can, the key box is not a password field at all and no password manager
+  // takes an interest in it.
+  const [maskable] = useState(
+    () => typeof CSS !== "undefined"
+      && CSS.supports?.("-webkit-text-security", "disc"),
+  );
   // Ollama's host is its own field: unlike LM Studio it is commonly on
   // ANOTHER machine, so it cannot be a fixed default.
   const [ollamaUrl, setOllamaUrl] = useState("");
@@ -416,10 +423,25 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   )}
                   <div className="set-row">
                     <input
-                      type="password"
+                      // NOT type="password". Chrome attaches its password
+                      // manager to those fields whatever the autocomplete
+                      // hint says, and "new-password" actively invites the
+                      // generate-a-password offer -- reported twice. An API
+                      // key is a secret but it is not a login, and the
+                      // browser has no business filing it with one.
+                      //
+                      // Masked with -webkit-text-security instead, falling
+                      // back to a real password field where that is not
+                      // supported (Firefox), which is also where Chrome's
+                      // password UI does not exist.
+                      type={maskable ? "text" : "password"}
+                      className={maskable ? "set-secret" : undefined}
+                      name="wc-provider-secret"
+                      data-1p-ignore
+                      data-lpignore="true"
                       value={apiKey}
                       spellCheck={false}
-                      autoComplete="new-password"
+                      autoComplete="off"
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder={keyStored ? "•••••••• saved — type to replace" : "API key"}
                       aria-label="API key"
