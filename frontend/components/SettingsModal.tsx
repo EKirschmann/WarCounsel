@@ -38,6 +38,7 @@ type SettingsData = {
   llm: {
     active: { provider: string; model: string };
     openai_model: string;
+    lmstudio_model?: string;
     custom_model: string;
     custom_base_url: string;
     lmstudio_base_url: string;
@@ -121,6 +122,30 @@ function ProbeRow({ provider, probe, probing, onCheck }: {
   );
 }
 
+/** Which model belongs to a provider.
+ *
+ * This mapping was written out twice -- once to seed the panel, once when
+ * switching provider -- and BOTH copies omitted lmstudio. One fell through
+ * to the OpenAI model and showed "o3" in the local model box; the other
+ * fell through to "" and blanked it. Two chances to be wrong about the
+ * same fact is one too many. */
+function modelFor(provider: string, llm: SettingsData["llm"]): string {
+  switch (provider) {
+    case "custom":
+      return llm.custom_model ?? "";
+    case "local":
+      return llm.ollama_model ?? "";
+    case "anthropic":
+      return llm.anthropic_model ?? "";
+    case "openai":
+      return llm.openai_model ?? "";
+    case "lmstudio":
+      return llm.lmstudio_model ?? llm.active.model ?? "";
+    default:
+      return "";
+  }
+}
+
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<SettingsData | null>(null);
   const [gameDir, setGameDir] = useState("");
@@ -147,11 +172,11 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         setData(d);
         setGameDir(d.game.path ?? "");
         setProvider(d.llm.active.provider);
-        setModel(
-          d.llm.active.provider === "custom" ? d.llm.custom_model
-          : d.llm.active.provider === "local" ? d.llm.ollama_model
-          : d.llm.openai_model,
-        );
+        // No lmstudio branch here meant it fell through to the OpenAI
+        // model, so opening this panel with LM Studio active displayed
+        // "o3" -- a model that exists only at OpenAI -- in the local
+        // model box. Every provider names its own field now.
+        setModel(modelFor(d.llm.active.provider, d.llm));
         setOllamaUrl(d.llm.ollama_base_url ?? "");
         setCtxLimit(d.llm.context?.manual ?? "");
         setCustomUrl(d.llm.custom_base_url ?? "");
@@ -206,13 +231,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     (next: string) => {
       setProvider(next);
       if (!data) return;
-      setModel(
-        next === "custom" ? data.llm.custom_model
-        : next === "local" ? data.llm.ollama_model
-        : next === "anthropic" ? data.llm.anthropic_model
-        : next === "openai" ? data.llm.openai_model
-        : "",
-      );
+      setModel(modelFor(next, data.llm));
     },
     [data],
   );
@@ -322,6 +341,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   ref={firstField}
                   value={gameDir}
                   spellCheck={false}
+                      autoComplete="off"
                   onChange={(e) => {
                     setGameDir(e.target.value);
                     setVerdict(null);
@@ -376,6 +396,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <input
                       value={model}
                       spellCheck={false}
+                      autoComplete="off"
                       onChange={(e) => setModel(e.target.value)}
                       placeholder="model name"
                       aria-label="Model name"
@@ -386,6 +407,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                       <input
                         value={customUrl}
                         spellCheck={false}
+                      autoComplete="off"
                         onChange={(e) => setCustomUrl(e.target.value)}
                         placeholder="https://api.groq.com/openai/v1"
                         aria-label="Custom endpoint base URL"
@@ -396,8 +418,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <input
                       type="password"
                       value={apiKey}
-                      autoComplete="off"
                       spellCheck={false}
+                      autoComplete="new-password"
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder={keyStored ? "•••••••• saved — type to replace" : "API key"}
                       aria-label="API key"
@@ -447,6 +469,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <input
                       value={model}
                       spellCheck={false}
+                      autoComplete="off"
                       list="lmstudio-models"
                       onChange={(e) => setModel(e.target.value)}
                       placeholder="model id, e.g. gemma-4-26b-a4b-it"
@@ -493,6 +516,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   <input
                     value={ctxLimit}
                     spellCheck={false}
+                      autoComplete="off"
                     inputMode="numeric"
                     onChange={(e) => setCtxLimit(e.target.value)}
                     placeholder={
@@ -531,6 +555,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <input
                       value={model}
                       spellCheck={false}
+                      autoComplete="off"
                       onChange={(e) => setModel(e.target.value)}
                       placeholder="model, e.g. llama3.1"
                       aria-label="Ollama model"
@@ -540,6 +565,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <input
                       value={ollamaUrl}
                       spellCheck={false}
+                      autoComplete="off"
                       onChange={(e) => setOllamaUrl(e.target.value)}
                       placeholder="http://localhost:11434"
                       aria-label="Ollama server address"

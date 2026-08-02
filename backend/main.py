@@ -1279,7 +1279,7 @@ async def api_settings_get():
     from backend.app_config import load as overrides
     from backend import spell_lines
     from backend.game_data import _vendored_zem
-    from backend.llm_runtime import (active, available, custom_model,
+    from backend.llm_runtime import (active, available, custom_model, model_for,
                                      openai_model)
     from backend.secrets_store import which_are_set
     return {
@@ -1289,6 +1289,11 @@ async def api_settings_get():
         "packaged": is_frozen(),
         "llm": {
             "active": active(),
+            # LM Studio is the only provider whose model was absent here --
+            # it appeared solely as active.model, so the settings panel had
+            # nothing to seed its field from unless it was already active,
+            # and fell through to showing the OpenAI model instead.
+            "lmstudio_model": model_for("lmstudio"),
             "openai_model": openai_model(),
             "custom_model": custom_model(),
             "custom_base_url": settings.custom_base_url,
