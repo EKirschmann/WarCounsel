@@ -1094,7 +1094,6 @@ body {
 }
 
 .adv-foot {
-  margin-top: 4px;
   padding-top: 10px;
   border-top: 1px solid var(--hairline-dim);
   color: var(--muted);
@@ -1817,18 +1816,21 @@ button.app-version:hover { color: var(--gold-bright); }
 /* ---- item hover cards (wiki acquisition data) ---- */
 .item-hover { position: relative; cursor: help; border-bottom: 1px dotted var(--hairline); }
 .item-hover-card {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  z-index: 40;
+  /* FIXED and portalled to <body>: the panels set backdrop-filter (a
+     stacking context z-index cannot escape) and scroll their bodies (which
+     clipped it). Positioned from JS against the hovered name. */
+  position: fixed;
+  z-index: 55;  /* over every panel, under the modals at 60 */
   display: block;
   min-width: 230px;
   max-width: 330px;
   margin-top: 4px;
   padding: 8px 10px;
-  background: rgba(18, 21, 26, 0.97);
+  /* Fully opaque. At 0.97 the ledger text behind it stayed faintly legible
+     through the card, which read as the popup being see-through. */
+  background: #12151a;
   border: 1px solid var(--hairline);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
   font-size: 11.5px;
   font-weight: 400;
   line-height: 1.45;
