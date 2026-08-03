@@ -75,7 +75,7 @@ Rules:
   - should_have: fills the REMAINING slots, in priority order — must_have + should_have together must total EXACTLY __SLOTS_NOTE__ picks.
   - nice_to_have: 10-14 EXTRA alternatives beyond the slot count, in priority order, so the player can swap by situation (different zone, tougher pulls, low mana).
 - prebuffs: every entry's reason must say WHAT IT DOES and why it matters for this focus, using the effect shown beside it — "Permanent buff." is not a reason. Include long buffs worth re-casting between pulls, not only permanent ones. Separate from the loadout — list PERMANENT buffs (marked in the character data) FIRST: they persist until death, are cast exactly once, and must never be described as needing refreshing. Then long-duration self-buffs worth keeping up (damage shields like Bramblecoat, AC/HP buffs, Spirit of Wolf). The player memorizes one temporarily, casts it, then swaps the slot back to combat spells — so do NOT waste loadout slots on long buffs; put them here. Owned and level-legal only.
-- Summoned-pet lines (skeletons, elementals, warders): only ever slot the HIGHEST-level pet the character owns — older ranks are strictly weaker versions of the same pet.
+- If the character data says NO PET, never recommend pet spells of any kind — no pet haste, no shrink, no pet heals, no pet buffs. They target a pet slot that will be empty. Summoned-pet lines (skeletons, elementals, warders): only ever slot the HIGHEST-level pet the character owns — older ranks are strictly weaker versions of the same pet.
 - Respect the focus STRICTLY: for solo focuses, never slot group-only utility — resurrection and corpse-recovery lines, buffs that can only target others — those are dead slots when playing alone.
 - If a "Missing spells they could BUY" list is present, fold the best purchases into note or horizon (say they are vendor purchases).
 - replace: ONLY same-spell-line pairs — the upgrade must do the same job with the same primary effect (Symbol of Transal -> Symbol of Ryltan; Minor Healing -> Healing). A teleport, utility, or AA ability is NEVER upgraded by a nuke or an unrelated spell. Cover: recently-cast spells superseded by a better OWNED spell, and owned loadout spells with a significant same-line upgrade within 5 levels (say the level). Omit any pair you are not sure about; every pair is machine-verified and wrong ones are discarded.
@@ -125,6 +125,9 @@ def _build_prompt(ctx: dict, wiki: str) -> str:
     casts = ctx.get("recent_casts") or []
     lines.append("- Recently cast (live log, newest first): "
                  + (", ".join(casts) if casts else "none seen"))
+    if ctx.get("_no_pet"):
+        lines.append("- NO PET: none of these classes summons one, so every "
+                     "pet-targeted spell is dead weight in the loadout.")
     perm = ctx.get("_permanent") or []
     if perm:
         described = [f"{n} ({e})" if (e := _buff_effects(n)) else n for n in perm]
@@ -325,7 +328,11 @@ _SELF_TARGET = 6
 # Effects that are never a pre-buff even when they last a while. 67 is the
 # remote eye (Eye of Zomm) -- it summons something that flies off and does
 # nothing to the caster, so there is nothing to pre-cast.
-_NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67}
+# 12 is invisibility and 28 is invisibility-versus-undead. They last a
+# long time and land on you, so every structural test for a buff passes --
+# but you cast them for a specific pull, not as part of buffing up, and
+# they were crowding the real buffs out of the list.
+_NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67, 12, 28}
 
 
 # How far ahead the horizon looks. The wiki/builds context already spans
@@ -1266,6 +1273,7 @@ async def generate_advice(ctx: dict) -> dict:
             ctx["_hunting"] = []
         ctx["_permanent"] = _permanent_buffs(ctx)
         ctx["_long_buffs"] = _long_buffs(ctx)
+        ctx["_no_pet"] = not _summons_a_pet(classes)
         if llm_active()["provider"] == "none":
             body = await _builtin_counsel(ctx)
             base["grounding"] = body.pop("grounding", "memory")
@@ -1361,15 +1369,15 @@ async def generate_advice(ctx: dict) -> dict:
                 out.append(s)
             return out
 
-        must_have = await _gate_picks(
+        must_have = _gate_pet_spells(await _gate_picks(
             _clean_list(data.get("must_have"), ("name", "cls", "reason"), cap=10),
-            "must_have")
-        should_have = await _gate_picks(
+            "must_have"), classes)
+        should_have = _gate_pet_spells(await _gate_picks(
             _clean_list(data.get("should_have"), ("name", "cls", "reason"), cap=14),
-            "should_have")
-        nice_to_have = await _gate_picks(
+            "should_have"), classes)
+        nice_to_have = _gate_pet_spells(await _gate_picks(
             _clean_list(data.get("nice_to_have"), ("name", "cls", "reason"), cap=16),
-            "nice_to_have")
+            "nice_to_have"), classes)
         # Buff SLOTS: drop picks that would overwrite each other. Run across
         # must_have + should_have together (they are one slot fill) and
         # BEFORE the promote step, so a freed gem refills from alternatives.
@@ -1410,9 +1418,9 @@ async def generate_advice(ctx: dict) -> dict:
             for s in lst:
                 s["level"] = level_by_name.get(str(s["name"]).lower())
         loadout = must_have + should_have  # combined = the actual slot fill
-        prebuffs = _describe_prebuffs(_annotate_stacking(_gate_prebuffs(await _gate_picks(
+        prebuffs = _describe_prebuffs(_annotate_stacking(_backfill_prebuffs(_gate_prebuffs(await _gate_picks(
             _clean_list(data.get("prebuffs"), ("name", "cls", "reason"), cap=8),
-            "prebuffs")), ctx))
+            "prebuffs")), ctx), ctx))
         # Long-duration buffs are the worst place to stack two of a slot: the
         # second cast silently wastes the first one's mana and duration.
         prebuffs, _pre_clashes = _gate_stacking(prebuffs)
@@ -1724,6 +1732,43 @@ def _annotate_stacking(picks: list, ctx: dict) -> list:
     return [p for p in picks if not p.pop("_drop", False)]
 
 
+def _backfill_prebuffs(picks: list, ctx: dict) -> list:
+    """Make sure the long defensive buffs are actually offered.
+
+    The model was handed the list and still returned five permanents and two
+    invisibility spells; Center and Skin like Steel -- 27 and 36 minutes of
+    AC and hit points -- never appeared. A pre-buff section that omits the
+    buffs you would actually cast before a pull is not doing its job, so the
+    strongest few are added deterministically rather than left to chance.
+
+    Ordered by magnitude of the primary effect so an upgrade wins its slot,
+    and capped: this supplements the model's picks, it does not replace them.
+    """
+    from backend import builds_data
+    from backend.game_data import _primary_effect
+    have = {(p.get("name") or "").lower() for p in picks}
+    level = ctx.get("level")
+    cands = []
+    for sp in (ctx.get("spellbook") or {}).get("castable", []):
+        if level is not None and sp["level"] > level:
+            continue
+        if sp["name"].lower() in have:
+            continue
+        e = builds_data.spell_entry(sp["name"])
+        if not e or (e.get("durationTicks") or 0) < 100:
+            continue
+        pe = _primary_effect(e)
+        if not pe or pe[0] in _NOT_A_BUFF_SPAS:
+            continue
+        cands.append((abs(pe[1] or 0), sp))
+    cands.sort(key=lambda c: -c[0])
+    for _mag, sp in cands[:4]:
+        picks.append({"name": sp["name"], "cls": "", "level": sp["level"],
+                      "reason": (_buff_effects(sp["name"]) or "long buff")
+                                + " — worth re-casting between pulls"})
+    return picks
+
+
 def _describe_prebuffs(picks: list) -> list:
     """Say how long each pre-buff lasts, and whether it ever needs recasting.
 
@@ -1746,6 +1791,41 @@ def _describe_prebuffs(picks: list) -> list:
     picks.sort(key=lambda x: (not x.get("permanent"),
                               -(x.get("duration_min") or 0)))
     return picks
+
+
+def _summons_a_pet(classes: List[str]) -> bool:
+    """Does any class in the trio actually summon a pet?
+
+    Pet-support spells target the pet slot (target type 14) and are useless
+    without one. A Paladin/Druid/Monk was told to slot Tiny Companion --
+    "improves pet mobility" -- with no pet to improve: none of those three
+    summons anything. A druid CAN charm an animal, which is a pet of sorts,
+    but a charm is a fight-by-fight decision and not a reason to spend two
+    of fourteen combat gems on pet utility.
+    """
+    from backend import builds_data
+    for c in classes or []:
+        for sp in (builds_data.class_spells(c) or []):
+            if any(f.get("effectId") in (33, 71)
+                   for f in (sp.get("effects") or [])):
+                return True
+    return False
+
+
+def _gate_pet_spells(picks: list, classes: List[str]) -> list:
+    """Drop pet-targeted spells when nothing in the trio has a pet."""
+    if _summons_a_pet(classes):
+        return picks
+    from backend import builds_data
+    out = []
+    for p in picks:
+        e = builds_data.spell_entry(p.get("name") or "")
+        if e and e.get("targetTypeId") == _PET_TARGET:
+            logger.info("Dropped pet spell for a pet-less trio: %s",
+                        p.get("name"))
+            continue
+        out.append(p)
+    return out
 
 
 def _gate_prebuffs(picks: list) -> list:
