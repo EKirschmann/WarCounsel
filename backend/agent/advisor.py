@@ -198,19 +198,20 @@ def _lmstudio_budget(prompt_chars: int) -> int:
     if llm_active()["provider"] != "lmstudio":
         return 0  # frontier/other providers: no bind — their defaults are fine
     try:
-        import urllib.request
-        base = settings.lmstudio_base_url.rsplit("/v1", 1)[0]
-        with urllib.request.urlopen(base + "/api/v0/models", timeout=3) as r:
-            models = json.loads(r.read()).get("data", [])
-        ctx = next((m.get("loaded_context_length") for m in models
-                    if m.get("state") == "loaded"
-                    and m.get("loaded_context_length")), None)
-        if not ctx:
-            return 6000
-        est_prompt = prompt_chars // 3 + 200  # ~3 chars/token, safety pad
-        return max(1200, min(12000, int(ctx) - est_prompt - 256))
+        from backend.llm_runtime import context_limit
+        ctx = int((context_limit() or {}).get("limit") or 0)
     except Exception:
+        ctx = 0
+    if not ctx:
         return 6000
+    est_prompt = prompt_chars // 3 + 200  # ~3 chars/token, safety pad
+    # Ceiling raised from 12000, and the rest of the window is offered. A
+    # REASONING model spends its thinking against this same budget: one run
+    # burned 5,997 reasoning tokens out of 6,000 and was cut off
+    # mid-deliberation with an empty content field, which surfaced as "no
+    # JSON in reply" -- a parsing complaint about a model that never got as
+    # far as answering.
+    return max(1200, min(24000, ctx - est_prompt - 256))
 
 
 def _reply_text(response: Any) -> str:
@@ -240,6 +241,36 @@ def _reply_text(response: Any) -> str:
             if isinstance(val, str) and val.strip():
                 out.append(val)
     return chr(10).join(p for p in out if p)
+
+
+def _no_json_reason(response: Any, raw: str) -> str:
+    """Why there was no JSON, in terms the player can act on.
+
+    "no JSON object in LLM reply (0 chars of text seen)" reads as a parser
+    fault. The case actually seen was a reasoning model that spent its whole
+    completion budget thinking -- 5,997 reasoning tokens of 6,000,
+    finish_reason "length", content empty. It never reached the answer, and
+    a complaint about missing JSON sends the reader looking in the wrong
+    place entirely.
+    """
+    meta = getattr(response, "response_metadata", None) or {}
+    finish = meta.get("finish_reason") or meta.get("stop_reason")
+    usage = (meta.get("token_usage") or meta.get("usage")
+             or getattr(response, "usage_metadata", None) or {})
+    reasoning = 0
+    if isinstance(usage, dict):
+        det = usage.get("completion_tokens_details") or {}
+        reasoning = (det.get("reasoning_tokens")
+                     or usage.get("reasoning_tokens") or 0)
+    if finish == "length":
+        if reasoning:
+            return (f"the model spent its whole reply budget thinking "
+                    f"({reasoning} reasoning tokens) and never answered. "
+                    "Raise the context limit in Settings, or pick a model "
+                    "that does not think out loud.")
+        return ("the reply was cut off before it finished — raise the "
+                "context limit in Settings.")
+    return f"no JSON object in LLM reply ({len(raw)} chars of text seen)"
 
 
 def _extract_json(text: str) -> Optional[dict]:
@@ -1206,9 +1237,7 @@ async def generate_advice(ctx: dict) -> dict:
         raw = _reply_text(response)
         data = _extract_json(raw)
         if not data:
-            raise ValueError(
-                "no JSON object in LLM reply "
-                f"({len(raw)} chars of text seen)")
+            raise ValueError(_no_json_reason(response, raw))
         solo = (ctx.get("playstyle") or "").startswith("solo")
         usable = ([s["name"] for s in book["castable"]
                    if s["level"] <= ctx["level"]]
@@ -2370,9 +2399,7 @@ async def generate_gear_advice(ctx: dict) -> dict:
         raw = _reply_text(response)
         data = _extract_json(raw)
         if not data:
-            raise ValueError(
-                "no JSON object in LLM reply "
-                f"({len(raw)} chars of text seen)")
+            raise ValueError(_no_json_reason(response, raw))
     except Exception as e:
         logger.warning("Gear advisor failed: %.140s", str(e))
         try:
