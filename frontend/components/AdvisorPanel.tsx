@@ -197,13 +197,15 @@ interface MeleeGroup {
   fights: number;
   dps: number;
   avg_hit: number;
-  swings_per_min: number;
+  hits_per_min: number;
   level_lo: number | null;
   level_hi: number | null;
 }
 interface MeleeCompare {
   groups: MeleeGroup[];
   dual_wield_ceiling?: number | null;
+  ambidexterity?: boolean;
+  ceiling_with_aa?: { as_points: number; as_relative: number } | null;
   level?: number | null;
   overlap: { level_lo: number; level_hi: number; groups: MeleeGroup[] } | null;
   note?: string;
@@ -982,8 +984,16 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                       ? ` Levels ${melee.overlap.level_lo}–${melee.overlap.level_hi} only, so gear and level are not doing the work.`
                       : " Level ranges differ between rows — compare with that in mind."}
                     {melee.dual_wield_ceiling
-                      ? ` At level ${melee.level} an off-hand lands at most ${Math.round(melee.dual_wield_ceiling * 100)}% of the time, so a second weapon adds up to that — not double.`
+                      ? ` At level ${melee.level} an off-hand lands at most ${Math.round(
+                          melee.dual_wield_ceiling * 100,
+                        )}% of the time, so a second weapon adds up to that — not double.`
                       : ""}
+                    {melee.ceiling_with_aa
+                      ? ` Ambidexterity raises that to ${Math.round(
+                          melee.ceiling_with_aa.as_relative * 100,
+                        )}–${Math.round(melee.ceiling_with_aa.as_points * 100)}% — the AA text does not say whether its +32% is points or relative.`
+                      : ""}
+                    {" These are HITS, not swings: a missed off-hand swing is not counted, so an off-hand is worth at least what this shows."}
                   </p>
                   <table className="enc-table">
                     <thead>
@@ -1000,7 +1010,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                               : undefined
                           }
                         >
-                          Swings/min
+                          Hits/min
                         </th>
                       </tr>
                     </thead>
@@ -1021,7 +1031,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                               <strong>{g.dps}</strong>
                             </td>
                             <td>{g.avg_hit}</td>
-                            <td>{g.swings_per_min}</td>
+                            <td>{g.hits_per_min}</td>
                           </tr>
                         ))}
                     </tbody>

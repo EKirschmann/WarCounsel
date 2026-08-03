@@ -1132,7 +1132,18 @@ def _dual_wield_ceiling(classes: list, level) -> Optional[float]:
     if not best:
         return None
     cap = (level + 1) * best
-    return round(min(1.0, (level + cap) / 400.0), 2)
+    chance = (level + cap) / 400.0
+    # Ambidexterity is a real, owned-or-not modifier -- 1 rank, 9 points,
+    # "increases your chance to successfully dual wield by 32%". Whether
+    # that is 32 POINTS or a 32% relative increase is not stated, so the
+    # response carries both readings rather than picking one silently.
+    return round(min(1.0, chance), 2)
+
+
+def _ambidexterity_owned() -> bool:
+    owned = getattr(tracker, "owned_aas", None) or {}
+    names = owned.keys() if isinstance(owned, dict) else owned
+    return any("ambidex" in str(n).lower() for n in names)
 
 
 @app.get("/api/melee-compare")
@@ -1197,13 +1208,15 @@ async def melee_compare(db: Session = Depends(get_db), band: int = 3):
             if g["seconds"] < 60:
                 continue  # too little to say anything with
             lv = sorted(g["levels"])
-            spm = g["hits"] / (g["seconds"] / 60)
             out.append({
                 "verbs": g["verbs"],
                 "fights": g["fights"],
                 "dps": round(g["damage"] / g["seconds"], 1),
                 "avg_hit": round(g["damage"] / max(g["hits"], 1), 1),
-                "swings_per_min": round(g["hits"] / (g["seconds"] / 60), 1),
+                # HITS, not swings: ability rows count landed blows only, so a
+                # missed off-hand swing is invisible here. Naming it
+                # "swings" made a real off-hand look weaker than it is.
+                "hits_per_min": round(g["hits"] / (g["seconds"] / 60), 1),
                 "level_lo": lv[0] if lv else None,
                 "level_hi": lv[-1] if lv else None,
             })
@@ -1224,7 +1237,12 @@ async def melee_compare(db: Session = Depends(get_db), band: int = 3):
                (getattr(tracker, "class_str", "") or "").split("/") if c.strip()]
     lv_now = lvls[0] if lvls else None
     return {"groups": groups, "overlap": overlap,
-            "dual_wield_ceiling": _dual_wield_ceiling(classes, lv_now),
+            "dual_wield_ceiling": (_c := _dual_wield_ceiling(classes, lv_now)),
+            "ambidexterity": _ambidexterity_owned(),
+            # both readings of the AA text, because it does not say which
+            "ceiling_with_aa": (None if _c is None or not _ambidexterity_owned()
+                                else {"as_points": round(min(1.0, _c + 0.32), 2),
+                                      "as_relative": round(min(1.0, _c * 1.32), 2)}),
             "level": lv_now,
             "note": "Weapon swings only — kick, bash, smite and the monk "
                     "strike/punch line are class skills on their own timers, "
