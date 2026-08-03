@@ -1644,29 +1644,6 @@ async def get_advisor(refresh: bool = False, cached: bool = False):
             (s for s in miss["castable"] if s["level"] <= tracker.level + 3),
             key=lambda s: -s["level"])[:25]
     advice = await generate_advice(ctx)
-    # deterministic vendor list: missing spells are buyable (and scribable)
-    # BEFORE their level — compact reminder, not LLM-generated
-    lvl = tracker.level
-    advice["purchase"] = sorted(
-        ({"name": s["name"], "level": s["level"],
-          "now": lvl is None or s["level"] <= lvl}
-         for s in ctx.get("missing_spells") or []
-         # near-level window only: low-level leftovers were skipped on purpose
-         if lvl is None or s["level"] >= lvl - 2),
-        key=lambda x: -x["level"])[:8]
-    # ...and WHERE to buy each. Telling someone a spell is a vendor purchase
-    # without naming the vendor is half an answer; the wiki's spell pages
-    # carry zone, NPC, guild and coords, cached per spell after the first
-    # lookup. Only the ones buyable NOW are resolved -- a buy-ahead entry is
-    # a reminder, not a shopping trip, and each miss costs a wiki round-trip.
-    from backend.game_data import spell_vendors
-    for p in advice["purchase"]:
-        if not p.get("now"):
-            continue
-        try:
-            p["vendors"] = (await spell_vendors(p["name"]))[:3]
-        except Exception:
-            logger.exception("spell_vendors failed for %s", p["name"])
     _advice_cache, _advice_sig = advice, sig
     _save_advice_cache()
     return advice

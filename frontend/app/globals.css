@@ -2414,3 +2414,9 @@ button.app-version:hover { color: var(--gold-bright); }
   font-size: 10.5px;
   color: var(--muted, rgba(226, 222, 214, .55));
 }
+
+/* Buff stacking, said out loud. EQ overwrites silently and the only other
+   way to learn it is casting both and watching one drop. */
+.adv-stack { font-size: 10.5px; }
+.adv-stack[data-kind="lose"] { color: #d4574a; }
+.adv-stack[data-kind="win"] { color: var(--muted, rgba(226, 222, 214, .6)); }

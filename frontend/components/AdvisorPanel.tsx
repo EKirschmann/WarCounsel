@@ -735,10 +735,25 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                 </h3>
                 <ul className="adv-list">
                   {advice.prebuffs.map((s) => (
-                    <li key={`${s.cls}-${s.name}`}>
+                    <li key={`${s.cls}-${s.name}`} data-dim={s.superseded_by ? "1" : undefined}>
                       <strong>{s.name}</strong>
                       {s.level != null && <span className="adv-cls"> (L{s.level})</span>}{" "}
                       <span className="adv-cls">({s.cls})</span>
+                      {/* EQ buffs share effect slots and silently overwrite each
+                          other — Courage and Center are the same slot, and you
+                          only find out by casting both and watching one drop.
+                          The stacking data already gates the loadout; this says
+                          it out loud. */}
+                      {s.superseded_by && (
+                        <span className="adv-stack" data-kind="lose">
+                          {" "}overwritten by {s.superseded_by} — skip this one
+                        </span>
+                      )}
+                      {!s.superseded_by && (s.overwrites?.length ?? 0) > 0 && (
+                        <span className="adv-stack" data-kind="win">
+                          {" "}replaces {s.overwrites!.join(", ")}
+                        </span>
+                      )}
                       <br />
                       {s.reason}
                     </li>
@@ -772,38 +787,11 @@ export const AdvisorPanel = memo(function AdvisorPanel({
               </div>
             )}
 
-            {(advice.purchase?.length ?? 0) > 0 && (
-              <div className="adv-section">
-                <h3>Vendor shopping list</h3>
-                <ul className="adv-list adv-shop">
-                  {advice.purchase!.map((p) => (
-                    <li key={p.name}>
-                      <strong>{p.name}</strong>
-                      <span className="adv-cls">
-                        {" "}L{p.level}{p.now ? "" : " — buy ahead"}
-                      </span>
-                      {(p.vendors?.length ?? 0) > 0 && (
-                        <ul className="adv-vendors">
-                          {p.vendors!.map((v) => (
-                            <li key={`${v.zone}-${v.vendor}`}>
-                              <span className="adv-vendor-zone">{v.zone}</span>
-                              {" — "}{v.vendor}
-                              {v.where && <span className="adv-cls"> · {v.where}</span>}
-                              {v.loc && <span className="adv-vendor-loc"> {v.loc}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <p className="adv-purchase-note">
-                  Missing from your spellbook — spells can be bought and scribed
-                  before you reach their level. Vendors are shown for the ones
-                  you can buy now.
-                </p>
-              </div>
-            )}
+            {/* The vendor shopping list is gone. Spell vendors in EQL are
+    everywhere and stock broadly, and the in-game find tool already
+    answers "where do I buy this" better than a cached wiki lookup
+    could -- it was three wiki round-trips per consult to restate
+    something the game tells you faster. */}
 
             {(advice.aa_now.length > 0 || advice.aa_save.length > 0) && (
               <div className="adv-section">

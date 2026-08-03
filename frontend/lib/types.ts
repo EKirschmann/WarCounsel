@@ -284,6 +284,10 @@ export interface AdvisorLoadout {
   cls: string;
   reason: string;
   level?: number | null;
+  /** Another owned buff shares this effect slot and wins — skip this one. */
+  superseded_by?: string | null;
+  /** Owned buffs this one overwrites. */
+  overwrites?: string[];
 }
 
 export interface AdvisorReplace {

@@ -7,7 +7,7 @@ spell slots) + the /outputfile spellbook (what the character actually OWNS)
   loadout      what to memorize right now (fills the spell slots, owned only)
   replace      spells in use that a better spell supersedes
   aa_now/save  AA purchase order vs savings goal
-  horizon      significant unlocks in the NEXT 2 LEVELS + prep for them
+  horizon      significant unlocks in the NEXT 5 LEVELS + prep for them
   locations    where to hunt for this level/trio (+ notable paired drops)
   class_notes  weapon-skill / exaltation guidance per class
 
@@ -78,10 +78,10 @@ Rules:
 - Summoned-pet lines (skeletons, elementals, warders): only ever slot the HIGHEST-level pet the character owns — older ranks are strictly weaker versions of the same pet.
 - Respect the focus STRICTLY: for solo focuses, never slot group-only utility — resurrection and corpse-recovery lines, buffs that can only target others — those are dead slots when playing alone.
 - If a "Missing spells they could BUY" list is present, fold the best purchases into note or horizon (say they are vendor purchases).
-- replace: ONLY same-spell-line pairs — the upgrade must do the same job with the same primary effect (Symbol of Transal -> Symbol of Ryltan; Minor Healing -> Healing). A teleport, utility, or AA ability is NEVER upgraded by a nuke or an unrelated spell. Cover: recently-cast spells superseded by a better OWNED spell, and owned loadout spells with a significant same-line upgrade within 2 levels (say the level). Omit any pair you are not sure about; every pair is machine-verified and wrong ones are discarded.
+- replace: ONLY same-spell-line pairs — the upgrade must do the same job with the same primary effect (Symbol of Transal -> Symbol of Ryltan; Minor Healing -> Healing). A teleport, utility, or AA ability is NEVER upgraded by a nuke or an unrelated spell. Cover: recently-cast spells superseded by a better OWNED spell, and owned loadout spells with a significant same-line upgrade within 5 levels (say the level). Omit any pair you are not sure about; every pair is machine-verified and wrong ones are discarded.
 - aa_now: what to buy right now with the available points (use the per-rank costs in the data). Owned AA ranks are __AA_RANKS_NOTE__ — state assumptions briefly.
 - aa_save: 1-3 savings goals, especially anything that preps for the horizon items.
-- horizon: the significant spells/abilities arriving within the NEXT 2 LEVELS for any of the three classes (exact level from the tables), plus any AA worth buying in advance for them.
+- horizon: the significant spells/abilities arriving within the NEXT 5 LEVELS for any of the three classes (exact level from the tables), plus any AA worth buying in advance for them.
 - locations: 2-4 hunting spots for the level and focus. When a "Hunting grounds" list is present in the character data, choose ONLY zones from that list, using its exact names — never a city, never a zone outside the list (picks outside it are machine-discarded). Prefer spots whose band centers on the level over ones they are outgrowing; where you know a notable drop that pairs with this trio, name it in "notable" (else use "").
 - class_notes: one entry per class with practical guidance — for melee: which weapon skill to run right now (e.g. fists vs 1H Blunt for a Monk) and exaltations/disciplines if known. Mark uncertainty plainly when the data above does not cover it; never invent numbers.
 """
@@ -284,6 +284,15 @@ def _fallback_body(ctx: dict, reason: str) -> dict:
 # summons (32), pets (33/71), feign death (74), resurrection (81)
 _NOT_PERM_SPAS = {26, 32, 33, 71, 74, 81, 83, 88, 104}
 _SELF_TARGET = 6
+# Effects that are never a pre-buff even when they last a while. 67 is the
+# remote eye (Eye of Zomm) -- it summons something that flies off and does
+# nothing to the caster, so there is nothing to pre-cast.
+_NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67}
+
+
+# How far ahead the horizon looks. The wiki/builds context already spans
+# level+12, so this is a presentation window, not a data limit.
+HORIZON_LEVELS = 5
 
 
 def _permanent_buffs(ctx: dict) -> List[str]:
@@ -547,12 +556,12 @@ async def _compose_builtin(ctx, bycat, replaced, grounded_any,
     horizon = []
     if level is not None:
         for s in book.get("castable", []):
-            if level < s["level"] <= level + 2:
+            if level < s["level"] <= level + HORIZON_LEVELS:
                 horizon.append({"level": s["level"], "cls": "",
                                 "name": s["name"],
                                 "reason": "already scribed — usable on level-up"})
         for s in (ctx.get("missing_spells") or []):
-            if level < s["level"] <= level + 2:
+            if level < s["level"] <= level + HORIZON_LEVELS:
                 horizon.append({"level": s["level"], "cls": "",
                                 "name": s["name"],
                                 "reason": "missing — vendor purchase"})
@@ -1298,9 +1307,9 @@ async def generate_advice(ctx: dict) -> dict:
             for s in lst:
                 s["level"] = level_by_name.get(str(s["name"]).lower())
         loadout = must_have + should_have  # combined = the actual slot fill
-        prebuffs = await _gate_picks(
+        prebuffs = _annotate_stacking(_gate_prebuffs(await _gate_picks(
             _clean_list(data.get("prebuffs"), ("name", "cls", "reason"), cap=8),
-            "prebuffs")
+            "prebuffs")), ctx)
         # Long-duration buffs are the worst place to stack two of a slot: the
         # second cast silently wastes the first one's mana and duration.
         prebuffs, _pre_clashes = _gate_stacking(prebuffs)
@@ -1570,6 +1579,78 @@ def _upgrade_path(using: str, ctx: dict) -> Optional[dict]:
         return None
     return {"best": best, "next": nxt, "next_level": nxt_level,
             "at_best": best.strip().lower() == using.strip().lower()}
+
+
+def _annotate_stacking(picks: list, ctx: dict) -> list:
+    """Say which buffs share a slot, and which of them wins.
+
+    EQ buffs occupy effect slots and two spells in one slot overwrite each
+    other -- Courage and Center are the same ac-slot-1, so casting both
+    wastes the first. Nothing in game says so; you find out by casting them
+    and watching one drop. The stacking data is already vendored and
+    already used to GATE the loadout, so the only thing missing was saying
+    it out loud.
+
+    Also names the strongest thing in the same slot the player owns, which
+    is how a druid buff quietly outranking a paladin one becomes visible.
+    """
+    from backend import spell_lines
+    book = ctx.get("spellbook") or {}
+    level = ctx.get("level")
+    owned = [b["name"] for b in book.get("castable", [])
+             if level is None or b.get("level", 0) <= level]
+    for p in picks:
+        name = p.get("name") or ""
+        slots = spell_lines.slots_for(name) or {}
+        if not slots:
+            continue
+        beaten_by = [o for o in owned
+                     if o.lower() != name.lower() and spell_lines.supersedes(o, name)]
+        overwrites = [o for o in owned
+                      if o.lower() != name.lower() and spell_lines.supersedes(name, o)]
+        if beaten_by:
+            p["superseded_by"] = beaten_by[0]
+        if overwrites:
+            p["overwrites"] = sorted(overwrites)[:3]
+    return picks
+
+
+def _gate_prebuffs(picks: list) -> list:
+    """Drop anything in the pre-buff list that is not a buff.
+
+    "Cast it before the fight, then swap the slot back" describes something
+    that LEAVES AN EFFECT ON YOU. Eye of Zomm was offered to a wizard trio:
+    it is a summoned remote eye, it does nothing to the caster, and there is
+    nothing to pre-cast. A summon, a pet, a teleport or a feign is not a
+    pre-buff however useful it is elsewhere.
+
+    Kept when the data is missing rather than dropped -- an unrecognised
+    spell is not evidence of a bad pick, and the curated line data is
+    partial by design.
+    """
+    from backend import builds_data
+    from backend.game_data import _primary_effect
+    out = []
+    for p in picks:
+        e = builds_data.spell_entry(p.get("name") or "")
+        if not e:
+            out.append(p)
+            continue
+        pe = _primary_effect(e)
+        if pe and pe[0] in _NOT_A_BUFF_SPAS:
+            logger.info("Dropped prebuff (not a buff effect): %s", p.get("name"))
+            continue
+        ticks = e.get("durationTicks") or 0
+        if ticks > 0:
+            out.append(p)          # a timed buff
+        elif e.get("targetTypeId") == _SELF_TARGET:
+            out.append(p)          # permanent-until-death self-buff
+        else:
+            # zero duration on a friendly target is a HEAL, not a buff --
+            # nothing lingers, so there is nothing to cast in advance.
+            logger.info("Dropped prebuff (instant, nothing persists): %s",
+                        p.get("name"))
+    return out
 
 
 def _dual_wields(classes: List[str]) -> Optional[bool]:
