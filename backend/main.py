@@ -1643,6 +1643,9 @@ async def get_advisor(refresh: bool = False, cached: bool = False):
         ctx["missing_spells"] = sorted(
             (s for s in miss["castable"] if s["level"] <= tracker.level + 3),
             key=lambda s: -s["level"])[:25]
+    # the character's own recent fights, so spell picks can be judged on
+    # measured damage rather than on level and name alone
+    ctx["_encounters"] = tracker.encounters_snapshot()
     advice = await generate_advice(ctx)
     _advice_cache, _advice_sig = advice, sig
     _save_advice_cache()

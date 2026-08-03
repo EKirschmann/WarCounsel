@@ -128,6 +128,13 @@ def _build_prompt(ctx: dict, wiki: str) -> str:
     if ctx.get("_no_pet"):
         lines.append("- NO PET: none of these classes summons one, so every "
                      "pet-targeted spell is dead weight in the loadout.")
+    meas = ctx.get("_measured") or []
+    if meas:
+        lines.append("- MEASURED from this character's own combat log "
+                     "(recent fights; avg per hit, then total): "
+                     + "; ".join(meas)
+                     + ". Prefer what is actually performing over what looks "
+                       "strong on paper.")
     perm = ctx.get("_permanent") or []
     if perm:
         described = [f"{n} ({e})" if (e := _buff_effects(n)) else n for n in perm]
@@ -1274,6 +1281,7 @@ async def generate_advice(ctx: dict) -> dict:
         ctx["_permanent"] = _permanent_buffs(ctx)
         ctx["_long_buffs"] = _long_buffs(ctx)
         ctx["_no_pet"] = not _summons_a_pet(classes)
+        ctx["_measured"] = _measured_damage(ctx)
         if llm_active()["provider"] == "none":
             body = await _builtin_counsel(ctx)
             base["grounding"] = body.pop("grounding", "memory")
@@ -1398,6 +1406,15 @@ async def generate_advice(ctx: dict) -> dict:
                          not in {str(y["name"]).lower()
                                  for y in must_have + should_have}]
             should_have.extend(_promoted)
+        # Top up the alternatives BEFORE promoting from them. The backfill
+        # used to run afterwards, so when a gate emptied nice_to_have there
+        # was nothing left to promote and the loadout came back a slot
+        # short -- 13 of 14, with the shortfall unexplained.
+        if len(nice_to_have) < 12:
+            _picked = {p.get("name") for p in
+                       must_have + should_have + nice_to_have}
+            nice_to_have = nice_to_have + await _extra_alternatives(
+                ctx, _picked, 12 - len(nice_to_have))
         # auto-promote: gates may have removed picks — refill the slots from
         # the nice-to-have alternatives (they passed the same gates)
         slots_n = ctx.get("spell_slots")
@@ -1838,6 +1855,30 @@ def _describe_prebuffs(picks: list) -> list:
     picks.sort(key=lambda x: (not x.get("permanent"),
                               -(x.get("duration_min") or 0)))
     return picks
+
+
+def _measured_damage(ctx: dict) -> List[str]:
+    """What this character's spells and attacks ACTUALLY hit for.
+
+    The advisor was reasoning from spell levels and names alone and made
+    Smite the primary nuke while the log showed Careless Lightning hitting
+    harder in the same fights. Every encounter already stores per-ability
+    hits, total and dps -- the numbers were simply never shown to the thing
+    choosing spells.
+    """
+    agg: dict = {}
+    for e in (ctx.get("_encounters") or [])[:8]:
+        for a in e.get("abilities") or []:
+            n = a.get("name") or ""
+            if not n or not (a.get("hits") or 0):
+                continue
+            r = agg.setdefault(n, {"hits": 0, "total": 0})
+            r["hits"] += a["hits"]
+            r["total"] += a.get("total") or 0
+    rows = sorted(((v["total"], n, v) for n, v in agg.items() if v["total"]),
+                  reverse=True)
+    return [f"{n} (avg {round(v['total'] / v['hits'])}, {v['total']} total)"
+            for _t, n, v in rows[:10]]
 
 
 def _summons_a_pet(classes: List[str]) -> bool:
