@@ -317,6 +317,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
   const [rescanning, setRescanning] = useState(false);
   const [gear, setGear] = useState<GearAdvice | null>(null);
   const [melee, setMelee] = useState<MeleeCompare | null>(null);
+  const [trioOpen, setTrioOpen] = useState(false);
   const [gearLoading, setGearLoading] = useState(false);
   // Slots with nothing in them, so an unverifiable owned item can be shown
   // next to the gap it MIGHT fill. The app cannot match them up itself --
@@ -493,21 +494,41 @@ export const AdvisorPanel = memo(function AdvisorPanel({
       </div>
 
       <div className="adv-controls">
-        {TRIO_LABELS.map((label, i) => (
-          <div className="adv-field" key={label}>
-            <label htmlFor={`adv-cls-${i}`}>{label}</label>
-            <select
-              id={`adv-cls-${i}`}
-              value={trio[i] ?? ""}
-              onChange={(e) => setTrioAt(i, e.target.value)}
-            >
-              <option value="">—</option>
-              {CLASSES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+        {/* The trio comes from /who and is backed up by class inference, so
+            the pickers are no longer how anyone tells the app what they
+            play -- they are for asking "what would this look like as a
+            different trio", which is planning, not setup. Folded away so
+            live data leads, but kept: overwriting the detected trio by
+            hand is the only way to ask that question. */}
+        <details className="adv-trio" open={trioOpen}>
+          <summary
+            onClick={(e) => {
+              e.preventDefault();
+              setTrioOpen((v) => !v);
+            }}
+            title="Try the counsel against a trio you are not currently playing"
+          >
+            {snap?.class_str || "no trio detected"}
+            <span className="adv-cls"> — plan a different trio</span>
+          </summary>
+          <div className="adv-trio-fields">
+            {TRIO_LABELS.map((label, i) => (
+              <div className="adv-field" key={label}>
+                <label htmlFor={`adv-cls-${i}`}>{label}</label>
+                <select
+                  id={`adv-cls-${i}`}
+                  value={trio[i] ?? ""}
+                  onChange={(e) => setTrioAt(i, e.target.value)}
+                >
+                  <option value="">—</option>
+                  {CLASSES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
           </div>
-        ))}
+        </details>
         <div className="adv-field">
           <label htmlFor="adv-aa">AA points</label>
           <input

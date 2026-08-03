@@ -2447,3 +2447,23 @@ button.app-version:hover { color: var(--gold-bright); }
    is cast once and never refreshed, so it should not read like a chore. */
 .adv-dur { font-size: 10.5px; color: var(--muted, rgba(226, 222, 214, .6)); }
 .adv-dur[data-kind="perm"] { color: #1fb38c; }
+
+/* Trio pickers, demoted. /who and class inference set the trio now, so
+   these are for planning a trio you are NOT playing — present, quiet, and
+   not competing with live data. */
+.adv-trio { font-size: 11px; }
+.adv-trio > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0;
+  color: var(--gold, #c8aa6e);
+}
+.adv-trio > summary::-webkit-details-marker { display: none; }
+.adv-trio > summary::before { content: "▸ "; color: var(--muted, rgba(226,222,214,.5)); }
+.adv-trio[open] > summary::before { content: "▾ "; }
+.adv-trio-fields { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0 2px; }
+
+/* An explicit display on a <details> child defeats the browser's own
+   hiding of closed content, so the pickers stayed on screen while the
+   toggle read closed. Hide them explicitly. */
+.adv-trio:not([open]) .adv-trio-fields { display: none; }
