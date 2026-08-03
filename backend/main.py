@@ -1088,11 +1088,24 @@ async def post_group_trust_all(body: dict):
     return res
 
 
-# Verbs that are a WEAPON swinging, as opposed to a skill. Kick, bash and
-# the like land on their own timers and would credit a loadout for damage
-# it did not produce.
-_WEAPON_VERBS = {"slash", "pierce", "crush", "hit", "strike", "punch",
-                 "backstab", "slice", "bite", "maul", "gore"}
+# Verbs that are a WEAPON swinging. Everything else a player emits is a
+# class skill on its own timer (kick, bash, smite, and the monk line --
+# strike is Eagle Strike, punch is Dragon Punch) or is not melee at all:
+# "You hit X for 204 points of magic damage by Careless Lightning" is a
+# SPELL that happens to use the verb.
+#
+# The first version of this list included strike, punch, hit and bite, and
+# then inferred hand count from how many verbs appeared -- so a two-hander
+# swung alongside monk specials looked exactly like dual wield. The player
+# said their recent fights were with a 2H sword while this reported dual
+# wield for all of them, which is what exposed it.
+_WEAPON_VERBS = {"slash", "pierce", "crush", "backstab", "slice"}
+
+# Roughly how many times one weapon swings per minute. Below this reads as
+# a single weapon, comfortably above it as two. It is a RATE test because
+# the verb list cannot answer the question: two slashing weapons both log
+# "slash" and are indistinguishable from one.
+_ONE_WEAPON_SPM = 16.0
 
 
 @app.get("/api/melee-compare")
@@ -1157,11 +1170,16 @@ async def melee_compare(db: Session = Depends(get_db), band: int = 3):
             if g["seconds"] < 60:
                 continue  # too little to say anything with
             lv = sorted(g["levels"])
+            spm = g["hits"] / (g["seconds"] / 60)
             out.append({
                 "verbs": g["verbs"],
-                # one weapon swinging reads as a two-hander (or an empty
-                # off-hand); two or more reads as dual wield
-                "hands": 1 if len(g["verbs"]) == 1 else 2,
+                # Inferred from the SWING RATE, not the verb count: a pair
+                # of slashing weapons logs one verb and would otherwise be
+                # read as a two-hander. None when the rate is ambiguous --
+                # saying nothing beats labelling a loadout wrongly.
+                "hands": (1 if spm < _ONE_WEAPON_SPM
+                          else 2 if spm > _ONE_WEAPON_SPM * 1.35 else None),
+                "swings_per_min_raw": round(spm, 1),
                 "fights": g["fights"],
                 "dps": round(g["damage"] / g["seconds"], 1),
                 "avg_hit": round(g["damage"] / max(g["hits"], 1), 1),
@@ -1183,8 +1201,12 @@ async def melee_compare(db: Session = Depends(get_db), band: int = 3):
             overlap = {"level_lo": recent - band, "level_hi": recent + band,
                        "groups": inband}
     return {"groups": groups, "overlap": overlap,
-            "note": "Weapon swings only — kick and bash are separate skills. "
-                    "The verb set infers the loadout; the log never states it."}
+            "note": "Weapon swings only — kick, bash, smite and the monk "
+                    "strike/punch line are class skills on their own timers, "
+                    "and spell damage sometimes uses a melee verb. Hands are "
+                    "inferred from the SWING RATE: two weapons of the same "
+                    "type both log one verb, so the verb list alone cannot "
+                    "tell them apart."}
 
 
 def _launch_bound() -> str:

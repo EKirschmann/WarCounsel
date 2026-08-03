@@ -970,9 +970,12 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                 <>
                   <p className="adv-note">
                     From your own fights, not a formula: the two-handed damage bonus
-                    is not published for this game. One weapon verb reads as a
-                    two-hander, two or more as dual wield — the log never states
-                    what was equipped, so that inference is the weak link.
+                    is not published for this game. WEAPON SWINGS ONLY — kick, bash,
+                    smite and the monk strike/punch line are class skills on their
+                    own timers and are excluded, so this is the weapon&apos;s
+                    contribution and not your whole melee output. Hands are inferred
+                    from the swing rate, because two weapons of the same type both
+                    log one verb.
                     {melee.overlap
                       ? ` Levels ${melee.overlap.level_lo}–${melee.overlap.level_hi} only, so gear and level are not doing the work.`
                       : " Level ranges differ between rows — compare with that in mind."}
@@ -996,7 +999,14 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                             <td className="enc-name">
                               {g.verbs.join(" + ")}
                               <span className="enc-tag">
-                                {g.hands === 1 ? "2H / one weapon" : "dual wield"}
+                                {/* null when the swing rate sits between the
+                                    two — better to say nothing than to label
+                                    a loadout wrongly. */}
+                                {g.hands === 1
+                                  ? "one weapon"
+                                  : g.hands === 2
+                                    ? "dual wield"
+                                    : "unclear"}
                               </span>
                             </td>
                             <td>{g.fights}</td>
