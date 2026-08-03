@@ -754,6 +754,16 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                   {advice.replace.map((r) => (
                     <li key={r.using}>
                       <strong>{r.using}</strong> → <strong>{r.upgrade}</strong>
+                      {/* The upgrade is the best you can CAST today, not
+                          merely something better than what you named — and
+                          `next` is the rung above it, so the row says where
+                          you are and where you are going. */}
+                      {r.next && (
+                        <span className="adv-cls">
+                          {" "}· next {r.next}
+                          {r.next_level ? ` at L${r.next_level}` : ""}
+                        </span>
+                      )}
                       <br />
                       {r.why}
                     </li>

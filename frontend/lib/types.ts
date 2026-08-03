@@ -290,6 +290,9 @@ export interface AdvisorReplace {
   using: string;
   upgrade: string;
   why: string;
+  /** The rung above `upgrade` — owned but not castable yet. */
+  next?: string | null;
+  next_level?: number | null;
 }
 
 export interface AdvisorAA {

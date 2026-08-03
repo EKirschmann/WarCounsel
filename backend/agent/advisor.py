@@ -1318,6 +1318,18 @@ async def generate_advice(ctx: dict) -> dict:
                         and not await is_travel_ritual(p["using"])
                         and not await is_travel_ritual(p["upgrade"])
                         and await same_spell_line(p["using"], p["upgrade"])):
+                    # Point the pair at the best thing they can cast NOW,
+                    # not merely at something better than what they named,
+                    # and drop it entirely when they are already on it.
+                    path = _upgrade_path(p["using"], ctx)
+                    if path:
+                        if path["at_best"]:
+                            logger.info("Dropped replace pair: already on the "
+                                        "best owned %s", p["using"])
+                            continue
+                        p["upgrade"] = path["best"]
+                        p["next"] = path["next"]
+                        p["next_level"] = path["next_level"]
                     verified.append(p)
                 else:
                     logger.info("Dropped unverified replace pair: %s -> %s",
@@ -1512,6 +1524,52 @@ def _effective_vecs(cand: dict, worn: dict, ctx: dict) -> tuple:
             if v > 0:
                 vec[key] = max(0.0, min(cap, base + v) - base)
     return c, w
+
+
+def _upgrade_path(using: str, ctx: dict) -> Optional[dict]:
+    """Where a spell sits in its line, and what is actually next.
+
+    An upgrade warning is only useful if it points at the best thing you
+    can cast TODAY. Reported at level 25: "Minor Healing -> Light Healing",
+    while Healing -- two steps further up the same line and long since
+    scribed -- sat in the book. The pair was verified as a real same-line
+    upgrade and was still nearly useless, because nothing checked whether
+    the player was already past BOTH ends of it.
+
+    Returns the best owned-and-castable spell in the line, and the next one
+    beyond it with the level it unlocks at, so the warning can say where
+    you are and where you are going.
+    """
+    from backend import spell_lines
+    book = ctx.get("spellbook") or {}
+    level = ctx.get("level")
+    castable = book.get("castable") or []
+    if not castable or not spell_lines.known(using):
+        return None
+    lvl_of = {s["name"].strip().lower(): s.get("level") for s in castable}
+    slots = spell_lines.slots_for(using) or {}
+    best = best_pos = best_line = None
+    nxt = nxt_pos = nxt_level = None
+    for line, _pos in slots.items():
+        for cand in spell_lines.line_for(using, line):
+            key = cand.strip().lower()
+            if key not in lvl_of:
+                continue  # not owned at all
+            cl = lvl_of[key]
+            here = spell_lines.slots_for(cand).get(line)
+            if here is None:
+                continue
+            if level is not None and cl is not None and cl > level:
+                # owned but not yet castable -- this is the "next" rung
+                if nxt_pos is None or here < nxt_pos:
+                    nxt, nxt_pos, nxt_level = cand, here, cl
+                continue
+            if best_pos is None or here > best_pos:
+                best, best_pos, best_line = cand, here, line
+    if best is None:
+        return None
+    return {"best": best, "next": nxt, "next_level": nxt_level,
+            "at_best": best.strip().lower() == using.strip().lower()}
 
 
 def _dual_wields(classes: List[str]) -> Optional[bool]:
