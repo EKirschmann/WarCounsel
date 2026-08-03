@@ -4,6 +4,42 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.4.0 — 2026-08-02
+
+**Melee loadouts, measured from your own fights.** A new section in the gear
+tab groups every stored encounter by the weapon verbs that appeared and
+reports what each actually did — DPS, average hit, hits per minute — so
+"do I lose damage giving up dual wield for a two-hander" is answered with
+your data instead of a formula.
+
+It has to be measured, because it cannot honestly be modelled: eqlwiki does
+not publish the two-handed damage bonus, it links out to a classic
+EverQuest table, and classic values have been wrong for this game before.
+
+**Proc rate now counts in weapon comparisons.** Weapons with a combat effect
+carry their expected procs per minute, computed from your DEX. The
+important part is counterintuitive and the advisor is now told it outright:
+proc chance is a per-MINUTE budget, not a per-swing roll, so a faster
+weapon does not proc more often. What changes is how many hands carry a
+budget — the main hand gets the full rate and the off-hand half, so dual
+wielding yields about 1.5x a two-hander's procs. That was a real dual-wield
+advantage the white-DPS index could never see.
+
+**Dual-wield context.** The panel reports how often an off-hand can land at
+your level, from the skill cap — at 24 that is 50%, so a second weapon adds
+up to half again, never double. Owning Ambidexterity raises it, and both
+readings of the AA's "+32%" are shown because its text does not say whether
+that is points or relative.
+
+**What it will not tell you.** Hand count is not inferred. Two weapons of
+the same type both log the same verb and the log genuinely cannot separate
+them, so the panel reports the rate and leaves the reading to you. Two
+earlier attempts at guessing it were both wrong, and both were caught by a
+player saying what they had actually equipped.
+
+Figures are HITS per minute, not swings — a missed off-hand swing is not
+recorded, so an off-hand is worth at least what is shown.
+
 ## v2.3.0 — 2026-08-02
 
 **The app can read your character sheet.** An optional second screen-reading
