@@ -1397,7 +1397,7 @@ Rules:
 - ANY SLOT gives STATS ONLY. A weapon placed there contributes NO damage, NO delay and NO white-DPS index -- it is not swung. Judge an Any Slot purely on AC, attributes, resists and effects, and NEVER compare white-DPS indices for it; those numbers apply to Primary and Secondary alone. The ONE exception: a Piercing dagger in an Any Slot enables Backstab when the trio contains a class that can backstab (Rogue), so say so if that applies. A weapon can still be the best Any Slot item when its STATS beat the alternatives.
 __DUAL_WIELD__- Hands: a weapon with a 2H skill (2H Slash/2H Blunt/2H Piercing) occupies BOTH Primary and Secondary. Never recommend a 2H weapon together with any Secondary item; compare 1H+1H (or 1H+shield) as a package against the 2H alone.
 - farm: 3-6 realistic upgrade targets for their level. STRONGLY prefer items whose drop data appears above or that you know drop in zones near their level; give the zone and the mob/vendor in "source". Never invent stats; mark uncertainty briefly in "why" when relying on memory.
-- Weapons: consider the classes' usable weapon skills; for a Monk trio prefer fist/blunt options. 1H weapon lines carry deterministic [white-DPS index: MH x / OH y] — USE THEM instead of raw damage/delay ratio: the main-hand damage bonus is a flat, delay-independent add (fast MH weapons carry it more often), the off-hand gets NO bonus and swings only part of the time, so the best MH is often NOT the best OH. Procs are NOT in the index — a strong proc can outweigh a small index gap (off-hand procs fire less often). For 2H: compare its DPS against the MH index + OH index SUM plus the stat difference.
+- Weapons: consider the classes' usable weapon skills; for a Monk trio prefer fist/blunt options. 1H weapon lines carry deterministic [white-DPS index: MH x / OH y] — USE THEM instead of raw damage/delay ratio: the main-hand damage bonus is a flat, delay-independent add (fast MH weapons carry it more often), the off-hand gets NO bonus and swings only part of the time, so the best MH is often NOT the best OH. Procs are NOT in the index — a strong proc can outweigh a small index gap. Proc rate is a PROCS PER MINUTE budget, NOT a per-swing roll: a faster weapon does not proc more often, so never argue that speed increases procs. What changes is how many hands carry a budget — the main hand gets the full rate and the off-hand HALF, so dual wielding yields about 1.5x the procs of a two-hander. Weapon lines with a combat effect carry [procs/min: ...] when the character's DEX is known; if that annotation is absent, DEX is unknown and you must not state a proc rate. For 2H: compare its DPS against the MH index + OH index SUM plus the stat difference, and against that proc gap.
 - exaltations: review where each exaltation is socketed vs what it grants. Recommend moves ONLY when clearly better (an unused bank exaltation with a strong effect, or an effect wasted on unused gear); "move_to" = the item to socket it into. Skip trivial shuffles; note uncertainty about socket compatibility.
 """
 
@@ -1930,7 +1930,12 @@ async def generate_gear_advice(ctx: dict) -> dict:
         return {**base, **(await _builtin_gear(ctx))}
     classes = [x.strip() for x in (ctx.get("class_str") or "").split("/")
                if x.strip()]
-    gear = await build_gear_context(items, classes, level=ctx.get("level"))
+    # DEX drives the proc-per-minute budget, and it only exists when the
+    # stats OCR is running -- without it proccing weapons carry no rate and
+    # the prompt below says nothing about procs rather than guessing one.
+    _dex = (ctx.get("ocr_stats") or {}).get("dex")
+    gear = await build_gear_context(items, classes, dex=_dex,
+                                    level=ctx.get("level"))
     exalts = ctx.get("exaltations") or []
     exalt_lines = []
     exalt_info = []
