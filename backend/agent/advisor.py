@@ -1418,9 +1418,9 @@ async def generate_advice(ctx: dict) -> dict:
             for s in lst:
                 s["level"] = level_by_name.get(str(s["name"]).lower())
         loadout = must_have + should_have  # combined = the actual slot fill
-        prebuffs = _describe_prebuffs(_annotate_stacking(_backfill_prebuffs(_gate_prebuffs(await _gate_picks(
+        prebuffs = _describe_prebuffs(_annotate_stacking(_gate_pet_spells(_backfill_prebuffs(_gate_prebuffs(await _gate_picks(
             _clean_list(data.get("prebuffs"), ("name", "cls", "reason"), cap=8),
-            "prebuffs")), ctx), ctx))
+            "prebuffs")), ctx), classes), ctx))
         # Long-duration buffs are the worst place to stack two of a slot: the
         # second cast silently wastes the first one's mana and duration.
         prebuffs, _pre_clashes = _gate_stacking(prebuffs)
@@ -1692,6 +1692,32 @@ def _upgrade_path(using: str, ctx: dict) -> Optional[dict]:
             "at_best": best.strip().lower() == using.strip().lower()}
 
 
+def _effect_shape(name: str):
+    """The set of effects a buff actually applies, with its lead magnitude.
+
+    Used only where the curated line table has no entry. That table is
+    partial by design -- Protection of Rock is absent from it entirely --
+    and two buffs applying the SAME set of effects to the same target are
+    occupying the same slot whether or not anyone wrote it down. Reported
+    from the game: casting Skin like Steel overwrites Protection of Rock,
+    and both carry exactly effects 1, 69 and 79.
+
+    Requires two or more effects: a single shared effect is common enough
+    to be coincidence, and a wrong drop is worse than a missed note.
+    """
+    from backend import builds_data
+    from backend.game_data import _primary_effect
+    e = builds_data.spell_entry(name)
+    if not e:
+        return None
+    ids = frozenset(x.get("effectId") for x in (e.get("effects") or [])
+                    if x.get("baseValue"))
+    if len(ids) < 2:
+        return None
+    pe = _primary_effect(e)
+    return ids, abs((pe[1] if pe else 0) or 0)
+
+
 def _annotate_stacking(picks: list, ctx: dict) -> list:
     """Say which buffs share a slot, and which of them wins.
 
@@ -1729,6 +1755,26 @@ def _annotate_stacking(picks: list, ctx: dict) -> list:
     # this one" beside it was reported as the list still carrying a
     # deprecated spell -- which is exactly what it was. The `overwrites`
     # note on the survivor still says what it replaced, so nothing is lost.
+    # Fallback for spells the line table does not carry: identical effect
+    # sets on two picks means one overwrites the other, and the larger lead
+    # magnitude wins. Only among the picks themselves -- this is a note
+    # about a list the player is about to cast, not a claim about the game.
+    shapes = {}
+    for p in picks:
+        if p.get("_drop") or p.get("superseded_by"):
+            continue
+        sh = _effect_shape(p.get("name") or "")
+        if not sh:
+            continue
+        ids, mag = sh
+        prev = shapes.get(ids)
+        if prev is None:
+            shapes[ids] = (mag, p)
+            continue
+        keep, drop = (prev[1], p) if prev[0] >= mag else (p, prev[1])
+        shapes[ids] = (max(prev[0], mag), keep)
+        drop["_drop"] = True
+        keep.setdefault("overwrites", []).append(drop.get("name"))
     return [p for p in picks if not p.pop("_drop", False)]
 
 
@@ -1762,8 +1808,9 @@ def _backfill_prebuffs(picks: list, ctx: dict) -> list:
             continue
         cands.append((abs(pe[1] or 0), sp))
     cands.sort(key=lambda c: -c[0])
-    for _mag, sp in cands[:4]:
-        picks.append({"name": sp["name"], "cls": "", "level": sp["level"],
+    for _mag, sp in cands[:8]:
+        picks.append({"name": sp["name"], "cls": sp.get("cls") or "",
+                      "level": sp["level"],
                       "reason": (_buff_effects(sp["name"]) or "long buff")
                                 + " — worth re-casting between pulls"})
     return picks
