@@ -701,6 +701,10 @@ async def _compose_builtin(ctx, bycat, replaced, grounded_any,
                          "Recommended-Levels table.", "notable": ""}
                  for c in (ctx.get("_hunting") or [])
                  if c.get("at_level")][:3]
+    # same rule as the LLM path: an alternative already sitting in a slot
+    # is not an alternative
+    _slotted = {str(x.get("name")).lower() for x in must + should}
+    nice = [x for x in nice if str(x.get("name")).lower() not in _slotted]
     return {
         "source": "builtin",
         "grounding": "wiki" if grounded_any else "memory",
@@ -1428,6 +1432,14 @@ async def generate_advice(ctx: dict) -> dict:
                 promoted = {**promoted,
                             "reason": "(promoted alternative) " + str(promoted.get("reason", ""))}
                 should_have.append(promoted)
+        # An "alternative" you have already been told to memorize is not an
+        # alternative. Duplicates arrive two ways: the model lists a spell
+        # in both tiers, and the promote step moves one from here into
+        # should_have. Filtered once, at the end, after both have happened.
+        _slotted = {str(x.get("name")).lower()
+                    for x in must_have + should_have}
+        nice_to_have = [x for x in nice_to_have
+                        if str(x.get("name")).lower() not in _slotted]
         # annotate every pick with its spellbook level (deterministic)
         level_by_name = {s["name"].lower(): s["level"]
                          for s in (book["castable"] if book else [])}
