@@ -194,7 +194,6 @@ function StatFix({ name, onSaved }: { name: string; onSaved: () => void }) {
 
 interface MeleeGroup {
   verbs: string[];
-  hands: number;
   fights: number;
   dps: number;
   avg_hit: number;
@@ -204,6 +203,8 @@ interface MeleeGroup {
 }
 interface MeleeCompare {
   groups: MeleeGroup[];
+  dual_wield_ceiling?: number | null;
+  level?: number | null;
   overlap: { level_lo: number; level_hi: number; groups: MeleeGroup[] } | null;
   note?: string;
 }
@@ -974,11 +975,15 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                     smite and the monk strike/punch line are class skills on their
                     own timers and are excluded, so this is the weapon&apos;s
                     contribution and not your whole melee output. Hands are inferred
-                    from the swing rate, because two weapons of the same type both
-                    log one verb.
+                    NOT inferred: two weapons of the same type both log one verb,
+                    and an off-hand adds far less than double because it only
+                    swings when a skill check passes.
                     {melee.overlap
                       ? ` Levels ${melee.overlap.level_lo}–${melee.overlap.level_hi} only, so gear and level are not doing the work.`
                       : " Level ranges differ between rows — compare with that in mind."}
+                    {melee.dual_wield_ceiling
+                      ? ` At level ${melee.level} an off-hand lands at most ${Math.round(melee.dual_wield_ceiling * 100)}% of the time, so a second weapon adds up to that — not double.`
+                      : ""}
                   </p>
                   <table className="enc-table">
                     <thead>
@@ -987,7 +992,16 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                         <th scope="col">Fights</th>
                         <th scope="col">DPS</th>
                         <th scope="col">Avg</th>
-                        <th scope="col">Swings/min</th>
+                        <th
+                          scope="col"
+                          title={
+                            melee.dual_wield_ceiling
+                              ? `At level ${melee.level}, a maxed dual-wield skill lands the off-hand at most ${Math.round(melee.dual_wield_ceiling * 100)}% of the time — so a second weapon adds up to that much, not double.`
+                              : undefined
+                          }
+                        >
+                          Swings/min
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -996,19 +1010,12 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                         .slice(0, 6)
                         .map((g) => (
                           <tr key={g.verbs.join("+")}>
-                            <td className="enc-name">
-                              {g.verbs.join(" + ")}
-                              <span className="enc-tag">
-                                {/* null when the swing rate sits between the
-                                    two — better to say nothing than to label
-                                    a loadout wrongly. */}
-                                {g.hands === 1
-                                  ? "one weapon"
-                                  : g.hands === 2
-                                    ? "dual wield"
-                                    : "unclear"}
-                              </span>
-                            </td>
+                            {/* No hand-count label. Two attempts at inferring
+                                it from the log were both wrong, and two
+                                slashing weapons are genuinely indistinguishable
+                                from one here — the swing rate is the evidence,
+                                and you know what you equipped. */}
+                            <td className="enc-name">{g.verbs.join(" + ")}</td>
                             <td>{g.fights}</td>
                             <td>
                               <strong>{g.dps}</strong>

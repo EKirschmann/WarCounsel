@@ -1101,11 +1101,38 @@ async def post_group_trust_all(body: dict):
 # wield for all of them, which is what exposed it.
 _WEAPON_VERBS = {"slash", "pierce", "crush", "backstab", "slice"}
 
-# Roughly how many times one weapon swings per minute. Below this reads as
-# a single weapon, comfortably above it as two. It is a RATE test because
-# the verb list cannot answer the question: two slashing weapons both log
-# "slash" and are indistinguishable from one.
-_ONE_WEAPON_SPM = 16.0
+# Per-level dual-wield SKILL cap, by class (eqlwiki, Skill Dual Wield).
+# The off-hand swings only when a check against that skill passes, at
+# (level + skill) / 400 -- so the uplift from a second weapon is far below
+# double at low level and rises with it.
+_DW_SKILL_PER_LEVEL = {"monk": 7, "rogue": 6, "warrior": 5, "ranger": 5,
+                       "bard": 5, "beastlord": 5}
+
+
+def _dual_wield_ceiling(classes: list, level) -> Optional[float]:
+    """Best-case extra swings from an off-hand, as a fraction, or None.
+
+    NOT used to classify a loadout. Two attempts at inferring hand count
+    from the log were both wrong -- first from how many weapon verbs
+    appeared (a two-hander beside monk specials read as dual wield), then
+    from a flat swing-rate threshold that assumed a second weapon roughly
+    doubles the rate. It does not: at level 23 a maxed skill lands the
+    off-hand under half the time, so a real 2x1H pair measured 14.3
+    swings/min against a two-hander's 11.1 and would have been called a
+    two-hander.
+
+    Two slashing weapons both log "slash". The log cannot answer this, so
+    the view reports the RATE and this ceiling as context, and leaves the
+    reading to the player who knows what they equipped.
+    """
+    if not level:
+        return None
+    best = max((_DW_SKILL_PER_LEVEL.get((c or "").strip().lower(), 0)
+                for c in (classes or [])), default=0)
+    if not best:
+        return None
+    cap = (level + 1) * best
+    return round(min(1.0, (level + cap) / 400.0), 2)
 
 
 @app.get("/api/melee-compare")
@@ -1173,13 +1200,6 @@ async def melee_compare(db: Session = Depends(get_db), band: int = 3):
             spm = g["hits"] / (g["seconds"] / 60)
             out.append({
                 "verbs": g["verbs"],
-                # Inferred from the SWING RATE, not the verb count: a pair
-                # of slashing weapons logs one verb and would otherwise be
-                # read as a two-hander. None when the rate is ambiguous --
-                # saying nothing beats labelling a loadout wrongly.
-                "hands": (1 if spm < _ONE_WEAPON_SPM
-                          else 2 if spm > _ONE_WEAPON_SPM * 1.35 else None),
-                "swings_per_min_raw": round(spm, 1),
                 "fights": g["fights"],
                 "dps": round(g["damage"] / g["seconds"], 1),
                 "avg_hit": round(g["damage"] / max(g["hits"], 1), 1),
@@ -1200,13 +1220,19 @@ async def melee_compare(db: Session = Depends(get_db), band: int = 3):
         if len(inband) > 1:
             overlap = {"level_lo": recent - band, "level_hi": recent + band,
                        "groups": inband}
+    classes = [c.strip() for c in
+               (getattr(tracker, "class_str", "") or "").split("/") if c.strip()]
+    lv_now = lvls[0] if lvls else None
     return {"groups": groups, "overlap": overlap,
+            "dual_wield_ceiling": _dual_wield_ceiling(classes, lv_now),
+            "level": lv_now,
             "note": "Weapon swings only — kick, bash, smite and the monk "
                     "strike/punch line are class skills on their own timers, "
                     "and spell damage sometimes uses a melee verb. Hands are "
-                    "inferred from the SWING RATE: two weapons of the same "
-                    "type both log one verb, so the verb list alone cannot "
-                    "tell them apart."}
+                    "NOT inferred: two weapons of the same type both log one "
+                    "verb, and a second weapon adds far less than double "
+                    "because the off-hand only swings when a skill check "
+                    "passes. Compare the rates against the ceiling instead."}
 
 
 def _launch_bound() -> str:
