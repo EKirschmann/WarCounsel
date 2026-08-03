@@ -101,7 +101,7 @@ play**.
 | In-game overlay | yes | yes |
 | Atlas — charts, true walls, textured 3D | yes | yes |
 | Advisor + gear counsel | deterministic **or** an LLM | same |
-| Screen-OCR position tracking | no | yes |
+| Screen reading — position, character stats | no | yes |
 | Download | ~42 MB, one file | a repo plus its dependencies |
 
 **[Download WarCounsel.exe →](https://github.com/EKirschmann/WarCounsel/releases/latest)**
@@ -252,8 +252,10 @@ Then `/log on` in game, exactly as on Windows.
   reliably draw over a fullscreen Wine game anyway. **Run the game
   windowed** and keep the browser beside it — that is the intended shape
   here.
-- **No screen-OCR position feed.** Typing `/loc` still plots you on the
-  Atlas; only the automatic tracking is missing.
+- **No screen reading.** Typing `/loc` still plots you on the Atlas, and
+  max HP and mana can be typed into the Vitals panel; only reading them off
+  the screen is missing. Attribute caps are not available, so gear advice
+  cannot tell when a stat has stopped rising.
 - **No packaged download.** Run from source. An unsigned Mac app would
   need `xattr -dr com.apple.quarantine` before it would open, which is a
   worse first run than `git clone`.
@@ -291,6 +293,85 @@ Global, so they work while the game has focus:
 A tray icon near the clock offers the same, plus **Reset position** for an
 overlay dragged off-screen. Windows 11 tucks new tray icons into the `^`
 overflow until you drag one out.
+
+## Screen reading (optional)
+
+Windows only, off by default. The app can read two small boxes on your
+screen and use what it finds. Nothing is sent anywhere, and the game is
+never touched — this only looks at pixels the game has already drawn.
+
+Both live in **Settings ▸ Screen reading (OCR)**, each with a **Place box**
+and a **Test read**.
+
+### Placing a box
+
+1. Get the thing you want read on screen first — the box is placed over it.
+2. Press **Place box**. A gold rectangle appears, labelled with which box
+   it is.
+3. **Drag** it into position; drag the **bottom-right corner** to resize.
+4. **Double-click** to save. Escape cancels.
+5. Press **Test read** and check what it saw.
+
+### Position — follow yourself on the Atlas
+
+Open the in-game map so your coordinates are visible, and cover just the
+numbers:
+
+```
+        ┌───────────────────────┐
+        │  X: -1520.3           │   ← put the box around these three
+        │  Y:   842.7           │      lines and nothing else
+        │  Z:    12.0           │
+        └───────────────────────┘
+```
+
+A good Test read says `Read X -1520 · Y 842 · Z 12`. If it reports seeing
+something that is not an X/Y/Z readout, the box is too big and has caught
+neighbouring text.
+
+With this on, the Atlas follows you between `/loc` calls instead of
+jumping only when you type one.
+
+### Character stats — HP, mana, AC, attributes, resists
+
+Open the **Inventory** window and click the **Equipment** tab, then cover
+the stat column — the labels *and* their numbers together:
+
+```
+        ┌────────────────────────────┐
+        │  HP           1187/1187    │   ← labels and numbers in the SAME
+        │  Strength      196/510     │      box; a number without its label
+        │  Stamina       193/510     │      is thrown away rather than
+        │  AC             303        │      guessed at
+        │  SV. Magic      32/1000    │
+        └────────────────────────────┘
+```
+
+A good Test read says `Read 33 values — max_hp 1187, ac 303, str 196…`.
+
+This box only reads while that window is open with the Equipment tab
+focused. It checks for the yellow label text first, so a closed window is
+never mistaken for a screenful of zeroes. If Test read says the gate
+blocked it, the message includes the measured yellow level next to the
+threshold it needed — that number is how you tell "window closed" from
+"box in the wrong place".
+
+**What it is for.** Attributes cap at 510, and the panel prints
+`196/510`. Once the app can see that, gear advice stops recommending
+items for stats that can no longer rise, and weapon comparisons can work
+out your proc rate — which comes from DEX. Max HP and mana stop being
+numbers you type in and then forget to update.
+
+### If it reads nothing
+
+- **Nothing at all** — the box is off the thing, or the window is closed.
+- **Wrong numbers** — the box has caught a neighbouring column. Make it
+  tighter.
+- **A model that will not load** — the OCR packages are optional; install
+  them with `pip install -r requirements.txt`.
+
+Reading runs on a slow cadence (stats every 15s) and skips the work
+entirely when the game is not running.
 
 ## License
 
