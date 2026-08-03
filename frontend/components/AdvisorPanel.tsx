@@ -778,7 +778,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                 </h3>
                 <ul className="adv-list">
                   {advice.prebuffs.map((s) => (
-                    <li key={`${s.cls}-${s.name}`} data-dim={s.superseded_by ? "1" : undefined}>
+                    <li key={`${s.cls}-${s.name}`}>
                       <strong>{s.name}</strong>
                       {s.level != null && <span className="adv-cls"> (L{s.level})</span>}{" "}
                       <span className="adv-cls">({s.cls})</span>
@@ -795,12 +795,11 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                           only find out by casting both and watching one drop.
                           The stacking data already gates the loadout; this says
                           it out loud. */}
-                      {s.superseded_by && (
-                        <span className="adv-stack" data-kind="lose">
-                          {" "}overwritten by {s.superseded_by} — skip this one
-                        </span>
-                      )}
-                      {!s.superseded_by && (s.overwrites?.length ?? 0) > 0 && (
+                      {/* A superseded buff is dropped by the backend rather
+                          than dimmed — a row telling you to skip it is still
+                          a row to read. Only the survivor is listed, and it
+                          says what it replaced. */}
+                      {(s.overwrites?.length ?? 0) > 0 && (
                         <span className="adv-stack" data-kind="win">
                           {" "}replaces {s.overwrites!.join(", ")}
                         </span>

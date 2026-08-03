@@ -654,7 +654,7 @@ async def _compose_builtin(ctx, bycat, replaced, grounded_any,
     # The deterministic path had the same empty-reason problem as the LLM
     # one: "positive-effect buff" on every row says nothing about which to
     # cast. The effects are in the spell record either way.
-    prebuffs = [entry(i, (_buff_effects(i) or "positive-effect buff")
+    prebuffs = [entry(i, (_buff_effects(i["name"]) or "positive-effect buff")
                       + " — cast it, then swap the slot back to combat spells")
                 for i in (bycat.get("buff") or [])[:6]]
     horizon = []
@@ -1713,9 +1713,15 @@ def _annotate_stacking(picks: list, ctx: dict) -> list:
                       if o.lower() != name.lower() and spell_lines.supersedes(name, o)]
         if beaten_by:
             p["superseded_by"] = beaten_by[0]
+            p["_drop"] = True
         if overwrites:
             p["overwrites"] = sorted(overwrites)[:3]
-    return picks
+    # A buff the player ALREADY OWNS a strict upgrade for is not a
+    # recommendation, it is a distraction. Showing it dimmed with "skip
+    # this one" beside it was reported as the list still carrying a
+    # deprecated spell -- which is exactly what it was. The `overwrites`
+    # note on the survivor still says what it replaced, so nothing is lost.
+    return [p for p in picks if not p.pop("_drop", False)]
 
 
 def _describe_prebuffs(picks: list) -> list:
