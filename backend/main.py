@@ -1680,8 +1680,13 @@ async def get_gear(refresh: bool = False, cached: bool = False):
     WITHOUT running the LLM — the tab uses it to restore results on load."""
     global _gear_cache, _gear_sig
     inv = load_export(tracker.name, tracker.server, "Inventory")
+    # max_hp / max_mana are NOT in the signature. They were, harmlessly,
+    # while they were typed once and left alone -- but the stats OCR now
+    # rewrites them every 15 seconds and they move with every buff, so a
+    # consult that took half a minute to build was being marked stale by a
+    # Strength buff landing. They are context in the prompt, not an input
+    # that changes which item wins a slot.
     sig = (tracker.class_str, tracker.level, tracker.race, tracker.pet_slots,
-           tracker.max_hp, tracker.max_mana,
            tuple(sorted(tracker.pet_inventory.items())),
            inv["updated"] if inv else None)
     sig = _sig_norm(sig)

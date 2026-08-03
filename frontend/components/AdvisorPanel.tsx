@@ -862,6 +862,39 @@ export const AdvisorPanel = memo(function AdvisorPanel({
             )}
             </div>
 
+
+            {advice.class_notes.length > 0 && (
+              <div className="adv-section">
+                <h3>Class notes</h3>
+                <ul className="adv-list">
+                  {advice.class_notes.map((n) => (
+                    <li key={n.topic}>
+                      <strong>{n.topic}</strong>
+                      <br />
+                      {n.advice}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="adv-foot">
+              <span>
+                {advice.source === "llm"
+                  ? advice.grounding === "wiki"
+                    ? "Grounded in the EQL wiki — verify costs in-game."
+                    : "From model memory (wiki unreachable) — treat names as approximate."
+                  : "Built-in notes only — the LLM is offline."}
+              </span>
+              <span>{new Date(advice.generated).toLocaleTimeString()}</span>
+            </div>
+          </>
+        )}
+
+        {/* Equipment lives OUTSIDE the advice guard. It was nested
+            inside it, so the consult-gear button could not be reached
+            until an advisor consult had run -- two independent
+            consults, one of them held hostage by the other. */}
             <div className="adv-section adv-gear-section">
               <h3 className="adv-gear-head">
                 <span>Equipment</span>
@@ -1246,34 +1279,6 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                 </>
               )}
             </div>
-
-            {advice.class_notes.length > 0 && (
-              <div className="adv-section">
-                <h3>Class notes</h3>
-                <ul className="adv-list">
-                  {advice.class_notes.map((n) => (
-                    <li key={n.topic}>
-                      <strong>{n.topic}</strong>
-                      <br />
-                      {n.advice}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="adv-foot">
-              <span>
-                {advice.source === "llm"
-                  ? advice.grounding === "wiki"
-                    ? "Grounded in the EQL wiki — verify costs in-game."
-                    : "From model memory (wiki unreachable) — treat names as approximate."
-                  : "Built-in notes only — the LLM is offline."}
-              </span>
-              <span>{new Date(advice.generated).toLocaleTimeString()}</span>
-            </div>
-          </>
-        )}
       </div>
     </section>
   );
