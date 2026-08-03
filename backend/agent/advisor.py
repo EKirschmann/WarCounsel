@@ -1336,9 +1336,9 @@ async def generate_advice(ctx: dict) -> dict:
             for s in lst:
                 s["level"] = level_by_name.get(str(s["name"]).lower())
         loadout = must_have + should_have  # combined = the actual slot fill
-        prebuffs = _annotate_stacking(_gate_prebuffs(await _gate_picks(
+        prebuffs = _describe_prebuffs(_annotate_stacking(_gate_prebuffs(await _gate_picks(
             _clean_list(data.get("prebuffs"), ("name", "cls", "reason"), cap=8),
-            "prebuffs")), ctx)
+            "prebuffs")), ctx))
         # Long-duration buffs are the worst place to stack two of a slot: the
         # second cast silently wastes the first one's mana and duration.
         prebuffs, _pre_clashes = _gate_stacking(prebuffs)
@@ -1641,6 +1641,30 @@ def _annotate_stacking(picks: list, ctx: dict) -> list:
             p["superseded_by"] = beaten_by[0]
         if overwrites:
             p["overwrites"] = sorted(overwrites)[:3]
+    return picks
+
+
+def _describe_prebuffs(picks: list) -> list:
+    """Say how long each pre-buff lasts, and whether it ever needs recasting.
+
+    The list was flat and undifferentiated, which is the opposite of useful
+    here: a permanent buff is cast once ever and a 27-minute one has to be
+    redone before the next pull, and the row gave no way to tell them apart.
+    The duration is in the same spell data the gate already reads.
+    """
+    from backend import builds_data
+    for p in picks:
+        e = builds_data.spell_entry(p.get("name") or "")
+        if not e:
+            continue
+        ticks = e.get("durationTicks") or 0
+        p["permanent"] = ticks == 0
+        if ticks:
+            # a tick is 6 seconds
+            p["duration_min"] = round(ticks * 6 / 60)
+    # permanent first, then longest-lasting: the order you actually cast in
+    picks.sort(key=lambda x: (not x.get("permanent"),
+                              -(x.get("duration_min") or 0)))
     return picks
 
 

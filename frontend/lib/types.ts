@@ -188,6 +188,8 @@ export interface ZoneGeometry3D {
 }
 
 export interface Snapshot {
+  /** Where max_hp / max_mana came from: typed, or read off the screen. */
+  vitals_source?: { max_hp?: "manual" | "ocr" | null; max_mana?: "manual" | "ocr" | null };
   /** Looted items that are race-unlock turn-ins, with a running tally. */
   unlock_loot?: Record<string, {
     count: number;
@@ -288,6 +290,10 @@ export interface AdvisorLoadout {
   superseded_by?: string | null;
   /** Owned buffs this one overwrites. */
   overwrites?: string[];
+  /** Lasts until death — cast once, never refresh. */
+  permanent?: boolean;
+  /** Minutes it lasts, when it is not permanent. */
+  duration_min?: number | null;
 }
 
 export interface AdvisorReplace {

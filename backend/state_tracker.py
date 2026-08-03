@@ -200,6 +200,8 @@ class CharacterTracker:
         self.unlock_loot: dict = {}
         self._unlock_alerted: set = set()
         self.ocr_stats: dict = {}
+        # which vitals the screen supplied (vs the player typing them)
+        self.vitals_ocr: set = set()
         self.ocr_stats_at = None
         # anyone who has spoken in any channel -- pets never do
         self._chat_seen: set = set()
@@ -366,6 +368,10 @@ class CharacterTracker:
             v = stats.get(src)
             if v and v > 0 and not getattr(self, manual, False):
                 setattr(self, dest, v)
+                # remembered rather than inferred from ocr_stats: that dict
+                # is live-only, so after a restart an OCR-supplied number
+                # looked exactly like a typed one
+                self.vitals_ocr.add(dest)
 
     def trust_all(self, action: str) -> dict:
         """Apply one verdict to everyone currently on the not-counted list.
@@ -1780,6 +1786,14 @@ class CharacterTracker:
             "spell_slots": self.spell_slots,
             "pet_slots": self.pet_slots,
             "pet_classes": self.pet_classes,
+            # Where these came from, so the panel can stop presenting a
+            # screen reading as something the player typed. A typed value
+            # still wins -- apply_ocr_stats refuses to overwrite one.
+            "vitals_source": {
+                k: ("manual" if getattr(self, f"_{k}_manual", False)
+                    else "ocr" if k in self.vitals_ocr else None)
+                for k in ("max_hp", "max_mana")
+            },
             "max_hp": self.max_hp,
             "max_mana": self.max_mana,
             "pet_inventory": dict(self.pet_inventory),

@@ -157,10 +157,18 @@ export const CharacterPanel = memo(function CharacterPanel({
 
         <div
           className="vitals-edit"
-          title="The log never prints your max HP/mana — copy them from the in-game UI once (update after level-ups) and gear advice can say what a +75 HP swap really means for you."
+          data-src={snap.vitals_source?.max_hp ?? undefined}
+          title={
+            snap.vitals_source?.max_hp === "ocr"
+              ? "Read from your Inventory window by the stats OCR. Type over either box to pin it yourself — a typed value is never overwritten by a screen reading."
+              : "The log never prints your max HP/mana — type them once, or turn on the character-stats OCR in Settings and they keep themselves current."
+          }
         >
           <label htmlFor="maxhp">
             Max HP
+            {snap.vitals_source?.max_hp === "ocr" && (
+              <span className="vitals-src" title="from the stats OCR">screen</span>
+            )}
             <input
               id="maxhp"
               type="number"
@@ -174,6 +182,9 @@ export const CharacterPanel = memo(function CharacterPanel({
           </label>
           <label htmlFor="maxmana">
             Max Mana
+            {snap.vitals_source?.max_mana === "ocr" && (
+              <span className="vitals-src" title="from the stats OCR">screen</span>
+            )}
             <input
               id="maxmana"
               type="number"
@@ -473,20 +484,9 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
-        <div className="focus-row">
-          <label htmlFor="playstyle">Focus</label>
-          <select
-            id="playstyle"
-            value={snap.playstyle ?? "balanced"}
-            onChange={(e) => setPlaystyle(e.target.value)}
-          >
-            {PLAYSTYLES.map((p) => (
-              <option key={p} value={p}>
-                {p.replace("_", " ")}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Focus moved to the Advisor header — it steers the counsel
+            and belongs beside the button that asks for it, not at the
+            bottom of a session summary it has nothing to do with. */}
       </div>
     </section>
   );

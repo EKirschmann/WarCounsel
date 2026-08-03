@@ -5,6 +5,11 @@ import { apiGet, apiSend } from "@/lib/api";
 import { ItemHover } from "./ItemHover";
 import type { Advice, ExportsStatus, GearAdvice, HuntingData, LlmInfo, OwnedAAsInfo, Snapshot, SpellbookInfo } from "@/lib/types";
 
+/** What the counsel optimises for. Mirrors the backend's allowed values. */
+const PLAYSTYLES = [
+  "solo_dps", "group_dps", "tank", "healer", "support", "pet_focused", "balanced",
+];
+
 const CLASSES = [
   "Bard", "Beastlord", "Berserker", "Cleric", "Druid", "Enchanter",
   "Magician", "Monk", "Necromancer", "Paladin", "Ranger", "Rogue",
@@ -567,6 +572,23 @@ export const AdvisorPanel = memo(function AdvisorPanel({
             No OPENAI_API_KEY in .env — consults will fall back to local data. Paste the key, restart the backend.
           </span>
         )}
+        {/* Focus steers the whole consult, so it sits beside the button that
+            asks for one. It used to live at the bottom of the session
+            summary, which is the last place you would look for a control
+            over advice. */}
+        <label className="adv-focus" title="What the counsel should optimise for">
+          Focus
+          <select
+            value={snap?.playstyle ?? "balanced"}
+            onChange={(e) => patch({ playstyle: e.target.value })}
+          >
+            {PLAYSTYLES.map((p) => (
+              <option key={p} value={p}>
+                {p.replace("_", " ")}
+              </option>
+            ))}
+          </select>
+        </label>
         <button className="adv-consult" onClick={() => consult(true)} disabled={loading}>
           {loading ? "Consulting…" : "Consult"}
         </button>
@@ -739,6 +761,14 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                       <strong>{s.name}</strong>
                       {s.level != null && <span className="adv-cls"> (L{s.level})</span>}{" "}
                       <span className="adv-cls">({s.cls})</span>
+                      {/* A permanent buff is cast once ever; a 27-minute one
+                          has to be redone before the next pull. The flat list
+                          gave no way to tell those apart. */}
+                      {s.permanent ? (
+                        <span className="adv-dur" data-kind="perm"> until death</span>
+                      ) : s.duration_min ? (
+                        <span className="adv-dur"> {s.duration_min} min</span>
+                      ) : null}
                       {/* EQ buffs share effect slots and silently overwrite each
                           other — Courage and Center are the same slot, and you
                           only find out by casting both and watching one drop.
@@ -814,7 +844,7 @@ export const AdvisorPanel = memo(function AdvisorPanel({
 
             {advice.horizon.length > 0 && (
               <div className="adv-section">
-                <h3>Next two levels</h3>
+                <h3>Next five levels</h3>
                 <ul className="adv-list">
                   {advice.horizon.map((h) => (
                     <li key={`${h.cls}-${h.name}`}>

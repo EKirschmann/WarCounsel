@@ -2420,3 +2420,30 @@ button.app-version:hover { color: var(--gold-bright); }
 .adv-stack { font-size: 10.5px; }
 .adv-stack[data-kind="lose"] { color: #d4574a; }
 .adv-stack[data-kind="win"] { color: var(--muted, rgba(226, 222, 214, .6)); }
+
+/* Focus, beside the Consult button it steers. */
+.adv-focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted, rgba(226, 222, 214, .62));
+}
+.adv-focus select { font: inherit; font-size: 11px; }
+
+/* "screen" tag on a vital the stats OCR supplies, so a read value is never
+   mistaken for one the player typed and forgot to update. */
+.vitals-src {
+  margin-left: 5px;
+  padding: 0 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #1fb38c;
+  border: 1px solid rgba(31, 179, 140, .4);
+}
+
+/* How long a pre-buff lasts. "until death" is the one worth spotting: it
+   is cast once and never refreshed, so it should not read like a chore. */
+.adv-dur { font-size: 10.5px; color: var(--muted, rgba(226, 222, 214, .6)); }
+.adv-dur[data-kind="perm"] { color: #1fb38c; }

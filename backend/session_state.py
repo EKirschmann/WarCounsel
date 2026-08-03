@@ -53,6 +53,9 @@ PERSIST_FIELDS = [
     "filtered_seen", "session_fights",
     "inferred_classes", "_infer_seen", "_infer_at",
     "ignored_contributors", "_chat_seen",
+    # a typed max HP must stay typed across a restart, or the
+    # stats OCR silently takes the field back over
+    "_max_hp_manual", "_max_mana_manual", "vitals_ocr",
 ]
 _DEQUES = {"loots": 20, "ledger": 300, "encounter_history": 5}
 
@@ -108,6 +111,7 @@ def restore(tracker, data: dict) -> None:
         elif f == "_last_kill" and v is not None:
             v = tuple(v)
         elif f in ("spell_casts", "_active_buckets", "unknown_casts",
-                   "group_members", "_infer_seen", "_chat_seen") and v is not None:
+                   "group_members", "_infer_seen", "_chat_seen",
+                   "vitals_ocr") and v is not None:
             v = set(v)
         setattr(tracker, f, v)
