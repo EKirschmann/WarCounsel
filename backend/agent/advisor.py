@@ -74,7 +74,7 @@ Rules:
   - must_have: the core spells that should always be memorized, in priority order (typically 5-7).
   - should_have: fills the REMAINING slots, in priority order — must_have + should_have together must total EXACTLY __SLOTS_NOTE__ picks.
   - nice_to_have: 10-14 EXTRA alternatives beyond the slot count, in priority order, so the player can swap by situation (different zone, tougher pulls, low mana).
-- prebuffs: separate from the loadout — list PERMANENT buffs (marked in the character data) FIRST: they persist until death, are cast exactly once, and must never be described as needing refreshing. Then long-duration self-buffs worth keeping up (damage shields like Bramblecoat, AC/HP buffs, Spirit of Wolf). The player memorizes one temporarily, casts it, then swaps the slot back to combat spells — so do NOT waste loadout slots on long buffs; put them here. Owned and level-legal only.
+- prebuffs: every entry's reason must say WHAT IT DOES and why it matters for this focus, using the effect shown beside it — "Permanent buff." is not a reason. Include long buffs worth re-casting between pulls, not only permanent ones. Separate from the loadout — list PERMANENT buffs (marked in the character data) FIRST: they persist until death, are cast exactly once, and must never be described as needing refreshing. Then long-duration self-buffs worth keeping up (damage shields like Bramblecoat, AC/HP buffs, Spirit of Wolf). The player memorizes one temporarily, casts it, then swaps the slot back to combat spells — so do NOT waste loadout slots on long buffs; put them here. Owned and level-legal only.
 - Summoned-pet lines (skeletons, elementals, warders): only ever slot the HIGHEST-level pet the character owns — older ranks are strictly weaker versions of the same pet.
 - Respect the focus STRICTLY: for solo focuses, never slot group-only utility — resurrection and corpse-recovery lines, buffs that can only target others — those are dead slots when playing alone.
 - If a "Missing spells they could BUY" list is present, fold the best purchases into note or horizon (say they are vendor purchases).
@@ -127,9 +127,16 @@ def _build_prompt(ctx: dict, wiki: str) -> str:
                  + (", ".join(casts) if casts else "none seen"))
     perm = ctx.get("_permanent") or []
     if perm:
+        described = [f"{n} ({e})" if (e := _buff_effects(n)) else n for n in perm]
         lines.append("- PERMANENT buffs owned (last until death — cast ONCE "
                      "after login/death, NEVER tell the user to refresh them, "
-                     "never spend a combat slot on them): " + ", ".join(perm))
+                     "never spend a combat slot on them): "
+                     + ", ".join(described))
+    longb = ctx.get("_long_buffs") or []
+    if longb:
+        lines.append("- LONG buffs owned and castable now, worth re-casting "
+                     "between pulls (duration and effect shown): "
+                     + ", ".join(longb))
     hunt = ctx.get("_hunting") or []
     if hunt:
         def fmt(c):
@@ -324,6 +331,69 @@ _NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67}
 # How far ahead the horizon looks. The wiki/builds context already spans
 # level+12, so this is a presentation window, not a data limit.
 HORIZON_LEVELS = 5
+
+
+# Effects that are noise in a one-line buff summary: zero-magnitude
+# charisma spacers pad almost every record, and the illusion id is a form
+# number rather than a stat.
+_BUFF_NOISE = {"Charisma", "Illusion", "Evacuate"}
+
+
+def _buff_effects(name: str) -> str:
+    """A one-line "what it actually does", from the spell record.
+
+    The prompt used to hand over bare NAMES, which is why every pre-buff
+    came back reasoned as "Permanent buff." -- the model had nothing else
+    to say about them. It cannot describe an effect it was never shown.
+    """
+    from backend import builds_data
+    e = builds_data.spell_entry(name)
+    if not e:
+        return ""
+    parts = []
+    for eff in (e.get("effects") or []):
+        label = (eff.get("name") or "").strip()
+        base = eff.get("baseValue")
+        if not label or label in _BUFF_NOISE or not base:
+            continue
+        # damage shields carry a negative base; it is a positive thing
+        parts.append(f"{label} {abs(int(base))}")
+        if len(parts) >= 3:
+            break
+    return ", ".join(dict.fromkeys(parts))
+
+
+def _long_buffs(ctx: dict) -> List[str]:
+    """Owned, castable buffs that last long enough to be worth pre-casting.
+
+    Permanent buffs were the only thing the prompt listed, so they were the
+    only thing that came back -- five rows of "until death" and nothing a
+    player would actually re-cast between pulls. A 27-minute AC buff is the
+    other half of a pre-buff routine and was never mentioned.
+    """
+    from backend import builds_data
+    from backend.game_data import _primary_effect
+    level = ctx.get("level")
+    perm = {n.lower() for n in (ctx.get("_permanent") or [])}
+    out = []
+    for sp in (ctx.get("spellbook") or {}).get("castable", []):
+        if level is not None and sp["level"] > level:
+            continue
+        if sp["name"].lower() in perm:
+            continue
+        e = builds_data.spell_entry(sp["name"])
+        if not e:
+            continue
+        ticks = e.get("durationTicks") or 0
+        if ticks < 100:          # under ~10 minutes: not worth a pre-cast
+            continue
+        pe = _primary_effect(e)
+        if pe and pe[0] in _NOT_A_BUFF_SPAS:
+            continue
+        eff = _buff_effects(sp["name"])
+        out.append(f"{sp['name']} ({round(ticks * 6 / 60)}min"
+                   + (f", {eff}" if eff else "") + ")")
+    return out[:12]
 
 
 def _permanent_buffs(ctx: dict) -> List[str]:
@@ -581,8 +651,11 @@ async def _compose_builtin(ctx, bycat, replaced, grounded_any,
     for cat in ("damage", "heal", "control", "other"):
         for i in (bycat.get(cat) or [])[:3]:
             nice.append(entry(i, f"alternative {cat} spell"))
-    prebuffs = [entry(i, "positive-effect buff — cast it, then swap the slot "
-                         "back to combat spells")
+    # The deterministic path had the same empty-reason problem as the LLM
+    # one: "positive-effect buff" on every row says nothing about which to
+    # cast. The effects are in the spell record either way.
+    prebuffs = [entry(i, (_buff_effects(i) or "positive-effect buff")
+                      + " — cast it, then swap the slot back to combat spells")
                 for i in (bycat.get("buff") or [])[:6]]
     horizon = []
     if level is not None:
@@ -1192,6 +1265,7 @@ async def generate_advice(ctx: dict) -> dict:
         except Exception:
             ctx["_hunting"] = []
         ctx["_permanent"] = _permanent_buffs(ctx)
+        ctx["_long_buffs"] = _long_buffs(ctx)
         if llm_active()["provider"] == "none":
             body = await _builtin_counsel(ctx)
             base["grounding"] = body.pop("grounding", "memory")
