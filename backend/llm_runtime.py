@@ -124,8 +124,21 @@ def _build(provider: str, model: str):
         # Ollama. Its own server, not an OpenAI-compatible shim, so it gets
         # a real client rather than being folded into "custom".
         from langchain_ollama import ChatOllama
+        # num_ctx is NOT optional here. Ollama defaults to a 2048-token
+        # context unless the Modelfile says otherwise, and it TRUNCATES a
+        # longer prompt silently -- no error, no warning. The advisor prompt
+        # runs to nine thousand tokens or more, so the model was being handed
+        # the tail of it and answering from that: one player on llama3.1 got
+        # a fourteen-slot loadout filled with two spells, because the
+        # spellbook never reached the model at all.
+        #
+        # Resolved the same way LM Studio's is (manual > probed > default),
+        # so a player who pins a limit gets it and everyone else gets
+        # something workable instead of 2048.
+        ctx = int((context_limit("local") or {}).get("limit") or DEFAULT_CONTEXT)
         return ChatOllama(model=model or settings.ollama_model,
                           base_url=settings.ollama_base_url,
+                          num_ctx=max(4096, ctx),
                           temperature=0.3)
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic

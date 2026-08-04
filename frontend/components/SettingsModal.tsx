@@ -613,6 +613,31 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                       aria-label="Ollama server address"
                     />
                   </div>
+                  {/* Ollama had no context field at all, which mattered more
+                      here than anywhere: it defaults to 2048 tokens and
+                      TRUNCATES a longer prompt silently, so the advisor was
+                      being handed the tail of its own prompt. */}
+                  <div className="set-row">
+                    <input
+                      value={ctxLimit}
+                      spellCheck={false}
+                      autoComplete="off"
+                      inputMode="numeric"
+                      onChange={(e) => setCtxLimit(e.target.value)}
+                      placeholder="context tokens, e.g. 16384"
+                      aria-label="Ollama context limit"
+                    />
+                  </div>
+                  <p className="set-note">
+                    Ollama defaults to a <strong>2048-token</strong> context and
+                    quietly cuts anything longer, which leaves the advisor
+                    answering from a fraction of its prompt — a near-empty
+                    loadout is the usual symptom. WarCounsel asks for{" "}
+                    {data.llm.context?.limit ?? 8192} unless you set a number
+                    here. 16384 suits an 8B model on a 12&nbsp;GB card; raise it
+                    if consults still come back thin, lower it if the model
+                    will not load.
+                  </p>
                   <ProbeRow
                     provider="local"
                     probe={probe}
