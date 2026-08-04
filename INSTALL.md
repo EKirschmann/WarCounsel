@@ -69,6 +69,20 @@ packed into one file) get flagged by pattern-matching scanners fairly
 often; it is a known false positive for this kind of build, not a sign of
 anything specific to this app.
 
+**Seen in the wild:** Windows Defender quarantined v2.4.0 as
+`Trojan:Win32/Wacatac.B!ml`, and the GitHub source `.zip` as
+`Trojan:Script/Wacatac.B!ml`. The `!ml` suffix means the verdict came from
+Defender's machine-learning model rather than a signature — that is the
+category with the highest false-positive rate, and it is corrected
+server-side without any change to the file. Both cleared on their own
+after a signature update, with no change to the app.
+
+If you hit this, **update your definitions first** — an elevated
+PowerShell running `Update-MpSignature`, or Windows Security ▸ Virus &
+threat protection ▸ Check for updates — and try again. If it still fires,
+please open an issue with the exact detection name from Windows Security ▸
+Protection history; that string is the only thing Microsoft can act on.
+
 **If you would rather verify than trust:** every release is built from the
 public source in this repository, and you can upload the file to
 <https://www.virustotal.com> for a second opinion before running it. You
