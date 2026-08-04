@@ -4,6 +4,29 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.5.1 — 2026-08-04
+
+**Fixed: Ollama consults returned an almost empty loadout.** Ollama uses a
+2048-token context unless told otherwise, and it cuts a longer prompt
+without reporting it — so the advisor was answering from the tail end of
+its own prompt, with your spellbook missing entirely. A level 46 character
+was offered two spells for fourteen slots.
+
+WarCounsel now tells Ollama how large a context to use, and **Settings has
+a context field for Ollama** — previously the one provider that most needed
+the setting was the only one without it. 16384 is a good starting point for
+an 8B model on a 12 GB card; raise it if consults still come back thin.
+
+If a prompt does overflow whatever limit is set, the consult now says so
+and names the likely casualty, instead of presenting the remains as an
+answer.
+
+**Also:** INSTALL.md now names the actual Windows Defender detections seen
+in the wild (`Trojan:Win32/Wacatac.B!ml` on the exe, `Trojan:Script/...`
+on the source zip), explains that the `!ml` suffix means a machine-learning
+verdict rather than a signature, and tells you to update definitions before
+reporting one. Both cleared server-side on their own.
+
 ## v2.5.0 — 2026-08-03
 
 **Spell picks now use what your log says your spells actually do.** The
