@@ -2315,6 +2315,68 @@ async def _tradeoffs(ctx: dict) -> list:
     return out
 
 
+async def _surplus(items: list, worn: Optional[dict]) -> list:
+    """Owned things that will not be worn again, whatever you level next.
+
+    Deliberately CLASS-AGNOSTIC. A trio is a temporary state -- the player
+    swaps them and intends to keep swapping -- so "your Necromancer cannot
+    use this" is not a reason to sell anything. Only two conditions
+    qualify, and both hold no matter what you play:
+
+      1. A strictly lower rank of an item you already own at a higher one.
+         An item at +N embodies 2^N copies, so a spare +0 beside your +5 is
+         merge fodder at best and clutter otherwise.
+      2. The wiki calls it vendor trash outright.
+
+    Everything else is left alone ON PURPOSE. An item with no wiki page
+    could be anything; a quest item looks like junk until the quest; a low
+    -AC piece is still the best thing a future class has. This list is
+    meant to be short and certain rather than long and probably-right,
+    because the action it invites cannot be undone.
+    """
+    from backend.game_data import item_acquisition
+    worn_names = {str(v).strip().lower() for v in (worn or {}).values() if v}
+    best: dict = {}
+    for it in items:
+        nm = it.get("name") or ""
+        if not nm:
+            continue
+        b = _item_base(nm)
+        r = _item_rank(nm)
+        if b not in best or r > best[b][0]:
+            best[b] = (r, nm)
+    out = []
+    for it in items:
+        nm = it.get("name") or ""
+        if not nm or nm.strip().lower() in worn_names or it.get("where") == "pet":
+            continue
+        b, r = _item_base(nm), _item_rank(nm)
+        top = best.get(b)
+        if top and r < top[0]:
+            out.append({"name": nm, "where": it.get("where"),
+                        "why": f"you also own {top[1]} — merge it in or sell it",
+                        "action": "merge or sell"})
+            continue
+        try:
+            acq = await item_acquisition(nm)
+        except Exception:
+            continue
+        blob = " ".join(l.get("text", "") for sec in (acq.get("sections") or [])
+                        for l in (sec.get("lines") or []))
+        if "vendor trash" in (blob + " " + (acq.get("notes") or "")).lower():
+            out.append({"name": nm, "where": it.get("where"),
+                        "why": "the wiki calls this vendor trash",
+                        "action": "sell"})
+    # one row per item, most actionable first
+    seen, dedup = set(), []
+    for r in out:
+        if r["name"].lower() in seen:
+            continue
+        seen.add(r["name"].lower())
+        dedup.append(r)
+    return dedup[:20]
+
+
 async def _merge_opportunities(items: list, exalts: list,
                                loot_filter: Optional[dict] = None) -> list:
     """Duplicate owned EQUIPMENT is an EQL merge opportunity: two copies
@@ -2401,6 +2463,8 @@ async def generate_gear_advice(ctx: dict) -> dict:
                                              ctx.get("exaltations") or [],
                                              ctx.get("loot_filter")),
         "clickies": await _clickies(items),
+        # things that will not be worn again whatever you level next
+        "surplus": await _surplus(items, ctx.get("worn")),
         # candidates that win some stats and lose others: real
         # trades the strict-Pareto recommender must not claim
         "tradeoffs": await _tradeoffs(ctx),

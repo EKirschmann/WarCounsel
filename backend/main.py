@@ -1652,6 +1652,27 @@ async def get_advisor(refresh: bool = False, cached: bool = False):
     return advice
 
 
+def _items_including_pet(inv) -> list:
+    """Owned items, with what the PET is holding folded in.
+
+    Pet gear arrives from `/pet inventory check` and lives on the tracker,
+    not in the inventory export, so the gear advisor never saw it. That is
+    one-directional in a way nobody would choose: the app happily tells you
+    to hand a better item DOWN to the pet, while a Ringmail Coat +6 sits on
+    the pet and the player wears worse.
+
+    Marked `where: "pet"` so a recommendation says where the item actually
+    is -- taking it back off the pet is a real action with a cost, and the
+    row should say so rather than implying it is sitting in a bag.
+    """
+    items = list((inv or {}).get("items") or [])
+    for slot, name in (getattr(tracker, "pet_inventory", None) or {}).items():
+        if not name or str(name).strip().lower() in ("empty", "none"):
+            continue
+        items.append({"name": str(name), "where": "pet", "loc": f"pet:{slot}"})
+    return items
+
+
 @app.get("/api/gear")
 async def get_gear(refresh: bool = False, cached: bool = False):
     """Equipment counsel: best owned item per slot + farming targets.
@@ -1681,7 +1702,7 @@ async def get_gear(refresh: bool = False, cached: bool = False):
     ctx = {"class_str": tracker.class_str, "level": tracker.level,
            "race": tracker.race, "playstyle": tracker.playstyle,
            "worn": (inv or {}).get("worn"),
-           "inventory_items": (inv or {}).get("items"),
+           "inventory_items": _items_including_pet(inv),
            "exaltations": (inv or {}).get("exaltations"),
            "item_sockets": (inv or {}).get("item_sockets"),
            "loot_filter": lf["actions"] if lf else None,

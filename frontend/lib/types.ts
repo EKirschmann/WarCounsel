@@ -435,6 +435,13 @@ export interface GearMerge {
   filter_action?: string | null;
 }
 
+export interface GearSurplus {
+  name: string;
+  where?: string | null;
+  why: string;
+  action: string;
+}
+
 export interface GearAdvice {
   /** Owned items with an activatable effect — deterministic, never LLM. */
   clickies?: {
@@ -447,6 +454,8 @@ export interface GearAdvice {
   stale?: boolean;
   pet_gear?: PetGear[];
   merges?: GearMerge[];
+  /** Owned items that will not be worn again, whatever you level next. */
+  surplus?: GearSurplus[];
   source: "llm" | "builtin";
   generated: string;
   note: string | null;

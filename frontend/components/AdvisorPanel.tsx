@@ -1120,6 +1120,38 @@ export const AdvisorPanel = memo(function AdvisorPanel({
                 </>
               )}
 
+              {gear && (gear.surplus?.length ?? 0) > 0 && (
+                <>
+                  <div className="adv-sub" style={{ marginTop: 12 }}>
+                    Surplus — safe to clear out
+                  </div>
+                  <p className="adv-note">
+                    Only two things land here: a lower rank of something you
+                    already own, and anything the wiki calls vendor trash.
+                    Class is deliberately ignored — you will swap trios, so
+                    &quot;your current classes cannot use this&quot; is not a
+                    reason to sell it. Anything the app is unsure about is left
+                    out rather than guessed at.
+                  </p>
+                  <table className="enc-table">
+                    <tbody>
+                      {gear.surplus!.map((x) => (
+                        <tr key={x.name}>
+                          <td className="enc-name">
+                            <ItemHover name={x.name} />
+                            {x.where && <span className="adv-cls"> ({x.where})</span>}
+                          </td>
+                          <td>
+                            <strong>{x.action}</strong>
+                          </td>
+                          <td className="adv-why">{x.why}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
               {gear && (gear.merges?.length ?? 0) > 0 && (
                 <>
                   <div
