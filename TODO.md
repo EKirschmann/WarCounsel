@@ -222,3 +222,58 @@ can be finished.
   `/alternateadv list` and `/pet inventory check`, and we already write
   `LO*.ini` spell sets, so a copy-paste social block has precedent. Small,
   low differentiation.
+
+## Unparsed log lines worth having (measured 2026-08-04)
+
+Prompted by a taxonomy in Moonchopper/EQDeeps (MIT) and cross-checked
+against a real 90MB EQL log rather than taken on trust. Counts are actual
+occurrences in that log, so the value of each is known before any work
+starts. Nothing below is parsed today.
+
+- **Consider messages carry the MOB LEVEL — 885 occurrences.** `A large
+  plague rat scowls at you, ready to attack -- looks kind of risky, but
+  you might win. (Lvl: 22)`. We have no source of mob level anywhere. It
+  would let hunting advice say what the player is ACTUALLY killing instead
+  of inferring from a community zone table, and would give encounters a
+  difficulty axis. Highest value of the set.
+- **Mez break — 142.** `A greater skeleton has been awakened by Bellrain.`
+  We already broadcast the mez APPLY half and CLAUDE.md calls breaking a
+  mez the classic group error; this is the half that names who did it.
+  Small, and an alert people would want.
+- **Taunt — 737 success, 737 failure.** `Kenann has captured a Teir`Dal
+  ranger's attention!` / `Konektik failed to taunt a necro initiate.`
+  Real, but only matters to a tank. Leave until someone asks.
+- **`<Player> activates <Ability>` — 371.** Other people's ability usage.
+- **Stance changes — 46.** `You assume a defensive stance.` We surface
+  stances from the MCP data but never notice one being taken.
+
+NOT worth adding, verified absent from EQL logs: INVULNERABLE, tell-window
+echo (`A -> B: text`), custom channels, fellowship chat, and the classic
+direction-only faction lines ("got better"). All are live/TLP formats.
+
+EQDeeps also warns that two log entries can concatenate onto one physical
+line. That appeared twice in 90MB and BOTH were a player pasting a log
+line into guild chat, which the existing chat guard already handles — so
+the hazard is real for live EQ and not for us.
+
+## Pet names may be a lookup, not a guess
+
+EQDeeps notes that game-generated pet names follow consonant-cluster
+patterns (its examples: `Xobtik`, `Jobekn`) and that reliable
+classification wants a **petnames list**.
+
+This matters because it contradicts something already written down as
+unfixable. The group filter currently guesses at pets from absence of
+evidence — never appeared in a /who, never spoke — and marks the row
+`pet?`. A real player's filtered list was `Gabartik`, `Xektik`,
+`Libektik`, `Kebantik`, `Jabeker`: obviously the same generator.
+
+EQ builds these from a fixed syllable table, so a complete list is an
+EXACT lookup and does not breach the no-fuzzy-matching rule that governs
+zone names. If a usable list exists (EQDeeps may vendor one; live-EQ
+tables have been published), the `pet?` heuristic becomes a fact, the
+not-counted list stops being cluttered by other people's pets, and ally
+pets could fold into their owner properly.
+
+Worth checking whether such a list exists and what licence it carries
+before assuming it can be vendored.
