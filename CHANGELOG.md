@@ -4,6 +4,30 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.5.2 — 2026-08-08
+
+**Fixed: 14 zones had no map or 3D geometry, including The Hole.** The Atlas
+looks a zone up by the name the log prints, and EQL prints the old long
+names — "The Ruins of Old Paineel" for The Hole, "The Liberated Citadel of
+Runnyeye", "Neriak - Commons" with a dash. None of those matched, so the
+panel said "no zone geometry for this place" for zones whose art was sitting
+in the game folder the whole time.
+
+Now charted and rendering: **The Hole**, The Warrens, Planes of Sky, Fear
+and Hate, the Temple of Solusek Ro, Runnyeye, the Lair of the Splitpaw, the
+Qeynos Aqueducts, the Castle of Mistmoore, and all three Neriak gates. Two
+of those (Mistmoore, Runnyeye) were broken by an entry that was *supposed*
+to help and instead hid a working one.
+
+Routing reaches the new zones too — The Hole and The Warrens connect through
+Paineel, the Temple through Lavastorm. Lake Nerius is still unmapped: it is
+the one EQL zone whose art ships in a format the 3D extractor does not read.
+
+Checked against the client's own zone list (`Resources/ZoneNames.txt`) —
+all 77 live zones now resolve. `scripts/zone_coverage.py` re-runs that check
+after a patch, so the next renamed zone shows up as a failure instead of an
+empty panel.
+
 ## v2.5.1 — 2026-08-04
 
 **Fixed: Ollama consults returned an almost empty loadout.** Ollama uses a

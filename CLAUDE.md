@@ -527,11 +527,34 @@ throttled `state` pushes. REST highlights (see main.py for all):
     `normalize_zone()` leaves it. "estate of unrest" → "The Estate of
     Unrest" pointed at a nonexistent key (the article is already stripped)
     and suppressed the direct hit that would otherwise have worked.
+  - **The client ships the authoritative roster: `Resources/ZoneNames.txt`**
+    (`id^long name^lo^hi`). The long name is EXACTLY what "You have entered
+    X." prints, and `lo`/`hi` are `0^0` for every zone EQL does not run — 77
+    live zones at launch, out of 699 rows. `scripts/zone_coverage.py` walks
+    it through `_canonical()`, so a zone we cannot chart is found BEFORE a
+    player walks into it. **Do not guess a short name from the long one**:
+    `spells_us.txt` teleport rows carry `name^0^<short zone>` (row 54915 is
+    how "The Ruins of Old Paineel" was proven to be `hole`), and the .s3d
+    must exist on disk. That pairing is the evidence the no-fuzzy rule
+    demands.
   - `_canonical()` logs an unresolved zone once. A miss fails SILENTLY —
     the panel just shows nothing — which is how New Sebilis Expedition went
-    53 visits with no chart while sebilis.txt/.s3d sat in the game folder.
-    Re-audit after a patch by counting "You have entered" names from a real
-    log through `load_map`.
+    53 visits with no chart while sebilis.txt/.s3d sat in the game folder,
+    and how 14 more (The Hole, both Neriak dash spellings, the Planes, the
+    Warrens, Runnyeye, Splitpaw, Mistmoore, the Qeynos Aqueducts) survived
+    to 2026-08. Run the coverage script after a patch rather than waiting
+    for the report.
+  - **An alias is consulted BEFORE the direct `ZONE_FILES` hit, so a bad one
+    is worse than none.** `"castle mistmoore" -> "Mistmoore Castle"` pointed
+    at a key that does not exist AND suppressed `"Castle Mistmoore"`, which
+    was right there and would have worked. Same shape as the Estate of
+    Unrest note above; the coverage script catches both.
+  - Zones reached only by ritual (the Planes) get ZONE_FILES entries but no
+    ZONE_GRAPH edges — chart and 3D work, routing to them does not.
+    `Lake Nerius` is an .eqg zone: chart-only, since geometry_system reads
+    s3d/wld. `Plane of Hate` resolves to the 2001 revamp `hateplaneb` (the
+    client keeps both files; only hateplaneb has EQL emitter resources), with
+    the original as fallback — swap the candidate order if a layout is wrong.
 - Routing (`find_route_ex`, /api/route): walk edges + NAVAL TRANSLOCATOR
   dock cliques (any dock -> any dock on the route, one hop; boats do not
   exist on EQL) + druid/wizard PORT RITUALS as jump-from-anywhere edges
@@ -1199,6 +1222,11 @@ model selection itself is runtime-switchable in the UI.
 - **Parser coverage** (after any EQL patch): iterate your real log through
   `parse_line`, `Counter` the event types — a vanished category means the
   log format changed; fix `parser.py`.
+- **Zone coverage** (after any EQL patch, and whenever a zone is added):
+  `python scripts/zone_coverage.py` — runs every zone in the client's own
+  `Resources/ZoneNames.txt` through `_canonical()`. `MISS` is a bug in
+  ZONE_FILES/ZONE_ALIASES; `NOFILE` usually just means the zone ships no
+  stock chart. Exits non-zero on any MISS.
 - **Simulated combat** (no game needed): append a line to the watched log —
   `[<timestamp>] You crush a test dummy for 42 points of damage.` — the
   ledger updates within ~0.5s. Tag synthetic rows unmistakably ("test

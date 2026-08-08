@@ -65,6 +65,11 @@ ZONE_FILES: dict[str, list[str]] = {
     "Toxxulia Forest": ["tox", "toxxulia"], "Paineel": ["paineel"],
     "Kerra Isle": ["kerraridge"], "Erud's Crossing": ["erudsxing"],
     "Stonebrunt Mountains": ["stonebrunt"],
+    # The Hole. The game never calls it that on zone-in — spells_us.txt row
+    # 54915 is "Teleport: The Ruins of Old Paineel" with target short name
+    # `hole`, which is the client's own word on the mapping.
+    "Ruins of Old Paineel": ["hole"],
+    "Warrens": ["warrens"],
     # Boats / misc
     "Ocean of Tears": ["oot"],
     "Plane of Knowledge": ["poknowledge"],
@@ -90,6 +95,20 @@ ZONE_FILES: dict[str, list[str]] = {
     "Temple of Cazic-Thule": ["cazicthule"],
     "Najena": ["najena"],
     "Cazic-Thule": ["cazicthule"],
+    "Temple of Solusek Ro": ["soltemple"],
+    # Planes. Reached by ritual only, so they get no ZONE_GRAPH edges — the
+    # chart and the 3D view still work, routing to them does not.
+    "Plane of Sky": ["airplane"],
+    "Plane of Fear": ["fearplane"],
+    # The 2001 revamp shipped as hateplaneb and the client keeps BOTH files.
+    # hateplaneb is listed first because it is the one EQL's own resources
+    # reference (hateplaneb_EnvironmentEmitters.txt exists, hateplane's does
+    # not); the original stays as a fallback. If someone reports the wrong
+    # Hate layout, swap the order — that is the whole fix.
+    "Plane of Hate": ["hateplaneb", "hateplane"],
+    # EQL-only, and an .eqg zone rather than .s3d: geometry_system reads
+    # s3d/wld only, so this is chart-only and the 3D view stays empty.
+    "Lake Nerius": ["lakenerius"],
 }
 
 # Travel graph (classic pre-Kunark connections). Keys/values use the same
@@ -153,6 +172,7 @@ ZONE_GRAPH: dict[str, list[str]] = {
     "Solusek's Eye": ["Lavastorm Mountains", "Nagafen's Lair"],
     "Nagafen's Lair": ["Lavastorm Mountains", "Solusek's Eye"],
     "Najena": ["Lavastorm Mountains"],
+    "Temple of Solusek Ro": ["Lavastorm Mountains"],
     "Ocean of Tears": ["East Freeport", "Butcherblock Mountains"],
     "Butcherblock Mountains": ["Ocean of Tears", "North Kaladim",
                                "Greater Faydark", "Dagnor's Cauldron"],
@@ -176,7 +196,12 @@ ZONE_GRAPH: dict[str, list[str]] = {
     "Erudin": ["Erud's Crossing", "Erudin Palace", "Toxxulia Forest"],
     "Erudin Palace": ["Erudin"],
     "Toxxulia Forest": ["Erudin", "Paineel", "Kerra Isle"],
-    "Paineel": ["Toxxulia Forest"],
+    # The Hole and The Warrens are both entered from Paineel (the achievement
+    # text for the Hole Key: "unlocks the entrance to the Ruins of Old
+    # Paineel").
+    "Paineel": ["Toxxulia Forest", "Ruins of Old Paineel", "Warrens"],
+    "Ruins of Old Paineel": ["Paineel"],
+    "Warrens": ["Paineel"],
     "Kerra Isle": ["Toxxulia Forest", "Erud's Crossing"],
 }
 
@@ -231,10 +256,28 @@ ZONE_ALIASES = {
     "guk": "Upper Guk",
     "ruins of old guk": "Lower Guk",
     "old guk": "Lower Guk",
-    # EQL's in-game names vs the classic chart/graph keys
+    # EQL's in-game names vs the classic chart/graph keys. The authority for
+    # these is the client's own Resources/ZoneNames.txt, which lists every
+    # zone EQL actually runs under the exact name the log prints —
+    # scripts/zone_coverage.py checks this table against it.
     "clan crushbone": "Crushbone",
-    "clan runnyeye": "Runnyeye",
-    "castle mistmoore": "Mistmoore Castle",
+    # Both of these used to name a key that does not exist ("Runnyeye",
+    # "Mistmoore Castle"), and an alias is consulted BEFORE the direct
+    # ZONE_FILES hit — so "castle mistmoore" did not merely fail to help, it
+    # SUPPRESSED the entry that would have worked. Same trap as the Estate of
+    # Unrest note below. An alias value must be a real key, spelled the way
+    # normalize_zone() leaves it.
+    "clan runnyeye": "Runnyeye Citadel",
+    "liberated citadel of runnyeye": "Runnyeye Citadel",
+    "castle of mistmoore": "Castle Mistmoore",
+    "lair of the splitpaw": "Splitpaw Lair",
+    "qeynos aqueduct system": "Qeynos Catacombs",
+    # EQL punctuates the Neriak gates with a dash
+    "neriak - foreign quarter": "Neriak Foreign Quarter",
+    "neriak - commons": "Neriak Commons",
+    "neriak - third gate": "Neriak Third Gate",
+    # "The Hole" is what everyone calls it; the log says the long name
+    "hole": "Ruins of Old Paineel",
     # NOT "The Estate of Unrest": normalize_zone() has already dropped the
     # article, and ZONE_FILES is keyed without it — aiming here at the
     # "The" form pointed at a nonexistent key and broke the direct hit.
