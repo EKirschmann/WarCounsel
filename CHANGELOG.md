@@ -4,6 +4,33 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.5.3 — 2026-08-08
+
+**Fixed: the full install could fail with "'pip' is not recognized".** Windows
+ships a fake `python.exe` — a Microsoft Store shortcut that does nothing and
+*reports success* — and it is on your PATH by default. The installer believed
+it, skipped the offer to install Python, and then died on pip with no useful
+explanation. It now checks whether Python can say where it lives, which the
+fake one cannot.
+
+**It also stops asking you to install things you already have.** Python and
+Node.js are often installed but simply not on PATH (the python.org installer
+only adds it if you tick the box; Anaconda and Node both do this too). Both
+the installer and the launcher now look in the usual places before asking,
+and use what they find for that run — without changing your system PATH.
+
+**Fixed: the launcher could start the backend with the wrong Python.** It
+tried to activate its own environment, but that command quietly does nothing
+in a plain command window, so the backend started against an installation
+that had none of its dependencies and stopped with an import error. It now
+uses the environment's own Python directly.
+
+If you hit any of this, re-running `install_companion.bat` is enough — and
+INSTALL.md now lists the symptom, including how to switch the Store shortcuts
+off if you would rather clear them out.
+
+Nothing here affects the single .exe, which carries its own Python.
+
 ## v2.5.2 — 2026-08-08
 
 **Fixed: 14 zones had no map or 3D geometry, including The Hole.** The Atlas

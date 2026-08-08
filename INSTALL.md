@@ -280,6 +280,7 @@ the War Ledger within a second.
 | What you see | What to do |
 |---|---|
 | "python is not recognized" | Press **Y** when the installer offers Python — or install it yourself with **Add python.exe to PATH** ticked, then re-run the installer |
+| **"'pip' is not recognized"**, or Python "is installed" but nothing works | Windows ships a fake `python.exe` — a Microsoft Store shortcut that does nothing and reports success, which is why this looks so strange. The installer now sees through it and finds your real Python (including Anaconda/Miniconda) by itself, so **re-run install_companion.bat**. If you would rather clear it out: Settings → Apps → **Advanced app settings** → **App execution aliases**, switch **python.exe** and **python3.exe** off |
 | "winget is not recognized" | Your Windows is older — install Python and Node.js manually from the links in Step 2.2, then re-run |
 | Nothing happens on double-click | You're inside the ZIP — do Step 1.3 (**Extract All**) first |
 | The wizard can't find the game | Only happens on very unusual setups: find the folder containing `eqgame.exe` (right-click your desktop EQL shortcut → Open file location), copy the address bar, paste it into the wizard |
