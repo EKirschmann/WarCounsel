@@ -327,6 +327,7 @@ jobs:
           --hidden-import uvicorn.lifespan.on
           --hidden-import uvicorn.loops.asyncio
           --hidden-import pystray._win32
+          --collect-all rapidocr
           --exclude-module matplotlib --exclude-module torch
           --exclude-module langgraph
           run_companion.py
@@ -379,6 +380,19 @@ jobs:
             throw "OCR deps missing from the OCR build: $($ocr.deps_error)"
           }
           "started in $([int]$sw.Elapsed.TotalSeconds)s, reports $($info.version), OCR deps_ok=$($ocr.deps_ok)" | Write-Host
+
+      - name: Prove the OCR engine actually reads text
+        # deps_ok only means the imports survived. rapidocr's MODELS and
+        # config are package DATA, which PyInstaller does not collect unless
+        # asked, and the engine then fails deep inside rather than at import
+        # -- v2.6.0's first attempt bundled the code and left
+        # default_models.yaml behind. So run it on an image with known text.
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath (Resolve-Path dist/WarCounsel/WarCounsel.exe) `
+                 -ArgumentList '--ocr-check' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "OCR engine self-check failed (exit $($p.ExitCode))" }
+          "OCR engine read its test image" | Write-Host
 
       - name: Zip it
         shell: pwsh

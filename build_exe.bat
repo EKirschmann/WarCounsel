@@ -82,7 +82,20 @@ goto built
 rem Same bundle, minus the OCR excludes, plus --onedir. numpy stays in (the
 rem OCR engine needs it), and torch/matplotlib/langgraph stay OUT -- nothing
 rem imports them and they are enormous.
+rem
+rem --collect-all on the OCR package is REQUIRED, not tidiness: rapidocr's
+rem models and default_models.yaml are package DATA, and PyInstaller bundles
+rem only code unless told otherwise. Without it the build succeeds, the
+rem import succeeds, and the engine dies with FileNotFoundError the first
+rem time someone enables screen reading. The package renamed itself between
+rem Python versions (rapidocr_onnxruntime <=3.12, rapidocr on 3.13+), so ask
+rem which one is actually installed rather than guessing.
+set "OCRPKG="
+for /f "usebackq delims=" %%m in (`python -c "import importlib.util as u;print('rapidocr' if u.find_spec('rapidocr') else ('rapidocr_onnxruntime' if u.find_spec('rapidocr_onnxruntime') else ''))"`) do set "OCRPKG=%%m"
+if not defined OCRPKG (echo No rapidocr installed - run pip install -r requirements-heavy.txt & exit /b 1)
+echo   OCR package: %OCRPKG%
 pyinstaller --noconfirm --onedir --windowed --name WarCounsel ^
+  --collect-all %OCRPKG% ^
   --add-data "frontend/out;frontend/out" ^
   --add-data "data/eqlbuilds;data/eqlbuilds" ^
   --add-data "class_guides;class_guides" ^

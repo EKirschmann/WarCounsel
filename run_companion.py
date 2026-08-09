@@ -173,9 +173,37 @@ def main() -> None:
     parser.add_argument("--overlay-check", action="store_true",
                         help="verify the overlay's imports, then exit "
                              "(0 = usable) — used by the release build")
+    parser.add_argument("--ocr-check", action="store_true",
+                        help="verify screen OCR really works, then exit "
+                             "(0 = usable) — used by the OCR release build")
     args, _unknown = parser.parse_known_args()
     _adopt_dead_streams()
     try:
+        if args.ocr_check:
+            # IMPORTING rapidocr is not proof. Its models and config are
+            # package DATA, which PyInstaller does not collect unless told
+            # to, and a half-present install raises FileNotFoundError from
+            # deep inside the engine rather than at import — so the only
+            # honest check is to run the thing on an image with known text
+            # in it. v2.6.0's first OCR build shipped-in-CI with the code
+            # bundled and default_models.yaml missing.
+            from backend import ocr_system
+            if not ocr_system.HAS_DEPS:
+                print(f"OCR deps unusable: {ocr_system._IMPORT_ERROR}")
+                raise SystemExit(1)
+            from PIL import Image, ImageDraw
+            import numpy as np
+            img = Image.new("RGB", (240, 64), "black")
+            ImageDraw.Draw(img).text((8, 20), "X: 1234", fill="yellow")
+            engine = ocr_system._get_engine()
+            result = engine(np.array(img))
+            text = " ".join(str(x) for x in (result or []))
+            print(f"OCR engine ran, read: {text[:120]!r}")
+            # "1234" is the assertion, not the whole string: the engine's
+            # confidence on a 64px synthetic render is not the point, and
+            # demanding an exact match would make this brittle rather than
+            # meaningful.
+            raise SystemExit(0 if "1234" in text else 1)
         if args.overlay_check:
             # No window: just prove the pieces are present. The overlay is a
             # child process, so nothing else in the build exercises them.
