@@ -18,6 +18,8 @@ import { apiGet, apiSend } from "@/lib/api";
 interface OcrStatus {
   deps_ok: boolean;
   deps_error?: string | null;
+  packaged?: boolean;
+  python?: string;
   enabled: boolean;
   game_running: boolean;
   last_ok: string | null;
@@ -132,11 +134,49 @@ export function OcrSettings() {
     }
   };
 
+  // Two very different failures used to share one message — and the advice
+  // it gave ("pip install…") cannot work in the packaged build at all,
+  // which is where the person least likely to have Python is standing.
+  if (ocr && !ocr.deps_ok && ocr.packaged) {
+    return (
+      <p className="set-note" data-ok="0">
+        Screen reading is <strong>not in this download</strong>. Its image
+        packages weigh about 200&nbsp;MB — five times the rest of the app —
+        so they ship as a separate build rather than slowing every launch
+        for everyone. Grab{" "}
+        <strong>WarCounsel-OCR.zip</strong> from the{" "}
+        <a
+          href="https://github.com/EKirschmann/WarCounsel/releases/latest"
+          target="_blank"
+          rel="noreferrer"
+        >
+          releases page
+        </a>
+        , unzip it anywhere and run the WarCounsel.exe inside. It is the
+        same app with screen reading added — your <code>data</code> folder
+        and settings carry over.
+      </p>
+    );
+  }
+
   if (ocr && !ocr.deps_ok) {
     return (
       <p className="set-note" data-ok="0">
-        Screen reading needs its optional packages: <code>pip install -r requirements.txt</code>
-        {ocr.deps_error ? ` (${ocr.deps_error})` : ""}
+        Screen reading needs its optional packages. Install them into{" "}
+        <strong>the Python that runs WarCounsel</strong> — if plain{" "}
+        <code>pip</code> says they are already there, it belongs to a
+        different Python than this one:
+        <br />
+        <code>
+          {ocr.python ? `"${ocr.python}" -m pip` : "python -m pip"} install -r
+          requirements.txt
+        </code>
+        {ocr.deps_error ? (
+          <>
+            <br />
+            <span style={{ opacity: 0.75 }}>({ocr.deps_error})</span>
+          </>
+        ) : null}
       </p>
     );
   }

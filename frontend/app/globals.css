@@ -2139,10 +2139,38 @@ button.app-version:hover { color: var(--gold-bright); }
 .ov-fields .ov-label { font-size: 0.76rem; }
 .ov-fields .ov-hint { font-size: 0.7rem; }
 
+/* Trigger rows: enable, kind, pattern, sound, delete. The pattern box takes
+   the slack because it is the only field whose content varies in length. */
+.trg-item { padding: 3px 0; }
+.trg-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+.modal-card .trg-row select {
+  font-size: 0.74rem;
+  padding: 2px 4px;
+  min-width: 84px;
+}
+.modal-card .trg-row input[type="text"],
+.modal-card .trg-row input:not([type]) {
+  font-size: 0.78rem;
+  padding: 3px 6px;
+  min-width: 0;
+}
+.trg-hint { display: block; padding: 0 0 3px 21px; }
+.trg-foot { align-items: center; margin-top: 8px; }
+.trg-foot .set-note { margin: 0; }
+.ov-item[data-on="0"] .trg-hint { opacity: 0.5; }
+
 @media (max-width: 520px) {
   .ov-row { grid-template-columns: auto auto 1fr; }
   .ov-row .ov-hint { display: none; }
   .ov-fields li { grid-template-columns: 1fr; }
+  .trg-row { grid-template-columns: auto 1fr auto auto; }
+  .trg-row select { grid-column: 2; }
   .ov-fields .ov-hint { display: none; }
 }
 

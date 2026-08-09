@@ -4,6 +4,50 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.6.0 — 2026-08-08
+
+**Triggers you can actually set up.** Watching the log for the things you
+would otherwise miss now lives under **Settings ▸ Triggers**, instead of a
+JSON file you had to find and hand-edit. Add a row, pick what it watches,
+type the text — matches are plain text, so there is nothing to escape, and
+`*` catches every one of a kind.
+
+Five new things can be watched, all of which the app was already reading
+and simply had nowhere to report:
+
+- **your spell being interrupted**, and separately, **fizzling**
+- **someone else starting a cast** — a mob's cast line is the only warning
+  before it lands
+- **a raid mechanic firing**
+- **a mob being mesmerized**
+
+Charm and mez breaks were already possible and still are: watch `fade` for
+`Charm`. Each trigger says what its text is compared against, because a
+pattern aimed at the wrong part of the line fails silently forever.
+
+Also fixed: the trigger list showed nothing at all on a fresh install. The
+examples ship switched off, and the list was only reporting switched-on
+ones — so the one screen meant to explain the feature looked empty.
+
+**New download: `WarCounsel-OCR.zip`.** Reading your position off the screen
+was the one thing the single .exe could not do. It now can — as a separate
+download, because the image-recognition packages weigh about 200 MB against
+the app's 44 MB, and a one-file build unpacks everything on *every* launch.
+Folding them in would have slowed the start for everyone who never turns the
+feature on. The OCR build ships as a folder for the same reason: it unpacks
+once, not each time.
+
+`WarCounsel.exe` is unchanged — same download, same speed. Take the OCR one
+only if you want screen reading; both keep their data in the same place, so
+switching between them costs nothing.
+
+The settings panel used to answer "screen reading needs its optional
+packages: `pip install …`" for this, which could never work in the .exe and
+asked people with no Python to run a Python command. It now names the right
+download — or, in a source install, the exact interpreter to install into,
+since a plain `pip` frequently belongs to a different Python than the one
+running the app.
+
 ## v2.5.3 — 2026-08-08
 
 **Fixed: the full install could fail with "'pip' is not recognized".** Windows

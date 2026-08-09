@@ -20,6 +20,7 @@ import { apiGet, apiSend } from "@/lib/api";
 import type { LlmProbe } from "@/lib/types";
 import { OcrSettings } from "./OcrSettings";
 import { OverlaySettings } from "./OverlaySettings";
+import { TriggerSettings } from "./TriggerSettings";
 
 type GameVerdict = {
   path: string;
@@ -661,6 +662,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 web view, where there is room for it.
               </p>
               <OverlaySettings />
+            </section>
+
+            <section className="set-block">
+              <label>Triggers</label>
+              <p className="set-note">
+                Watch the log for the things you would otherwise miss — a
+                charm or mez breaking, a named spawn, a mob starting a nasty
+                cast. Each one raises a banner on the overlay.
+              </p>
+              <TriggerSettings />
             </section>
 
             <section className="set-block">

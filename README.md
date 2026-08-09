@@ -50,6 +50,13 @@ banner. Click-through by default; Scroll Lock makes it interactive.
 You choose what it shows. Under **Settings ▸ Overlay** every section
 switches off, and so does every field inside one — keep the kill count
 but drop the coin, keep cooldowns but not every buff you refreshed.
+
+**Triggers** — under **Settings ▸ Triggers**, watch the log for what you
+would otherwise miss: a charm or mez breaking, a named spawn in the loot
+you just took, your cast getting interrupted, a mob starting something
+nasty, a hit over a number you pick. Matches are plain text, not
+patterns — nothing to escape, and `*` catches every one of a kind. A
+match raises the overlay banner.
 Start from **Combat focus** (the meter and your timers) or **Meter
 only**, then adjust. Changes reach a running overlay in about half a
 second, so you can watch it shrink while you tune it. Anything you
@@ -90,19 +97,19 @@ turn off is still in the web view, which has room for it:
 
 ## Get it
 
-Two ways to run it, and **the .exe is the one to pick if you just want to
+Three ways to run it, and **the .exe is the one to pick if you just want to
 play**.
 
-| | Single .exe | Source install |
-|---|---|---|
-| You must already have | nothing | Python 3.11+ and Node 18+ |
-| Setup | download, double-click | run `install_companion.bat` |
-| HUD, War Ledger, encounters, timers, alerts | yes | yes |
-| In-game overlay | yes | yes |
-| Atlas — charts, true walls, textured 3D | yes | yes |
-| Advisor + gear counsel | deterministic **or** an LLM | same |
-| Screen reading — position, character stats | no | yes |
-| Download | ~42 MB, one file | a repo plus its dependencies |
+| | Single .exe | OCR build | Source install |
+|---|---|---|---|
+| You must already have | nothing | nothing | Python 3.11+ and Node 18+ |
+| Setup | download, double-click | unzip, double-click | run `install_companion.bat` |
+| HUD, War Ledger, encounters, timers, alerts | yes | yes | yes |
+| In-game overlay | yes | yes | yes |
+| Atlas — charts, true walls, textured 3D | yes | yes | yes |
+| Advisor + gear counsel | deterministic **or** an LLM | same | same |
+| Screen reading — position, character stats | no | **yes** | yes |
+| Download | ~44 MB, one file | ~5× that, a folder | a repo plus its dependencies |
 
 **[Download WarCounsel.exe →](https://github.com/EKirschmann/WarCounsel/releases/latest)**
 
@@ -110,6 +117,13 @@ It needs nothing installed, finds your game through the Windows registry,
 and keeps its data in a `data` folder beside itself. First launch takes a
 few seconds (a one-file build unpacks itself each time); after that it is
 the same app as the source install.
+
+**`WarCounsel-OCR.zip`** on that same page is the identical app with screen
+reading included. It is a separate download because the image-recognition
+packages weigh ~200 MB — around five times the rest of the app — and a
+one-file build unpacks its whole payload on *every* launch, so folding them
+in would slow the start for everyone who never turns the feature on. That
+build ships as a folder for the same reason: it unpacks once, not each time.
 
 Windows **will** warn you that it does not recognise the publisher — the
 file is unsigned. [INSTALL.md](INSTALL.md#option-a--the-single-exe) shows

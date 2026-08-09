@@ -22,16 +22,70 @@ logger = logging.getLogger(__name__)
 from backend.paths import data_path
 
 RULES_FILE = data_path("tracked_rules.json")
-KINDS = ("loot", "kill", "death", "zone", "tell", "fade", "bighit")
+KINDS = ("loot", "kill", "death", "zone", "tell", "fade", "bighit",
+         # These five were PARSED all along and simply had nothing to fire:
+         # the events existed, no rule kind reached them. "Can I trigger on a
+         # spell interrupt like GINA does" was a fair question with a silly
+         # answer -- the line was already in ev.CastInterrupted, complete with
+         # the spell name.
+         "interrupt", "fizzle", "cast", "mechanic", "mez")
+
+# What each kind matches its pattern AGAINST. Shown in the settings panel,
+# because "pattern" means nothing without knowing what it is compared to --
+# and a rule that never fires looks identical to a quiet night.
+KIND_HELP = {
+    "loot": "item name",
+    "kill": "what you killed",
+    "death": "'slain by <killer>'",
+    "zone": "zone name",
+    "tell": "'<sender>: <message>'",
+    "fade": "'<spell> (<target>)' as a buff drops -- mez and charm breaks",
+    "bighit": "a NUMBER: alert when one hit on you meets it",
+    "interrupt": "the spell your cast was interrupted on",
+    "fizzle": "the spell that fizzled",
+    "cast": "'<caster>: <spell>' when someone else starts casting",
+    "mechanic": "the raid mechanic's name",
+    "mez": "the mob that just got mesmerized",
+}
+
 _EXAMPLE = [
     {"kind": "loot", "pattern": "Kitchen Toolbelt",
      "enabled": False, "sound": True},
     {"kind": "tell", "pattern": "*", "enabled": False, "sound": True},
     {"kind": "fade", "pattern": "Mesmerize", "enabled": False, "sound": True},
+    {"kind": "fade", "pattern": "Charm", "enabled": False, "sound": True},
+    {"kind": "interrupt", "pattern": "*", "enabled": False, "sound": True},
     {"kind": "bighit", "pattern": "800", "enabled": False, "sound": True},
 ]
 
-_cache = {"mtime": None, "rules": []}
+_cache = {"mtime": None, "rules": [], "all": []}
+
+
+def _clean(raw) -> list:
+    """Well-formed rules, enabled or not, in file order."""
+    out = []
+    for r in raw if isinstance(raw, list) else []:
+        if not isinstance(r, dict) or r.get("kind") not in KINDS:
+            continue
+        pattern = str(r.get("pattern", "")).strip()
+        if not pattern:
+            continue
+        out.append({"kind": r["kind"], "pattern": pattern,
+                    "enabled": bool(r.get("enabled", True)),
+                    "sound": bool(r.get("sound", True))})
+    return out
+
+
+def all_rules() -> list:
+    """Every rule INCLUDING disabled ones — what an editor has to show.
+
+    load_rules() drops the disabled ones because matching should never see
+    them, which meant /api/tracked-rules reported an empty list on a fresh
+    install: the seeded examples all ship disabled, so the one surface that
+    was supposed to explain the feature showed nothing at all.
+    """
+    load_rules()
+    return list(_cache["all"])
 
 
 def load_rules() -> list:
@@ -43,14 +97,30 @@ def load_rules() -> list:
         mtime = os.path.getmtime(RULES_FILE)
         if _cache["mtime"] != mtime:
             raw = json.loads(RULES_FILE.read_text(encoding="utf-8"))
-            _cache["rules"] = [
-                r for r in raw
-                if isinstance(r, dict) and r.get("enabled", True)
-                and r.get("pattern") and r.get("kind") in KINDS]
+            _cache["all"] = _clean(raw)
+            _cache["rules"] = [r for r in _cache["all"] if r["enabled"]]
             _cache["mtime"] = mtime
     except Exception:
         logger.exception("tracked_rules.json load failed")
     return _cache["rules"]
+
+
+def save(rules) -> list:
+    """Replace the rule set. Returns what was actually stored.
+
+    Written whole rather than merged: unlike the settings panel's API keys,
+    a rules LIST has no per-field identity to merge on -- the editor owns the
+    whole table, and a merge would make deleting a rule impossible.
+    """
+    clean = _clean(rules)
+    RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = RULES_FILE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(clean, indent=2), encoding="utf-8")
+    tmp.replace(RULES_FILE)          # atomic: the overlay re-reads on mtime
+    _cache["mtime"] = None           # force a reload on the next match
+    load_rules()
+    logger.info("tracked_rules.json saved (%d rules)", len(clean))
+    return clean
 
 
 def match(kind: str, text: str) -> list:

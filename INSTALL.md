@@ -21,20 +21,28 @@ touches game files, never injects, never automates anything in-game.
 
 ## Which download do I want?
 
-There are two. Pick one.
+Three, and **most people want the first one.**
 
-| | **The single .exe** | **The full install** |
-|---|---|---|
-| What you download | one file, about 42 MB | a ZIP you unpack and set up |
-| Do I need anything else first? | **no** | Python and Node (the installer offers to fetch them) |
-| How long | under a minute | about ten minutes |
-| Live HUD, damage meter, overlay, maps | yes | yes |
-| Spell/gear advice | yes — built-in, or plug in an AI model | same |
-| Reads your position off the screen | no | yes |
+| | **The single .exe** | **The OCR build** | **The full install** |
+|---|---|---|---|
+| What you download | one file, about 44 MB | a ZIP, about five times bigger | a ZIP you unpack and set up |
+| Do I need anything else first? | **no** | **no** | Python and Node (the installer offers to fetch them) |
+| How long | under a minute | a few minutes | about ten minutes |
+| Live HUD, damage meter, overlay, maps | yes | yes | yes |
+| Spell/gear advice | yes — built-in, or plug in an AI model | same | same |
+| Reads your position off the screen | no | **yes** | yes |
 
-**Most people want the .exe.** Follow Option A. The only thing it gives up
-is reading your position off the screen; if you want that, do the full
-install (Option B) — the two can live side by side.
+**Take the single .exe** and follow Option A. The only thing it gives up is
+reading your position off the screen — and your position still updates every
+time you type `/loc`, so this matters less than it sounds.
+
+**Only if you want that screen reading:** download `WarCounsel-OCR.zip`
+instead, unzip it anywhere, and run the `WarCounsel.exe` inside. It is the
+same app; the difference is entirely the image-recognition packages, which
+weigh around 200 MB on their own. They are a separate download precisely so
+that everyone else's copy stays small and starts quickly. Everything in
+Option A below applies to it too — the only change is that you unzip a
+folder first and keep the exe inside it.
 
 ---
 
@@ -164,6 +172,12 @@ whenever you type `/loc` in-game, and the maps, route finder, and 3D view
 all work normally. Everything else — HUD, damage meter, timers, alerts,
 the in-game overlay, session history, spell-set writing — is exactly the
 same app as the full install.
+
+If you do want it, you have two options and neither needs Python:
+**`WarCounsel-OCR.zip`** from the same releases page is this exact app with
+screen reading built in, or do the full install below. Point either at the
+same folder and your data and settings carry over — the `data` folder is
+shared, so switching costs you nothing.
 
 ---
 

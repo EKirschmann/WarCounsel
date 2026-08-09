@@ -19,13 +19,14 @@ import asyncio
 import json
 import logging
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from backend.paths import data_path
+from backend.paths import data_path, is_frozen
 
 CONFIG_PATH = data_path("ocr_config.json")
 DEFAULT_CONFIG = {
@@ -343,6 +344,18 @@ class OcrWatcher:
         return {
             "deps_ok": HAS_DEPS,
             "deps_error": _IMPORT_ERROR,
+            # Which build, and which interpreter, because "No module named
+            # mss" has two completely different causes and the panel used to
+            # give the same advice for both:
+            #   * the packaged .exe OMITS the OCR stack on purpose
+            #     (requirements-lite.txt) -- no pip command can ever fix it,
+            #     and telling someone with no Python to run pip is a dead end;
+            #   * a source install where `pip` belongs to a DIFFERENT
+            #     interpreter than the one running this server, which is the
+            #     usual reason pip reports "already satisfied" while the
+            #     import still fails. Naming sys.executable is the whole fix.
+            "packaged": is_frozen(),
+            "python": sys.executable,
             "enabled": cfg["enabled"],
             "region": {k: cfg[k] for k in ("left", "top", "width", "height")},
             "game_running": self.game_running(),

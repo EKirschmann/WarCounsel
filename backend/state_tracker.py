@@ -941,6 +941,10 @@ class CharacterTracker:
                     casts = enc.setdefault("other_casts", {})
                     key = f"{e.spell} — {e.caster}"
                     casts[key] = casts.get(key, 0) + 1
+                # Fired OUTSIDE the encounter window on purpose: a mob casting
+                # is the only warning before it lands, and the one you most
+                # want warned about is the one that has not hit you yet.
+                self._fire_alerts("cast", f"{e.caster}: {e.spell}", e.ts)
             elif isinstance(e, ev.Kill):
                 self.kills += 1
                 self._fire_alerts("kill", e.target, e.ts)
@@ -975,6 +979,7 @@ class CharacterTracker:
                     self._encounter_foe(e.victim, slain=True)
             elif isinstance(e, ev.MechanicTimer):
                 self._start_timer(e.name, e.seconds, "raid", e.ts)
+                self._fire_alerts("mechanic", e.name, e.ts)
             elif isinstance(e, ev.AbilityActivate):
                 self._start_cooldown(e.name, e.ts)
             elif isinstance(e, ev.Mend):
@@ -1004,6 +1009,7 @@ class CharacterTracker:
                         self.stuns_landed += 1
             elif isinstance(e, ev.Mesmerized):
                 self.mez_applied += 1
+                self._fire_alerts("mez", e.target, e.ts)
             elif isinstance(e, ev.Tell):
                 self._fire_alerts("tell", f"{e.sender}: {e.text}", e.ts)
             elif isinstance(e, ev.GroupChat):
@@ -1017,8 +1023,14 @@ class CharacterTracker:
                     self._fire_alerts("fade", label, e.ts)
             elif isinstance(e, ev.CastFizzle):
                 self._cancel_timer(e.spell)
+                self._fire_alerts("fizzle", e.spell or "your spell", e.ts)
             elif isinstance(e, ev.CastInterrupted):
                 self._cancel_timer(e.spell)
+                # The bard/melody form names no spell, so a "*" rule is the
+                # only way to catch every interrupt -- give it something to
+                # match rather than an empty string, which "*" would still
+                # match but a named pattern never could explain missing.
+                self._fire_alerts("interrupt", e.spell or "your casting", e.ts)
             elif isinstance(e, ev.SessionStart):
                 summ = self.session_summary()
                 if (summ["kills"] or summ["xp_percent"] or summ["loot_count"]

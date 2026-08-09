@@ -17,8 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import (Depends, FastAPI, HTTPException, Request, WebSocket,
-                     WebSocketDisconnect)
+from fastapi import (Body, Depends, FastAPI, HTTPException, Request,
+                     WebSocket, WebSocketDisconnect)
 from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -603,7 +603,7 @@ async def lifespan(app: FastAPI):
         t.cancel()
 
 
-APP_VERSION = "2.5.3"  # bump together with frontend/lib/version.ts
+APP_VERSION = "2.6.0"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/WarCounsel"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 
@@ -1885,10 +1885,30 @@ async def get_lifetime(db: Session = Depends(get_db)):
 
 @app.get("/api/tracked-rules")
 async def get_tracked_rules():
-    """The user's alert rules (edit data/tracked_rules.json by hand —
-    substring matches on loot/kill/death/zone; reloaded on save)."""
+    """The user's alert rules, plus the schema the settings panel renders.
+
+    Returns DISABLED rules too — they are exactly what an editor exists to
+    switch back on, and the seeded examples all ship disabled, so the
+    enabled-only view reported an empty list on every fresh install.
+    """
     from backend import alerts
-    return {"file": str(alerts.RULES_FILE), "rules": alerts.load_rules()}
+    return {"file": str(alerts.RULES_FILE), "rules": alerts.all_rules(),
+            "kinds": [{"kind": k, "matches": alerts.KIND_HELP.get(k, "")}
+                      for k in alerts.KINDS]}
+
+
+@app.post("/api/tracked-rules")
+async def post_tracked_rules(payload: dict = Body(...)):
+    """Replace the rule set. The editor owns the whole table (see
+    alerts.save); the file is written atomically and every reader picks it
+    up by mtime, including the overlay in its own process."""
+    from backend import alerts
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        raise HTTPException(status_code=400, detail="rules must be a list")
+    saved = alerts.save(rules)
+    dropped = len(rules) - len(saved)
+    return {"rules": saved, "dropped": dropped}
 
 
 @app.get("/api/loot-filter")

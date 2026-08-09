@@ -106,7 +106,10 @@ the plan, once post-launch consensus exists.
 
 ## Audio triggers
 
-**Status:** requested 2026-07-28. Not started.
+**Status:** requested 2026-07-28. Audio not started; the TRIGGER half was
+done 2026-08-08 (see "GINA-style triggers" below) — rule kinds now cover
+interrupt/fizzle/cast/mechanic/mez and the rules are editable under
+Settings ▸ Triggers, so `sound` has somewhere obvious to become a filename.
 
 Today the only sound the app makes is a single `winsound.MessageBeep` from
 the overlay when a tracked rule fires — one chime for everything, and only
@@ -140,6 +143,41 @@ What "audio triggers" should mean, roughly in order of value:
   it must fail soft the way the tray already does.
 - Sound files have to ship or be user-supplied. Bundling a handful means
   `--add-data` and a CI assertion, exactly like `maps/`.
+
+---
+
+## GINA-style triggers (the rest of the way)
+
+**Status:** asked again on Discord 2026-08-08 — "can you make triggers with
+this tool (like GINA, e.g. spell interrupted, charm break)?" Charm break
+already worked (`{"kind":"fade","pattern":"Charm"}`); spell interrupt did
+not, for no better reason than that no rule kind reached an event that was
+already being parsed. Both work now, and rules are editable in the app.
+
+What is still missing before "like GINA" is honest:
+
+- **Matching on ARBITRARY log lines.** Rules watch twelve event kinds; GINA
+  watches the raw line. This is the big one, and it is a different shape:
+  the tracked-rule table is fed by parsed events, so a raw-line rule needs
+  its own path down in the watcher, before/beside `parse_line`.
+- **Regex with capture groups**, and displaying the captures ("Fear kiting
+  {1}"). Note the standing decision: matching is substring-only *on
+  purpose*, per EQBuddy — nobody should have to escape an apostrophe in a
+  mob's name to watch for it. If regex arrives it should be an OPT-IN per
+  rule (`"regex": true`), never the default, so the simple case stays
+  simple and a bad pattern cannot break the whole table.
+- **Per-trigger display text**, rather than echoing what matched.
+- **Trigger-started timers.** The timer machinery already exists
+  (`_start_timer`, kinds spell/cooldown/raid) — a rule would just need to
+  name a duration. Probably the cheapest high-value item here.
+- **Importing GINA packages** (their shared XML trigger sets). Attractive
+  because the community already has good ones; a parser plus a mapping
+  onto whatever the rule model looks like by then.
+
+**Constraint worth restating:** TODO's audio entry warns this must not
+become a reason to duplicate eql-alerts. Triggers that feed the OVERLAY and
+the existing timer/alert surfaces are ours; a second voice-callout engine
+is not.
 
 ## Launch-day patch follow-ups (2026-07-28)
 
