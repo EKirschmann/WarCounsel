@@ -4,6 +4,19 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.6.1 — 2026-08-09
+
+**The OCR download from v2.6.0 never made it out.** Its build failed a
+check on the way — the image-recognition models were left out of the
+bundle, so screen reading would have broken the moment anyone switched it
+on. `WarCounsel-OCR.zip` is attached to this release instead, and the build
+now proves the engine works by having it read a test image before shipping,
+rather than trusting that the pieces are present.
+
+`WarCounsel.exe` for v2.6.0 was built and released normally and is
+unaffected — the two are built separately on purpose. Everything else in
+v2.6.0, including the new Triggers panel, is unchanged and already in it.
+
 ## v2.6.0 — 2026-08-08
 
 **Triggers you can actually set up.** Watching the log for the things you
