@@ -260,13 +260,30 @@ jobs:
   # ---------------------------------------------------------------------
   build-ocr:
     runs-on: windows-latest
+    # A hung step here once ran for 114 MINUTES before anyone looked (the
+    # OCR engine was waiting on a model download that never came). Nothing
+    # in this job should take ten.
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
 
+      # 3.12, NOT 3.13 like the job above -- and this is the whole reason
+      # the OCR build works offline. The engine renamed itself between
+      # versions and they are not equivalent:
+      #   3.12 -> rapidocr-onnxruntime v1, which SHIPS its ONNX models
+      #           inside the package (~15 MB). Bundling it is enough.
+      #   3.13 -> rapidocr v2, which ships NO models and downloads them on
+      #           first use. PyInstaller cannot bundle what is not there,
+      #           so the build passed its import check and then hung
+      #           forever inside the engine, on a runner with nothing to
+      #           download from.
+      # A packaged build must work with no network -- the same reason
+      # maps/ and zem_levels.wiki are bundled at all -- so the OCR build
+      # pins itself to the version that carries its own models.
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.13"
+          python-version: "3.12"
 
       - uses: actions/setup-node@v7
         with:
@@ -327,7 +344,7 @@ jobs:
           --hidden-import uvicorn.lifespan.on
           --hidden-import uvicorn.loops.asyncio
           --hidden-import pystray._win32
-          --collect-all rapidocr
+          --collect-all rapidocr_onnxruntime
           --exclude-module matplotlib --exclude-module torch
           --exclude-module langgraph
           run_companion.py
@@ -382,11 +399,15 @@ jobs:
           "started in $([int]$sw.Elapsed.TotalSeconds)s, reports $($info.version), OCR deps_ok=$($ocr.deps_ok)" | Write-Host
 
       - name: Prove the OCR engine actually reads text
-        # deps_ok only means the imports survived. rapidocr's MODELS and
-        # config are package DATA, which PyInstaller does not collect unless
-        # asked, and the engine then fails deep inside rather than at import
-        # -- v2.6.0's first attempt bundled the code and left
-        # default_models.yaml behind. So run it on an image with known text.
+        # deps_ok only means the imports survived. The models are package
+        # DATA, which PyInstaller does not collect unless asked, and the
+        # engine then fails deep inside rather than at import -- v2.6.0
+        # bundled the code and left default_models.yaml behind. So run it
+        # on an image with known text.
+        # The timeout is not belt-and-braces: the failure mode this catches
+        # is an engine trying to DOWNLOAD its models, which does not error,
+        # it waits. Unbounded, that consumed 114 minutes of runner time.
+        timeout-minutes: 5
         shell: pwsh
         run: |
           $p = Start-Process -FilePath (Resolve-Path dist/WarCounsel/WarCounsel.exe) `

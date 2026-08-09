@@ -85,6 +85,22 @@ Hard-won, all of it load-bearing:
     import guard in `ocr_system` is broad on purpose (a half-present
     rapidocr raises `FileNotFoundError`, not `ImportError`), so a broken
     OCR bundle looks exactly like a working one until someone enables it.
+    `deps_ok` alone proved too weak — `run_companion.py --ocr-check`
+    (mirroring `--overlay-check`) runs the REAL engine over a rendered
+    "X: 1234" and fails unless the digits come back.
+  - **Build the OCR release on PYTHON 3.12.** The engine renamed itself and
+    the two packages are not interchangeable: 3.12 gets
+    `rapidocr-onnxruntime` v1, which SHIPS its ONNX models; 3.13 gets
+    `rapidocr` v2, which ships none and DOWNLOADS them on first use.
+    `--collect-all` cannot bundle what does not exist, so the 3.13 build
+    passed every import check and then hung inside the engine waiting on a
+    download — 114 minutes of CI before anyone looked. A packaged build
+    must work offline, the same reason `maps/` and `zem_levels.wiki` are
+    bundled. Every CI step that runs the engine carries `timeout-minutes`,
+    because this class of failure WAITS rather than erroring.
+  - **Verify on the Python CI actually builds with.** The v1/v2 split meant
+    a local check on 3.12 passed while the shipped 3.13 build was broken —
+    the local run never touched the same package.
   - The two jobs are INDEPENDENT (no `needs:`): the optional download must
     never hold back the exe most people use.
   - `Windows.Media.Ocr` is not an alternative — it silently drops short
