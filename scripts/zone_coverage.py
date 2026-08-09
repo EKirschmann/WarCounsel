@@ -74,7 +74,37 @@ def main() -> None:
         print(f"  MISS  id {zid:>4}  {name!r} - add to ZONE_FILES/ZONE_ALIASES")
 
     print(f"\n{ok} charted or meshed, {len(nofile)} no files, {len(misses)} unresolved")
-    sys.exit(1 if misses else 0)
+
+    zem_bad = check_zem_bridge()
+    sys.exit(1 if (misses or zem_bad) else 0)
+
+
+def check_zem_bridge() -> list:
+    """Every zone the hunting sheet names must resolve to a map key.
+
+    Two features meet here and used to miss each other entirely: the
+    leveling chart recommends zones by the sheet's WIKI spelling, and
+    routing/charting key on the GAME's. A name that does not bridge can be
+    recommended and then not routed to, and the zone you are standing in
+    reads as "not in the sheet" while its row sits there under another
+    spelling. Nine zones were in that state until 2026-08-09.
+    """
+    import asyncio
+    from backend.game_data import zem_zone_levels
+    from backend.map_system import _canonical
+
+    print("\n=== hunting sheet -> map keys ===")
+    try:
+        table = asyncio.run(zem_zone_levels())
+    except Exception as e:      # offline and no snapshot: not this test's job
+        print(f"  (sheet unavailable: {e})")
+        return []
+    bad = [z for z in table if _canonical(z) is None]
+    for z in bad:
+        print(f"  UNBRIDGED {z!r} - the chart can suggest it, nothing can "
+              f"route to it. Add to ZONE_ALIASES.")
+    print(f"  {len(table) - len(bad)}/{len(table)} sheet zones resolve")
+    return bad
 
 
 if __name__ == "__main__":

@@ -599,6 +599,22 @@ throttled `state` pushes. REST highlights (see main.py for all):
     `normalize_zone()` leaves it. "estate of unrest" → "The Estate of
     Unrest" pointed at a nonexistent key (the article is already stripped)
     and suppressed the direct hit that would otherwise have worked.
+  - **The ZEM sheet and map_system are TWO NAME SPACES — bridge them with
+    `game_data.zem_entry_for()`, never by comparing strings.** The hunting
+    sheet keys on WIKI names ("The Hole", "Mistmoore Castle", "Western
+    Karana"); the log, tracker and map_system key on the GAME's ("Ruins of
+    Old Paineel", "Castle Mistmoore", "West Karana"). Nine zones spelled
+    differently and nothing reconciled them, which broke BOTH directions:
+    the leveling chart could recommend a zone that `find_route_ex` then
+    could not resolve ("no route known" for a zone two hops away), and
+    looking up the zone you are STANDING in answered "not in the sheet"
+    while its row sat there under the other spelling — a camp-value
+    prototype cheerfully advised moving to The Hole while standing in it.
+    Both sides reduce to `_canonical()` first, the same fix
+    `/api/trio-compare` uses for `class_str`. `hunting_candidates()` now
+    also returns `key` (the map spelling, or None when genuinely
+    unplaceable). `scripts/zone_coverage.py` fails if any sheet name stops
+    bridging; it was 64/73 before 2026-08-09 and is 73/73 now.
   - **The client ships the authoritative roster: `Resources/ZoneNames.txt`**
     (`id^long name^lo^hi`). The long name is EXACTLY what "You have entered
     X." prints, and `lo`/`hi` are `0^0` for every zone EQL does not run — 77

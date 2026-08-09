@@ -1221,6 +1221,36 @@ async def zem_zone_levels() -> dict:
     return zones
 
 
+async def zem_entry_for(zone_name: str) -> Optional[tuple]:
+    """The sheet's row for a zone named in ANY of our spellings.
+
+    The bridge between two name spaces that never met. The ZEM table keys on
+    WIKI names ("The Hole", "Mistmoore Castle", "Western Karana"); the log,
+    the tracker and map_system key on the game's ("Ruins of Old Paineel",
+    "Castle Mistmoore", "West Karana"). Comparing the strings answered "not
+    in the sheet" for zones sitting right there in it — so both sides are
+    reduced to a canonical key first, the same trick /api/trio-compare uses
+    for class_str, where two orderings of one real loadout were splitting
+    into rows that could not be compared.
+
+    Returns (display name as the sheet spells it, row) or None. The sheet's
+    spelling is handed back rather than swallowed: it is what the user will
+    see quoted on the wiki, and rewriting it would hide where the data came
+    from.
+    """
+    key = _canonical(zone_name)
+    table = await zem_zone_levels()
+    for zname, z in table.items():
+        if zname.lower() == (zone_name or "").lower():
+            return zname, z
+    if key is None:
+        return None
+    for zname, z in table.items():
+        if _canonical(zname) == key:
+            return zname, z
+    return None
+
+
 def _zone_band(z: dict) -> tuple:
     """(lo, hi) merging the explicit range with the marked tiers — the
     sheet is mid-edit and the two sometimes disagree (Everfrost: range
@@ -1282,6 +1312,12 @@ async def hunting_candidates(level: int) -> list:
         marked = sorted(l for l, t in tiers.items() if t in ("efficient", "ok"))
         out.append({
             "zone": zone,
+            # The map/log spelling of the same zone, so a caller can route
+            # to a pick, or tell that a pick IS where the player already is,
+            # without re-deriving it. None when the sheet names a zone we
+            # cannot place -- honest, and visible, rather than a name that
+            # silently resolves to nothing downstream.
+            "key": _canonical(zone),
             "band": f"{lo}-{hi or lo}",
             "at_level": quality != "stretch",
             "quality": quality,

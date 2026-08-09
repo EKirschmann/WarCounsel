@@ -49,6 +49,13 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
+          # setup-node has cached npm from the start; pip was reinstalling
+          # every dependency from scratch on every release (~51s here, ~59s
+          # in the OCR job, which downloads far more). Keyed on the
+          # requirements file, so a dependency change still gets a cold,
+          # honest install.
+          cache: pip
+          cache-dependency-path: requirements-lite.txt
 
       - uses: actions/setup-node@v7
         with:
@@ -284,6 +291,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          # Both files: requirements-heavy.txt is a `-r requirements-lite.txt`
+          # plus the OCR set, so a change to either must invalidate the cache.
+          cache-dependency-path: |
+            requirements-heavy.txt
+            requirements-lite.txt
 
       - uses: actions/setup-node@v7
         with:

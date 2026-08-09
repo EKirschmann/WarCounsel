@@ -278,6 +278,26 @@ ZONE_ALIASES = {
     "neriak - third gate": "Neriak Third Gate",
     # "The Hole" is what everyone calls it; the log says the long name
     "hole": "Ruins of Old Paineel",
+    # --- the community hunting sheet's spellings -------------------------
+    # The ZEM table (game_data.zem_zone_levels) keys on WIKI names while
+    # everything here keys on the game's. Nine zones spell differently, and
+    # the two name spaces never met: those nine could be RECOMMENDED by the
+    # leveling chart and then not routed to, because find_route_ex could not
+    # resolve the name the recommendation came back under. The reverse hurt
+    # more -- looking up the zone you are STANDING in ("Ruins of Old
+    # Paineel") found nothing, because the sheet calls it "The Hole".
+    # Each pair below was checked by hand against the sheet, not matched by
+    # similarity; scripts/zone_coverage.py now fails if any sheet name stops
+    # resolving.
+    "qeynos aqueducts": "Qeynos Catacombs",
+    "permafrost": "Permafrost Keep",
+    "western karana": "West Karana",
+    "northern karana": "North Karana",
+    "eastern karana": "East Karana",
+    "southern karana": "South Karana",
+    "runnyeye": "Runnyeye Citadel",
+    "kerra island": "Kerra Isle",
+    "mistmoore castle": "Castle Mistmoore",
     # NOT "The Estate of Unrest": normalize_zone() has already dropped the
     # article, and ZONE_FILES is keyed without it — aiming here at the
     # "The" form pointed at a nonexistent key and broke the direct hit.
