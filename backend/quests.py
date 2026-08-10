@@ -42,6 +42,15 @@ WIKI_BASE = "https://eqlwiki.com/"
 # moment's reading; a quest wrongly hidden is invisible, and the player is
 # already carrying items for it.
 _IN_ERA = {"classic era", "temple era", "paineel era"}
+
+_CLASSES = {"warrior", "cleric", "paladin", "ranger", "shadow knight", "druid",
+            "monk", "bard", "rogue", "shaman", "necromancer", "wizard",
+            "magician", "enchanter", "beastlord", "berserker"}
+
+# Sections, in the order a player would work through them. Derived from the
+# wiki's OWN categories rather than invented: "Paladin Quests", "Warrior
+# Equipment", "Repeatable Turn-in Quests" are its labels, not ours.
+KINDS = ("race", "class", "equipment", "faction", "spell", "other")
 _QUEST_TTL = 24 * 3600
 
 # Rows of the questTopTable worth keeping, mapped to the key we expose.
@@ -90,13 +99,45 @@ def _parse_quest(wikitext: str) -> dict:
     m = re.match(r"\s*\{\{\s*([^}|]{0,40}?Era)\s*\}\}", wikitext)
     if m:
         out["era"] = m.group(1).strip()
+    cats = [c.strip() for c in re.findall(r"\[\[Category:([^\]|]+)", wikitext)]
+    if cats:
+        out["categories"] = cats
     if re.search(r"^\s*Disambiguation", wikitext, re.M):
         out["disambiguation"] = True
     return out
 
 
+def _kind(quest: str, page: dict, item_names: list) -> str:
+    """Which section a quest belongs in.
+
+    Category-first, because those are the wiki's own labels. Rewards only
+    break a tie: a page with no categories still usually says what it gives
+    you, and "Spell: Cure Poison" is unambiguous where a bare item name is
+    not.
+    """
+    from backend import race_unlocks
+    if any(race_unlocks.match(n) for n in item_names):
+        return "race"
+    cats = [c.lower() for c in (page.get("categories") or [])]
+    blob = " ".join(cats)
+    if any(c.endswith(" quests") and c[:-7].strip() in _CLASSES for c in cats):
+        return "class"
+    if "equipment" in blob or "fashion" in blob:
+        return "equipment"
+    if "repeatable turn-in" in blob:
+        return "faction"
+    rewards = " ".join(page.get("rewards") or []).lower()
+    if rewards.startswith("spell:") or "spell:" in rewards:
+        return "spell"
+    if "faction" in rewards and "item" not in rewards:
+        return "faction"
+    if rewards:
+        return "equipment"
+    return "other"
+
+
 async def _quest_page(name: str) -> dict:
-    cached = wiki_page_cache.get("quest1", name.lower())
+    cached = wiki_page_cache.get("quest2", name.lower())
     if cached is not None:
         return cached or {}
     from backend import wiki_http
@@ -107,7 +148,7 @@ async def _quest_page(name: str) -> dict:
     data = _parse_quest(txt) if txt else {}
     # Cached even when empty: a quest page we cannot parse is still a page
     # we should not re-fetch on every consult.
-    wiki_page_cache.set(data, _QUEST_TTL, "quest1", name.lower())
+    wiki_page_cache.set(data, _QUEST_TTL, "quest2", name.lower())
     return data
 
 
@@ -173,6 +214,7 @@ async def quests_for_items(items: list, level=None) -> list:
             "classes": page.get("classes"),
             "races": page.get("races"),
             "rewards": page.get("rewards"),
+            "kind": _kind(quest, page, item_names),
             "era": page.get("era"),
             # unknown era counts as in-era: see _IN_ERA
             "out_of_era": bool(page.get("era")

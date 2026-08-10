@@ -32,7 +32,20 @@ interface QuestRow {
   below_level?: boolean;
   era?: string | null;
   out_of_era?: boolean;
+  kind?: string;
 }
+
+/** Section order is the order a player works through them: what unlocks a
+ *  race, what a class needs, then gear, then the grinds. Labels are the
+ *  wiki's own categories, not ones we invented. */
+const SECTIONS: { key: string; label: string; note: string }[] = [
+  { key: "race", label: "Race unlocks", note: "Turn-ins on a race-unlock faction path." },
+  { key: "class", label: "Class quests", note: "Restricted to particular classes — shown whatever you are playing now." },
+  { key: "equipment", label: "Equipment", note: "Rewards you can wear or wield." },
+  { key: "spell", label: "Spells", note: "Rewards a spell or tome." },
+  { key: "faction", label: "Faction & repeatables", note: "Turn in as often as you like; the reward is standing." },
+  { key: "other", label: "Other", note: "The wiki page did not say enough to place these." },
+];
 
 export function QuestPanel({ level }: { level?: number | null }) {
   const [rows, setRows] = useState<QuestRow[] | null>(null);
@@ -121,7 +134,16 @@ export function QuestPanel({ level }: { level?: number | null }) {
           </p>
         )}
 
-        {shown.map((q) => (
+        {SECTIONS.map((sec) => {
+          const rowsIn = shown.filter((q) => (q.kind || "other") === sec.key);
+          if (rowsIn.length === 0) return null;
+          return (
+            <div key={sec.key}>
+              <div className="adv-sub" style={{ marginTop: 12 }}>
+                {sec.label} — {rowsIn.length}
+              </div>
+              <p className="adv-note">{sec.note}</p>
+              {rowsIn.map((q) => (
           <div className="quest-row" key={q.quest}>
             <div className="quest-head">
               <a href={q.url} target="_blank" rel="noreferrer noopener">
@@ -163,7 +185,10 @@ export function QuestPanel({ level }: { level?: number | null }) {
               )}
             </div>
           </div>
-        ))}
+              ))}
+            </div>
+          );
+        })}
 
         {inEra.length > 25 && !showAll && (
           <button type="button" className="adv-rescan" onClick={() => setShowAll(true)}>
