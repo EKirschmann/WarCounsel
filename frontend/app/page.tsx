@@ -7,6 +7,7 @@ import type { LedgerRow, Snapshot, WsMessage } from "@/lib/types";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { APP_VERSION } from "@/lib/version";
 import { AdvisorPanel } from "@/components/AdvisorPanel";
+import { QuestPanel } from "@/components/QuestPanel";
 import { AtlasPanel } from "@/components/AtlasPanel";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { EncounterPanel } from "@/components/EncounterPanel";
@@ -68,7 +69,7 @@ export default function Home() {
       .catch(() => {});
   }, []);
   const [rows, setRows] = useState<LedgerRow[]>([]);
-  const [centerTab, setCenterTab] = useState<"atlas" | "advisor">("atlas");
+  const [centerTab, setCenterTab] = useState<"atlas" | "advisor" | "quests">("atlas");
   const [centerOpen, setCenterOpen] = useState(true);
 
   useEffect(() => {
@@ -261,6 +262,14 @@ export default function Home() {
                 Advisor
               </button>
               <button
+                role="tab"
+                aria-selected={centerTab === "quests"}
+                data-active={centerTab === "quests"}
+                onClick={() => setCenterTab("quests")}
+              >
+                Quests
+              </button>
+              <button
                 type="button"
                 className="tab-collapse"
                 onClick={toggleCenter}
@@ -271,6 +280,8 @@ export default function Home() {
             </div>
             {centerTab === "atlas" ? (
               <AtlasPanel zone={snap?.zone ?? null} position={snap?.position ?? null} />
+            ) : centerTab === "quests" ? (
+              <QuestPanel level={snap?.level ?? null} />
             ) : (
               <AdvisorPanel snap={snap} onSnapChange={setSnap} />
             )}

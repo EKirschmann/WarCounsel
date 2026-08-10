@@ -1,0 +1,149 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { apiGet } from "@/lib/api";
+import { ItemHover } from "./ItemHover";
+
+/* Quests your bags are already carrying items for.
+ *
+ * There is no progress percentage here on purpose. Required counts live in
+ * walkthrough prose on the wiki ("Bring me two tufts of bat fur"), not in
+ * any structured field, and a number scraped from a sentence would send
+ * someone farming the wrong amount. What IS exact is how many you hold, so
+ * that is what the panel shows, next to a link to read the requirement at
+ * the source. */
+
+interface QuestItem {
+  name: string;
+  count: number;
+  where: string[];
+}
+interface QuestRow {
+  quest: string;
+  url: string;
+  items: QuestItem[];
+  giver?: string | null;
+  zone?: string | null;
+  min_level?: number | null;
+  classes?: string | null;
+  races?: string | null;
+  rewards?: string[] | null;
+  disambiguation?: boolean;
+  below_level?: boolean;
+}
+
+export function QuestPanel({ level }: { level?: number | null }) {
+  const [rows, setRows] = useState<QuestRow[] | null>(null);
+  const [scanned, setScanned] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  const scan = useCallback(async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const d = await apiGet<{
+        quests: QuestRow[];
+        items_scanned?: number;
+        note?: string;
+      }>("/api/quests");
+      setRows(d.quests ?? []);
+      setScanned(d.items_scanned ?? null);
+      if (d.note) setErr(d.note);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "scan failed");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void scan();
+  }, [scan]);
+
+  const shown = showAll ? rows ?? [] : (rows ?? []).slice(0, 25);
+
+  return (
+    <section className="panel quest-panel">
+      <div className="panel-head">
+        <h2>Quests</h2>
+        <span className="atlas-zone">
+          {scanned != null ? `${scanned} items scanned` : ""}
+        </span>
+        <button type="button" className="adv-rescan" onClick={scan} disabled={busy}>
+          {busy ? "scanning…" : "rescan"}
+        </button>
+      </div>
+
+      <div className="panel-body">
+        <p className="adv-note">
+          Quests that reference something in your bags, bank or worn slots, from
+          your <code>/outputfile inventory</code> export and the wiki. Counts are
+          what you are carrying — the required amount lives in each quest&apos;s
+          walkthrough, so follow the link rather than trusting a number here.
+          Class and level are shown, never used to hide a row: you will change
+          trio, and the items keep.
+        </p>
+
+        {err && <p className="set-note" data-ok="0">{err}</p>}
+        {busy && !rows && <p className="adv-note">Reading item pages…</p>}
+        {rows && rows.length === 0 && !err && (
+          <p className="adv-note">
+            Nothing you are carrying is referenced by a quest page.
+          </p>
+        )}
+
+        {shown.map((q) => (
+          <div className="quest-row" key={q.quest}>
+            <div className="quest-head">
+              <a href={q.url} target="_blank" rel="noreferrer noopener">
+                {q.quest}
+              </a>
+              {q.min_level != null && (
+                <span className="adv-cls" data-warn={q.below_level ? "1" : undefined}>
+                  {" "}L{q.min_level}
+                  {q.below_level ? ` — you are ${level ?? "?"}` : ""}
+                </span>
+              )}
+              {q.disambiguation && (
+                <span className="enc-tag" title="Several quests share this name — the page lists them">
+                  several
+                </span>
+              )}
+            </div>
+
+            <div className="quest-items">
+              {q.items.map((i) => (
+                <span className="quest-item" key={i.name}>
+                  <ItemHover name={i.name} />
+                  <strong>×{i.count}</strong>
+                  {i.where.length > 0 && (
+                    <span className="adv-cls"> ({i.where.join("/")})</span>
+                  )}
+                </span>
+              ))}
+            </div>
+
+            <div className="quest-meta">
+              {q.giver && <span>{q.giver}</span>}
+              {q.zone && <span>{q.zone}</span>}
+              {q.classes && q.classes.toLowerCase() !== "all" && (
+                <span>{q.classes}</span>
+              )}
+              {q.rewards && q.rewards.length > 0 && (
+                <span className="quest-reward">{q.rewards.slice(0, 4).join(", ")}</span>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {rows && rows.length > 25 && !showAll && (
+          <button type="button" className="adv-rescan" onClick={() => setShowAll(true)}>
+            show the other {rows.length - 25}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}

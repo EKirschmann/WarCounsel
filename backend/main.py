@@ -1673,6 +1673,32 @@ def _items_including_pet(inv) -> list:
     return items
 
 
+@app.get("/api/quests")
+async def get_quests():
+    """Owned items matched to the quests that reference them.
+
+    Read-only and wiki-cached: the same item pages the gear hover cards
+    already mine, joined to quest pages for the giver, zone, level and
+    reward. Deliberately no progress percentage -- required counts live in
+    walkthrough prose, and a number scraped from a sentence would send
+    someone farming the wrong amount.
+    """
+    from backend import quests as quests_mod
+    inv = load_export(tracker.name, tracker.server, "Inventory")
+    items = (inv or {}).get("items") or []
+    if not items:
+        return {"quests": [], "note": "No inventory export found — type "
+                                      "/outputfile inventory in-game, then "
+                                      "press check exports."}
+    try:
+        rows = await quests_mod.quests_for_items(items, level=tracker.level)
+    except Exception as exc:
+        logger.exception("quest scan failed")
+        raise HTTPException(500, f"quest scan failed: {str(exc)[:120]}")
+    return {"quests": rows, "items_scanned": len({i.get("name") for i in items}),
+            "level": tracker.level}
+
+
 @app.get("/api/gear")
 async def get_gear(refresh: bool = False, cached: bool = False):
     """Equipment counsel: best owned item per slot + farming targets.

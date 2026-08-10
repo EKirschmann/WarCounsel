@@ -2495,3 +2495,25 @@ button.app-version:hover { color: var(--gold-bright); }
    hiding of closed content, so the pickers stayed on screen while the
    toggle read closed. Hide them explicitly. */
 .adv-trio:not([open]) .adv-trio-fields { display: none; }
+
+/* --- Quests -------------------------------------------------------------
+   One row per quest: the items you are already carrying for it, then where
+   it starts. No progress bar — the required count is prose on the wiki and
+   guessing it would send someone farming the wrong amount. */
+.quest-row {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(200, 170, 110, .14);
+}
+.quest-head a { color: var(--gold, #c8aa6e); text-decoration: none; }
+.quest-head a:hover { text-decoration: underline; }
+.quest-head [data-warn] { color: #d4574a; }
+.quest-items { display: flex; flex-wrap: wrap; gap: 10px; margin: 3px 0 2px; font-size: 11.5px; }
+.quest-item strong { color: var(--milestone, #c8aa6e); margin-left: 4px; }
+.quest-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 10.5px;
+  color: var(--muted, rgba(226, 222, 214, .58));
+}
+.quest-meta .quest-reward { color: #1fb38c; }
