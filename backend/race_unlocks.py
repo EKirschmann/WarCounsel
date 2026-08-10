@@ -69,3 +69,14 @@ def all_items() -> list:
 def reset_cache() -> None:
     global _BY_NAME
     _BY_NAME = None
+
+
+def guide_url() -> str:
+    """Where the table came from, so a row can link its source."""
+    try:
+        raw = json.loads(
+            (bundle_path() / "backend" / "race_unlocks.json").read_text(encoding="utf-8")
+        )
+        return raw.get("_url") or ""
+    except (OSError, ValueError):
+        return ""

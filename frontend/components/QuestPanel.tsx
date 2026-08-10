@@ -33,6 +33,12 @@ interface QuestRow {
   era?: string | null;
   out_of_era?: boolean;
   kind?: string;
+  /** What this unlocks or is restricted to — the race, or the classes. */
+  unlocks?: string | null;
+  /** Race-unlock rows only: total turn-ins and the size of one. */
+  needed?: number | null;
+  per_turnin?: number | null;
+  note?: string | null;
 }
 
 /** Section order is the order a player works through them: what unlocks a
@@ -155,6 +161,11 @@ export function QuestPanel({ level }: { level?: number | null }) {
                   {q.below_level ? ` — you are ${level ?? "?"}` : ""}
                 </span>
               )}
+              {q.unlocks && (
+                <span className="quest-unlocks" title="What this quest is for">
+                  {q.unlocks}
+                </span>
+              )}
               {q.disambiguation && (
                 <span className="enc-tag" title="Several quests share this name — the page lists them">
                   several
@@ -175,6 +186,14 @@ export function QuestPanel({ level }: { level?: number | null }) {
             </div>
 
             <div className="quest-meta">
+              {q.needed != null && (
+                <span title={q.note ?? undefined}>
+                  {/* Counts from the vendored unlock table, which states them
+                      outright — unlike a walkthrough, where they are prose. */}
+                  {q.needed} needed
+                  {q.per_turnin ? `, ${q.per_turnin} per turn-in` : ""}
+                </span>
+              )}
               {q.giver && <span>{q.giver}</span>}
               {q.zone && <span>{q.zone}</span>}
               {q.classes && q.classes.toLowerCase() !== "all" && (

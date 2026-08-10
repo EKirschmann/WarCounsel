@@ -107,6 +107,23 @@ def _parse_quest(wikitext: str) -> dict:
     return out
 
 
+def _unlocks(kind: str, page: dict) -> Optional[str]:
+    """What the quest is FOR, when that is knowable.
+
+    A "Race unlocks" heading with no race under it makes the reader open
+    every row to find out which. The class categories say it outright.
+    """
+    if kind != "class":
+        return None
+    names = [c[:-7].strip().title()
+             for c in (page.get("categories") or [])
+             if c.lower().endswith(" quests") and c[:-7].strip().lower() in _CLASSES]
+    uniq = list(dict.fromkeys(names))
+    if len(uniq) > 4:
+        return f"most classes ({len(uniq)})"
+    return ", ".join(uniq) or None
+
+
 def _kind(quest: str, page: dict, item_names: list) -> str:
     """Which section a quest belongs in.
 
@@ -192,10 +209,48 @@ async def quests_for_items(items: list, level=None) -> list:
         for q in qs:
             by_quest.setdefault(q, []).append(name)
 
-    pages = await asyncio.gather(*(_quest_page(q) for q in by_quest),
+    # The item page is not the only source, and relying on it alone lost
+    # real matches: Phosphorous Powder is a Froglok unlock turn-in in the
+    # table this app already ships, and its wiki page carries only a
+    # "Drops From" section, so the quest never appeared. Seed from the
+    # table too -- it names the race, the NPC, the zone and the count,
+    # which is more than most item pages give.
+    from backend import race_unlocks
+    seeded: dict = {}
+    for name in held:
+        rec = race_unlocks.match(name)
+        if not rec:
+            continue
+        label = f"{rec['race']} unlock — {rec['npc']}"
+        seeded.setdefault(label, rec)
+        by_quest.setdefault(label, []).append(name)
+
+    pages = await asyncio.gather(*(_quest_page(q) for q in by_quest
+                                   if q not in seeded),
                                  return_exceptions=True)
+    pages = dict(zip((q for q in by_quest if q not in seeded), pages))
     out = []
-    for (quest, item_names), page in zip(by_quest.items(), pages):
+    for quest, item_names in by_quest.items():
+        rec = seeded.get(quest)
+        if rec:
+            out.append({
+                "quest": quest,
+                "url": race_unlocks.guide_url(),
+                "items": [{"name": n, "count": held[n]["count"],
+                           "where": sorted(held[n]["where"])}
+                          for n in item_names],
+                "giver": rec.get("npc"), "zone": rec.get("zone"),
+                "min_level": None, "classes": None, "races": None,
+                "rewards": [f"{rec['race']} unlock"],
+                "kind": "race", "unlocks": rec.get("race"),
+                "needed": rec.get("total"),
+                "per_turnin": rec.get("per_turnin"),
+                "note": rec.get("note"),
+                "era": None, "out_of_era": False,
+                "disambiguation": False, "below_level": False,
+            })
+            continue
+        page = pages.get(quest)
         page = page if isinstance(page, dict) else {}
         lvl = None
         if page.get("min_level"):
@@ -214,7 +269,8 @@ async def quests_for_items(items: list, level=None) -> list:
             "classes": page.get("classes"),
             "races": page.get("races"),
             "rewards": page.get("rewards"),
-            "kind": _kind(quest, page, item_names),
+            "kind": (k := _kind(quest, page, item_names)),
+            "unlocks": _unlocks(k, page),
             "era": page.get("era"),
             # unknown era counts as in-era: see _IN_ERA
             "out_of_era": bool(page.get("era")

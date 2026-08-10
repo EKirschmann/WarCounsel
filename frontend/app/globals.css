@@ -2556,3 +2556,16 @@ button.app-version:hover { color: var(--gold-bright); }
 .hud-grid:not([data-combat]) .enc-panel[data-collapsed] .enc-nav {
   display: none;
 }
+
+/* What a quest unlocks — the race, or the classes it is limited to. The
+   heading says "Race unlocks"; this says WHICH, so the row does not have
+   to be opened to find out. */
+.quest-unlocks {
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #1fb38c;
+  border: 1px solid rgba(31, 179, 140, .38);
+}
