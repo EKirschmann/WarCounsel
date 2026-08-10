@@ -2518,7 +2518,41 @@ button.app-version:hover { color: var(--gold-bright); }
 }
 .quest-meta .quest-reward { color: #1fb38c; }
 
-/* A collapsed Encounter panel shrinks to its title bar, and gives its
-   column back to whatever is beside it — same treatment the ledger gets. */
+/* A collapsed Encounter panel shrinks to a slim vertical strip, the same
+   treatment the ledger gets — the first attempt only hid the body, so the
+   panel kept its full 760px column and nothing appeared to happen.
+   Specificity is why: the ledger's rule carries :not([data-combat]) as
+   well as :has(), and a plain .hud-grid:has() loses to it whenever the
+   ledger is also collapsed. These match its shape, and the third rule
+   handles both being shut at once, which the single rule could not
+   express at all. */
 .enc-panel[data-collapsed] { max-height: none; }
-.hud-grid:has(.enc-panel[data-collapsed]) { grid-template-columns: 340px minmax(760px, 1fr) 420px auto; }
+
+.hud-grid:not([data-combat]):has(.enc-panel[data-collapsed]) {
+  grid-template-columns: 320px minmax(380px, 1fr) minmax(380px, 1fr) 42px;
+}
+.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]):has(.enc-panel[data-collapsed]) {
+  grid-template-columns: 320px minmax(380px, 1fr) 42px 42px;
+}
+@media (min-width: 1920px) {
+  .hud-grid:not([data-combat]):has(.enc-panel[data-collapsed]) {
+    grid-template-columns: 340px minmax(760px, 1fr) minmax(420px, 1fr) 42px;
+  }
+  .hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]):has(.enc-panel[data-collapsed]) {
+    grid-template-columns: 340px minmax(760px, 1fr) 42px 42px;
+  }
+}
+
+/* the strip itself: title turned on its side, controls out of the way */
+.hud-grid:not([data-combat]) .enc-panel[data-collapsed] .panel-title {
+  writing-mode: vertical-rl;
+  height: 100%;
+  border-bottom: none;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px;
+}
+.hud-grid:not([data-combat]) .enc-panel[data-collapsed] .font-scale,
+.hud-grid:not([data-combat]) .enc-panel[data-collapsed] .enc-nav {
+  display: none;
+}
