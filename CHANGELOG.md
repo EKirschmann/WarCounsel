@@ -4,6 +4,39 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.6.2 — 2026-08-10
+
+**Leveling-chart zones now route.** The community hunting sheet spells some
+zones the wiki's way ("Mistmoore Castle", "The Hole", "Western Karana")
+while the log and the map use the game's ("Castle Mistmoore", "Ruins of Old
+Paineel", "West Karana"). Nine of its 73 zones differed and nothing
+reconciled them, so the chart could recommend somewhere the route finder
+then called unknown — and standing in a zone could report it as missing
+from the sheet while its row sat there under the other name.
+
+**Gear advice now looks at what your pet is carrying.** Pet inventory
+arrives from `/pet inventory check` and never reached the gear consult, so
+the app would hand items down to the pet but never notice the pet holding
+something better than you wear.
+
+**New: a surplus list** of things you can clear out. Deliberately ignores
+your classes — you will swap trios, so "your current classes cannot use
+this" is no reason to sell anything. Only two things qualify: a lower rank
+of an item you already own, and anything the wiki calls vendor trash. If
+the app is not sure, it says nothing rather than guessing, because the
+action it suggests cannot be undone.
+
+**Fixed: the updater blamed the wrong thing.** A failed update told everyone
+to `git stash`, which only helps if you have edited files. If you had
+committed something locally the advice did nothing and you stayed stuck.
+It now asks git which case it is and prints the command that actually
+applies — stash for edits, rebase or reset for commits.
+
+**Fixed: the packaged OCR build.** The v2.6.1 build job hung for nearly two
+hours because CI runs Python 3.13, where the OCR engine ships without its
+models and downloads them on first use. Pinned to 3.12, where the models
+travel with the package.
+
 ## v2.6.1 — 2026-08-09
 
 **The OCR download from v2.6.0 never made it out.** Its build failed a
