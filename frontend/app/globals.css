@@ -2517,3 +2517,8 @@ button.app-version:hover { color: var(--gold-bright); }
   color: var(--muted, rgba(226, 222, 214, .58));
 }
 .quest-meta .quest-reward { color: #1fb38c; }
+
+/* A collapsed Encounter panel shrinks to its title bar, and gives its
+   column back to whatever is beside it — same treatment the ledger gets. */
+.enc-panel[data-collapsed] { max-height: none; }
+.hud-grid:has(.enc-panel[data-collapsed]) { grid-template-columns: 340px minmax(760px, 1fr) 420px auto; }

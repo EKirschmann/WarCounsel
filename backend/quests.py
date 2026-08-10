@@ -29,6 +29,19 @@ from backend.game_data import item_acquisition, wiki_page_cache
 logger = logging.getLogger(__name__)
 
 WIKI_BASE = "https://eqlwiki.com/"
+
+# Which wiki eras EQL actually implements. It is a reimagined PRE-KUNARK
+# game and Kunark shipped in April 2000, so the cut is by date, taken from
+# the era templates' own documentation rather than guessed:
+#
+#   Classic  1999-2000            in     Kunark   2000          out
+#   Temple   October 1999         in     Epics    last sub-era  out
+#   Paineel  February 2000        in     Velious  Dec 2000+     out
+#
+# An era we do not recognise counts as IN. A quest wrongly shown is a
+# moment's reading; a quest wrongly hidden is invisible, and the player is
+# already carrying items for it.
+_IN_ERA = {"classic era", "temple era", "paineel era"}
 _QUEST_TTL = 24 * 3600
 
 # Rows of the questTopTable worth keeping, mapped to the key we expose.
@@ -74,6 +87,9 @@ def _parse_quest(wikitext: str) -> dict:
         rewards = [_delink(i) for i in items if _delink(i)]
         if rewards:
             out["rewards"] = rewards[:12]
+    m = re.match(r"\s*\{\{\s*([^}|]{0,40}?Era)\s*\}\}", wikitext)
+    if m:
+        out["era"] = m.group(1).strip()
     if re.search(r"^\s*Disambiguation", wikitext, re.M):
         out["disambiguation"] = True
     return out
@@ -157,11 +173,17 @@ async def quests_for_items(items: list, level=None) -> list:
             "classes": page.get("classes"),
             "races": page.get("races"),
             "rewards": page.get("rewards"),
+            "era": page.get("era"),
+            # unknown era counts as in-era: see _IN_ERA
+            "out_of_era": bool(page.get("era")
+                               and page["era"].strip().lower() not in _IN_ERA),
             "disambiguation": bool(page.get("disambiguation")),
             # reported, never used to hide a row -- see the module docstring
             "below_level": bool(lvl and level and level < lvl),
         })
     # most items held first: that is the closest honest proxy for "nearly done"
-    out.sort(key=lambda q: (-sum(i["count"] for i in q["items"]),
+    # in-era first, then by how much of it you are already carrying
+    out.sort(key=lambda q: (q["out_of_era"],
+                            -sum(i["count"] for i in q["items"]),
                             -len(q["items"]), q["quest"]))
     return out

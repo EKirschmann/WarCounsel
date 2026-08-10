@@ -119,6 +119,19 @@ export const EncounterPanel = memo(function EncounterPanel({
   const foes = enc?.foes ?? [];
   const slain = foes.filter((f) => f.slain).length;
   const [scale, setScale] = useState(1);
+  // Collapsible for the same reason the ledger is: on a narrow screen this
+  // panel is the widest thing competing with the Atlas, and someone reading
+  // a map or a quest list does not need a per-ability breakdown beside it.
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    setOpen(localStorage.getItem("eql.encOpen") !== "0");
+  }, []);
+  const toggleOpen = () => {
+    setOpen((v) => {
+      localStorage.setItem("eql.encOpen", v ? "0" : "1");
+      return !v;
+    });
+  };
   useEffect(() => {
     const s = parseFloat(localStorage.getItem("eql.encScale") ?? "1");
     if (s >= 0.8 && s <= 1.6) setScale(s);
@@ -132,13 +145,21 @@ export const EncounterPanel = memo(function EncounterPanel({
   };
 
   return (
-    <section className="panel">
+    <section className="panel enc-panel" data-collapsed={open ? undefined : "1"}>
       <div className="panel-title">
         Encounter
         <span className="font-scale" aria-label="Encounter text size">
           <button type="button" onClick={() => bumpScale(-0.1)} title="Smaller text">A−</button>
           <button type="button" onClick={() => bumpScale(0.1)} title="Larger text">A+</button>
         </span>
+        <button
+          type="button"
+          className="ledger-collapse"
+          onClick={toggleOpen}
+          title={open ? "Collapse the encounter panel to just this bar" : "Expand it"}
+        >
+          {open ? "▾ hide" : "▸ show"}
+        </button>
         {enc && (
           <span className="enc-nav">
             <button type="button" onClick={() => step(1)}
@@ -156,6 +177,7 @@ export const EncounterPanel = memo(function EncounterPanel({
           </span>
         )}
       </div>
+      {open && (
       <div className="panel-body" style={{ zoom: scale }}>
         {!enc ? (
           <p className="chat-empty">
@@ -446,6 +468,7 @@ export const EncounterPanel = memo(function EncounterPanel({
           </div>
         )}
       </div>
+      )}
     </section>
   );
 });

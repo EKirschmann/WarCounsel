@@ -30,6 +30,8 @@ interface QuestRow {
   rewards?: string[] | null;
   disambiguation?: boolean;
   below_level?: boolean;
+  era?: string | null;
+  out_of_era?: boolean;
 }
 
 export function QuestPanel({ level }: { level?: number | null }) {
@@ -38,6 +40,21 @@ export function QuestPanel({ level }: { level?: number | null }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  // Same control the Encounter panel uses, for the same reason: this is a
+  // dense list people read at a glance, and one text size does not suit
+  // every monitor. Persisted under its own key.
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const v = parseFloat(localStorage.getItem("eql.questScale") || "1");
+    if (v >= 0.8 && v <= 1.6) setScale(v);
+  }, []);
+  const bumpScale = (d: number) => {
+    setScale((v) => {
+      const n = Math.min(1.6, Math.max(0.8, Math.round((v + d) * 20) / 20));
+      localStorage.setItem("eql.questScale", String(n));
+      return n;
+    });
+  };
 
   const scan = useCallback(async () => {
     setBusy(true);
@@ -62,7 +79,13 @@ export function QuestPanel({ level }: { level?: number | null }) {
     void scan();
   }, [scan]);
 
-  const shown = showAll ? rows ?? [] : (rows ?? []).slice(0, 25);
+  const all = rows ?? [];
+  // Out-of-era quests are the Kunark-and-later content EQL does not
+  // implement. Kept, because the ITEMS are real and sit in your bags —
+  // but moved below, because they are not things you can go and do.
+  const inEra = all.filter((q) => !q.out_of_era);
+  const outEra = all.filter((q) => q.out_of_era);
+  const shown = showAll ? inEra : inEra.slice(0, 25);
 
   return (
     <section className="panel quest-panel">
@@ -71,12 +94,16 @@ export function QuestPanel({ level }: { level?: number | null }) {
         <span className="atlas-zone">
           {scanned != null ? `${scanned} items scanned` : ""}
         </span>
+        <span className="font-scale" aria-label="Quest text size">
+          <button type="button" onClick={() => bumpScale(-0.1)} title="Smaller text">A−</button>
+          <button type="button" onClick={() => bumpScale(0.1)} title="Larger text">A+</button>
+        </span>
         <button type="button" className="adv-rescan" onClick={scan} disabled={busy}>
           {busy ? "scanning…" : "rescan"}
         </button>
       </div>
 
-      <div className="panel-body">
+      <div className="panel-body" style={{ zoom: scale }}>
         <p className="adv-note">
           Quests that reference something in your bags, bank or worn slots, from
           your <code>/outputfile inventory</code> export and the wiki. Counts are
@@ -138,10 +165,41 @@ export function QuestPanel({ level }: { level?: number | null }) {
           </div>
         ))}
 
-        {rows && rows.length > 25 && !showAll && (
+        {inEra.length > 25 && !showAll && (
           <button type="button" className="adv-rescan" onClick={() => setShowAll(true)}>
-            show the other {rows.length - 25}
+            show the other {inEra.length - 25}
           </button>
+        )}
+
+        {outEra.length > 0 && (
+          <>
+            <div className="adv-sub" style={{ marginTop: 14 }}>
+              Out of era — {outEra.length}
+            </div>
+            <p className="adv-note">
+              Kunark-era content and later, which this game does not implement.
+              The items are real and in your bags; the quests are not
+              currently doable. Listed so you know why you are carrying them.
+            </p>
+            {outEra.map((q) => (
+              <div className="quest-row" key={q.quest} data-dim="1">
+                <div className="quest-head">
+                  <a href={q.url} target="_blank" rel="noreferrer noopener">
+                    {q.quest}
+                  </a>
+                  {q.era && <span className="adv-cls"> {q.era}</span>}
+                </div>
+                <div className="quest-items">
+                  {q.items.map((i) => (
+                    <span className="quest-item" key={i.name}>
+                      <ItemHover name={i.name} />
+                      <strong>×{i.count}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </>
         )}
       </div>
     </section>
