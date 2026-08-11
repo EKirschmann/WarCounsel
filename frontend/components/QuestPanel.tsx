@@ -37,6 +37,7 @@ interface QuestRow {
   unlocks?: string | null;
   /** Race-unlock rows only: total turn-ins and the size of one. */
   needed?: number | null;
+  have?: number | null;
   per_turnin?: number | null;
   note?: string | null;
 }
@@ -185,6 +186,23 @@ export function QuestPanel({ level }: { level?: number | null }) {
               ))}
             </div>
 
+            {/* A bar only where the requirement is STATED — the vendored
+                unlock table gives exact totals, a walkthrough gives prose.
+                Showing one on some rows and not others is the honest
+                version of "we know this number and not that one". */}
+            {q.needed != null && q.have != null && (
+              <div className="quest-progress" title={`${q.have} of ${q.needed}`}>
+                <div
+                  className="quest-progress-fill"
+                  style={{ width: `${Math.min(100, (q.have / q.needed) * 100)}%` }}
+                />
+                <span>
+                  {q.have} / {q.needed}
+                  {" · "}
+                  {Math.floor((q.have / q.needed) * 100)}%
+                </span>
+              </div>
+            )}
             <div className="quest-meta">
               {q.needed != null && (
                 <span title={q.note ?? undefined}>

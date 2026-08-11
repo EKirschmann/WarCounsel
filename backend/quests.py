@@ -5,12 +5,17 @@ quests reference each item; quest pages carry a structured header with the
 giver, the zone, the minimum level and the reward. Joining those three is
 the whole feature -- none of it is inferred.
 
-WHAT THIS DELIBERATELY DOES NOT DO is compute a progress bar. Required
-quantities live in walkthrough PROSE ("Bring me two tufts of bat fur and
-two fire beetle legs"), not in any structured field, and a number scraped
-out of a sentence would be wrong often enough to send someone farming the
-wrong count. The panel shows how many you HOLD, which is exact, and links
-the quest so the requirement can be read from the source.
+PROGRESS IS SHOWN ONLY WHERE THE REQUIREMENT IS STATED. The vendored race
+-unlock table gives exact totals (800 Phosphorous Powder, 1200 Gnoll Fang),
+and the inventory export gives an exact stack size, so those rows carry a
+real bar. Wiki quests do not: their counts live in walkthrough PROSE
+("Bring me two tufts of bat fur and two fire beetle legs"), and a number
+scraped out of a sentence would be wrong often enough to send someone
+farming the wrong amount. Those rows show what you HOLD and link the quest
+so the requirement can be read at its source.
+
+The distinction is the point. A bar that appears on some rows and not
+others is honest about which numbers are known.
 
 Class restrictions are reported, never used to filter: players change
 their trio and intend to keep changing it, so "your current classes cannot
@@ -107,6 +112,16 @@ def _parse_quest(wikitext: str) -> dict:
     return out
 
 
+def _have(held: dict, item_names: list) -> int:
+    """How many of the quest's items you are carrying, across every stack.
+
+    The export's stack column was being discarded, so 27 gnoll fangs and 42
+    phosphorous powder both counted as one and every unlock looked
+    untouched. It is the one number here that is exact.
+    """
+    return sum(held.get(n, {}).get("count", 0) for n in item_names)
+
+
 def _unlocks(kind: str, page: dict) -> Optional[str]:
     """What the quest is FOR, when that is knowable.
 
@@ -132,9 +147,11 @@ def _kind(quest: str, page: dict, item_names: list) -> str:
     you, and "Spell: Cure Poison" is unambiguous where a bare item name is
     not.
     """
-    from backend import race_unlocks
-    if any(race_unlocks.match(n) for n in item_names):
-        return "race"
+    # NOT keyed on "an item in this quest appears in the race table":
+    # Gnoll Fang is a Barbarian turn-in AND an ingredient in Moonstones and
+    # Gnoll Bounty, so that test made every quest touching it a race
+    # unlock. Only rows seeded FROM the table are race rows; they set their
+    # kind directly and never reach here.
     cats = [c.lower() for c in (page.get("categories") or [])]
     blob = " ".join(cats)
     if any(c.endswith(" quests") and c[:-7].strip() in _CLASSES for c in cats):
@@ -203,6 +220,7 @@ async def quests_for_items(items: list, level=None) -> list:
     pairs = await asyncio.gather(*(quests_of(n) for n in held),
                                  return_exceptions=True)
     by_quest: dict = {}
+    merged: dict = {}   # wiki quest name -> race-table record for the same turn-in
     for name, qs in zip(held, pairs):
         if isinstance(qs, Exception):
             continue
@@ -224,6 +242,28 @@ async def quests_for_items(items: list, level=None) -> list:
         label = f"{rec['race']} unlock — {rec['npc']}"
         seeded.setdefault(label, rec)
         by_quest.setdefault(label, []).append(name)
+    # The wiki usually has a page for the same turn-in under its real name
+    # -- Gnoll Bounty IS the Barbarian unlock at Lysbith McNaff -- and
+    # listing both is the same quest twice. Pages are fetched first so the
+    # giver can be compared; a shared giver AND a shared item is the same
+    # thing by any reading.
+    _pre = await asyncio.gather(*(_quest_page(q) for q in by_quest
+                                  if q not in seeded), return_exceptions=True)
+    _pre = dict(zip((q for q in by_quest if q not in seeded), _pre))
+    for label, rec in list(seeded.items()):
+        npc = (rec.get("npc") or "").strip().lower()
+        mine = set(by_quest.get(label) or [])
+        for quest, page in _pre.items():
+            if not isinstance(page, dict):
+                continue
+            if (page.get("giver") or "").strip().lower() != npc or not npc:
+                continue
+            if not mine & set(by_quest.get(quest) or []):
+                continue
+            merged[quest] = rec           # the wiki name wins, our data rides along
+            by_quest.pop(label, None)
+            seeded.pop(label, None)
+            break
 
     pages = await asyncio.gather(*(_quest_page(q) for q in by_quest
                                    if q not in seeded),
@@ -244,6 +284,7 @@ async def quests_for_items(items: list, level=None) -> list:
                 "rewards": [f"{rec['race']} unlock"],
                 "kind": "race", "unlocks": rec.get("race"),
                 "needed": rec.get("total"),
+                "have": _have(held, item_names),
                 "per_turnin": rec.get("per_turnin"),
                 "note": rec.get("note"),
                 "era": None, "out_of_era": False,
@@ -252,6 +293,7 @@ async def quests_for_items(items: list, level=None) -> list:
             continue
         page = pages.get(quest)
         page = page if isinstance(page, dict) else {}
+        extra = merged.get(quest)
         lvl = None
         if page.get("min_level"):
             m = re.search(r"\d+", str(page["min_level"]))
@@ -269,8 +311,13 @@ async def quests_for_items(items: list, level=None) -> list:
             "classes": page.get("classes"),
             "races": page.get("races"),
             "rewards": page.get("rewards"),
-            "kind": (k := _kind(quest, page, item_names)),
-            "unlocks": _unlocks(k, page),
+            "kind": "race" if extra else (k := _kind(quest, page, item_names)),
+            "unlocks": (extra["race"] if extra
+                        else _unlocks(_kind(quest, page, item_names), page)),
+            "needed": (extra or {}).get("total"),
+            "have": _have(held, item_names),
+            "per_turnin": (extra or {}).get("per_turnin"),
+            "note": (extra or {}).get("note"),
             "era": page.get("era"),
             # unknown era counts as in-era: see _IN_ERA
             "out_of_era": bool(page.get("era")

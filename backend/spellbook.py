@@ -201,8 +201,19 @@ def load_export(name: Optional[str], server: Optional[str],
             # key for anything we learn and want to keep -- see item_facts.
             try:
                 item_id = int(parts[2].strip()) if len(parts) > 2 else 0
+                # Column 4 is the STACK SIZE and was being discarded, so 27
+                # gnoll fangs and 42 phosphorous powder both read as one.
+                # That is the number the quest tab is counting, and the
+                # difference between "you have started this" and "you are
+                # a third of the way through it".
+                try:
+                    stack = int(parts[3].strip()) if len(parts) > 3 else 1
+                except ValueError:
+                    stack = 1
+                stack = max(1, stack)
             except ValueError:
                 item_id = 0
+                stack = 1
             empty = not item or item.lower() == "empty"
             m = sub_re.match(loc)
             if m:
@@ -229,7 +240,7 @@ def load_export(name: Optional[str], server: Optional[str],
                     continue  # non-exalt socket rows on gear: nothing to track
                 items.append({"loc": loc,
                               "where": "bank" if in_bank else "bags",
-                              "name": item, "id": item_id})
+                              "name": item, "id": item_id, "count": stack})
                 continue
             if empty:
                 current = None
@@ -245,7 +256,7 @@ def load_export(name: Optional[str], server: Optional[str],
             else:
                 where = "bags"
             entry = {"loc": loc, "where": where, "name": item,
-                     "id": item_id, "sockets": {}}
+                     "id": item_id, "count": stack, "sockets": {}}
             items.append(entry)
             current = entry
         value["worn"] = worn

@@ -2569,3 +2569,28 @@ button.app-version:hover { color: var(--gold-bright); }
   color: #1fb38c;
   border: 1px solid rgba(31, 179, 140, .38);
 }
+
+/* Progress toward an unlock. Present only when the required total is
+   actually known — see QuestPanel. Flat and square like every other gauge
+   in the app. */
+.quest-progress {
+  position: relative;
+  height: 16px;
+  margin: 4px 0 3px;
+  background: rgba(0, 0, 0, .34);
+  border: 1px solid rgba(200, 170, 110, .22);
+}
+.quest-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(31, 179, 140, .34);
+}
+.quest-progress span {
+  position: relative;
+  display: block;
+  padding: 0 6px;
+  font-family: var(--mono, "IBM Plex Mono", monospace);
+  font-size: 10px;
+  line-height: 16px;
+  color: var(--ink, #e2ded6);
+}
