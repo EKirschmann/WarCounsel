@@ -124,13 +124,15 @@ export function QuestPanel({ level }: { level?: number | null }) {
       </div>
 
       <div className="panel-body" style={{ zoom: scale }}>
-        <p className="adv-note">
-          Quests that reference something in your bags, bank or worn slots, from
-          your <code>/outputfile inventory</code> export and the wiki. Counts are
-          what you are carrying — the required amount lives in each quest&apos;s
-          walkthrough, so follow the link rather than trusting a number here.
-          Class and level are shown, never used to hide a row: you will change
-          trio, and the items keep.
+        {/* One line, not five. The rationale that used to sit here — and
+            under every section heading — explained the design to someone who
+            only wants to know whether they can finish a quest. It lives in
+            tooltips now, where it is available and not in the way. */}
+        <p
+          className="adv-note"
+          title="From your /outputfile inventory export joined to the wiki. Counts are what you hold; the required amount lives in each quest's walkthrough, so follow the link rather than trusting a number here. Class and level are shown but never used to hide a row — you will change trio and the items keep."
+        >
+          Quests that want something you are already carrying.
         </p>
 
         {err && <p className="set-note" data-ok="0">{err}</p>}
@@ -146,20 +148,26 @@ export function QuestPanel({ level }: { level?: number | null }) {
           if (rowsIn.length === 0) return null;
           return (
             <div key={sec.key}>
-              <div className="adv-sub" style={{ marginTop: 12 }}>
+              <div className="adv-sub" style={{ marginTop: 12 }} title={sec.note}>
                 {sec.label} — {rowsIn.length}
               </div>
-              <p className="adv-note">{sec.note}</p>
               {rowsIn.map((q) => (
           <div className="quest-row" key={q.quest}>
             <div className="quest-head">
               <a href={q.url} target="_blank" rel="noreferrer noopener">
                 {q.quest}
               </a>
+              {/* A chip, not a suffix. "Gnoll Bounty L1" read as the quest's
+                  name; the level is a gate on it. */}
               {q.min_level != null && (
-                <span className="adv-cls" data-warn={q.below_level ? "1" : undefined}>
-                  {" "}L{q.min_level}
-                  {q.below_level ? ` — you are ${level ?? "?"}` : ""}
+                <span
+                  className="quest-lvl"
+                  data-warn={q.below_level ? "1" : undefined}
+                  title={q.below_level
+                    ? `Needs level ${q.min_level}; you are ${level ?? "?"}`
+                    : `Minimum level ${q.min_level}`}
+                >
+                  L{q.min_level}
                 </span>
               )}
               {q.unlocks && (
@@ -239,9 +247,8 @@ export function QuestPanel({ level }: { level?: number | null }) {
               Out of era — {outEra.length}
             </div>
             <p className="adv-note">
-              Kunark-era content and later, which this game does not implement.
-              The items are real and in your bags; the quests are not
-              currently doable. Listed so you know why you are carrying them.
+              Not implemented in this game — listed so you know why the items
+              are in your bags.
             </p>
             {outEra.map((q) => (
               <div className="quest-row" key={q.quest} data-dim="1">

@@ -2594,3 +2594,49 @@ button.app-version:hover { color: var(--gold-bright); }
   line-height: 16px;
   color: var(--ink, #e2ded6);
 }
+
+/* --- Quest row hierarchy -------------------------------------------------
+   54 rows of equal weight read as texture. The NAME is what you scan for,
+   so it leads; the meta line carries four different kinds of fact and is
+   demoted to one dim run; and the progress bar is left as the only
+   saturated thing in a row, because it is the only one that answers "how
+   close am I". */
+.quest-head a {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.quest-meta {
+  font-size: 10px;
+  color: var(--muted, rgba(226, 222, 214, .45));
+}
+/* rewards stop competing with the bar: still distinguishable, no longer lit */
+.quest-meta .quest-reward { color: rgba(31, 179, 140, .62); }
+/* the unlock chip is the row's one accent, so the level chip stays neutral */
+.quest-lvl {
+  margin-left: 6px;
+  padding: 0 4px;
+  font-family: var(--mono, "IBM Plex Mono", monospace);
+  font-size: 9.5px;
+  color: var(--muted, rgba(226, 222, 214, .55));
+  border: 1px solid rgba(200, 170, 110, .2);
+}
+.quest-lvl[data-warn] {
+  color: #d4574a;
+  border-color: rgba(212, 87, 74, .45);
+}
+.quest-items { font-size: 11px; }
+.quest-row { padding: 9px 0; }
+
+/* --- Provenance, quietly -------------------------------------------------
+   "SCREEN" was a lit green box carrying metadata about where a number came
+   from. It is a footnote, not a status. */
+.vitals-src {
+  margin-left: 4px;
+  padding: 0;
+  font-size: 8.5px;
+  letter-spacing: .06em;
+  color: var(--muted, rgba(226, 222, 214, .42));
+  border: none;
+  vertical-align: super;
+}

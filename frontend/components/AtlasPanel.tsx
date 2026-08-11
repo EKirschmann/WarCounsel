@@ -727,6 +727,22 @@ export const AtlasPanel = memo(function AtlasPanel({
           onPointerLeave={onPointerUp}
           onWheel={onWheel}
         />
+        {/* The biggest element on screen used to render NOTHING here: the
+            empty state was gated on `map && !map.available`, so before a
+            zone is known — when `map` is still null — six hundred pixels of
+            black said nothing at all. An empty screen should say what to do
+            next. */}
+        {!map && (
+          <div className="atlas-empty">
+            <p>{zone ? "Loading the chart…" : "No zone yet."}</p>
+            {!zone && (
+              <p className="atlas-empty-sub">
+                Zone in, or type <code>/loc</code>, and the chart appears. The
+                log has to name a zone before there is anything to draw.
+              </p>
+            )}
+          </div>
+        )}
         {map && !map.available && (
           <div className="atlas-empty">
             <p>No chart for <strong>{map.zone}</strong>.</p>
