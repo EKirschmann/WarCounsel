@@ -427,6 +427,40 @@ hours-to-level estimate (exact only after a same-session ding).
   - `SECTIONS`/`PRESETS` are the single source of truth: the panel renders
     from them over the API, so the switchboard cannot drift from what the
     overlay paints. Presets are `Everything`, `Combat focus`, `Meter only`.
+
+## The WEB panels have their own switchboard
+
+`backend/panel_prefs.py` -> `data/panel_prefs.json`, edited under Settings,
+and DELIBERATELY separate from the overlay's. A 42px strip and a 340px
+column answer different questions -- you want a damage meter and nothing
+else while fighting, and the full session ledger while planning -- so one
+shared set of toggles would mean hiding deaths mid-fight also hides them
+when you sit down. Same SHAPE as the overlay's (per section, per field,
+defaults all on, `save()` merges onto current, `SECTIONS`/`PRESETS` are the
+source of truth the panel renders from), so there is one pattern to learn.
+
+- `frontend/lib/panelPrefs.ts` fetches once and re-reads on an
+  `eql:panel-prefs` event the Settings pane fires after each save, so a
+  toggle lands without a reload. **`show()` returns TRUE when the prefs have
+  not arrived or the key is unknown** — a settings feature that blanks the
+  UI while loading its own config is worse than no settings feature.
+- Ledger rows key on the EVENT TYPE (`LEDGER_FIELD`), not on `classify()`'s
+  colour kind: "milestone" covers a level-up, a coin split and a faction hit
+  at once, so hiding loot by colour would take the ding with it. An unlisted
+  or brand-new type falls to `misc` and still renders.
+- **The HUD grid's column widths now live in `page.tsx`, not CSS.** They
+  depend on three things at once — which panels Settings left on, which are
+  collapsed to a 42px strip, and the viewport — and the old form was four
+  hand-written `:has()` combinations that each assumed all four panels
+  existed. Switching one off made every one of them wrong. React writes
+  `--hud-cols` / `--hud-cols-wide`; the stylesheet's rules consume them so
+  the media queries still decide which applies. The panels announce a
+  collapse with an `eql:collapse` window event.
+- Combat-mode and slim-ledger rules address `.vitals-panel` / `.enc-panel`
+  by CLASS. `> .panel:last-child` silently retargeted the ledger the moment
+  the encounter panel was switched off.
+- Quests is a TAB, not a column, so its switch hides the tab button; if it
+  was the open tab the Advisor shows rather than an empty stack.
   - When exactly ONE section survives, its header is SUPPRESSED — there is
     nothing to tell it apart from, and the 15px buys another row.
 - **Timers are depleting tracks, not a text list** — the one place besides

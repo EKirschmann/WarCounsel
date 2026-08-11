@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useState } from "react";
 import { apiGet, apiSend } from "@/lib/api";
+import { usePanelPrefs } from "@/lib/panelPrefs";
 
 /** 3,614,400 -> "3.6M" — lifetime numbers outgrow a table cell. */
 function fmtBig(n: number): string {
@@ -68,6 +69,7 @@ export const CharacterPanel = memo(function CharacterPanel({
   onSnapChange: (s: Snapshot) => void;
 }) {
   const [hpDraft, setHpDraft] = useState("");
+  const { show } = usePanelPrefs();
   const [manaDraft, setManaDraft] = useState("");
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [trios, setTrios] = useState<TrioCompareRow[]>([]);
@@ -98,7 +100,7 @@ export const CharacterPanel = memo(function CharacterPanel({
   }, [snap?.max_mana]);
   if (!snap) {
     return (
-      <section className="panel">
+      <section className="panel vitals-panel">
         <div className="panel-title">Vitals &amp; Session</div>
         <div className="panel-body">
           <p className="chat-empty">
@@ -137,7 +139,7 @@ export const CharacterPanel = memo(function CharacterPanel({
   };
 
   return (
-    <section className="panel">
+    <section className="panel vitals-panel">
       <div className="panel-title">Vitals &amp; Session</div>
       <div className="panel-body">
         <div className="level-row">
@@ -155,6 +157,7 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         </div>
 
+        {show("vitals", "maxes") && (
         <div
           className="vitals-edit"
           data-src={snap.vitals_source?.max_hp ?? undefined}
@@ -198,6 +201,8 @@ export const CharacterPanel = memo(function CharacterPanel({
           </label>
         </div>
 
+        )}
+
         {snap.level === null && (
           <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
             Level unknown — type <code>/who</code> in-game once and the
@@ -223,6 +228,7 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
+        {show("vitals", "dps") && (
         <div className="gauge">
           <div className="gauge-label">
             <span>DPS (60s)</span>
@@ -232,6 +238,7 @@ export const CharacterPanel = memo(function CharacterPanel({
             <div className="gauge-fill" style={{ width: `${dpsPct}%` }} />
           </div>
         </div>
+        )}
 
         {(snap.timers?.length ?? 0) > 0 && (
           <ul className="vital-timers" aria-label="Active timers">
@@ -249,59 +256,83 @@ export const CharacterPanel = memo(function CharacterPanel({
         )}
 
         <div className="tiles">
+          {show("vitals", "damage") && (
           <div className="tile" data-accent="out">
             <div className="tile-value">{fmt(s.damage_dealt)}</div>
             <div className="tile-label">Damage dealt</div>
           </div>
+          )}
+          {show("vitals", "damage") && (
           <div className="tile" data-accent="in">
             <div className="tile-value">{fmt(s.damage_taken)}</div>
             <div className="tile-label">Damage taken</div>
           </div>
+          )}
+          {show("vitals", "healing") && (
           <div className="tile" data-accent="heal">
             <div className="tile-value">{fmt(s.healing_received)}</div>
             <div className="tile-label">Healing received</div>
           </div>
+          )}
+          {show("vitals", "healing") && (
           <div className="tile" data-accent="heal">
             <div className="tile-value">{fmt(s.healing_done)}</div>
             <div className="tile-label">Healing done</div>
           </div>
+          )}
+          {show("vitals", "kills") && (
           <div className="tile" data-accent="milestone">
             <div className="tile-value">{s.kills}</div>
             <div className="tile-label">Kills</div>
           </div>
+          )}
+          {show("vitals", "kills") && (
           <div className="tile" data-accent="in">
             <div className="tile-value">{s.deaths}</div>
             <div className="tile-label">Deaths</div>
           </div>
+          )}
+          {show("vitals", "level") && (
           <div className="tile" data-accent="milestone">
             <div className="tile-value">
               {s.xp_percent > 0 ? `${s.xp_percent.toFixed(1)}%` : s.xp_ticks}
             </div>
             <div className="tile-label">XP gained</div>
           </div>
+          )}
+          {show("vitals", "aa") && (
           <div className="tile" data-accent="milestone">
             <div className="tile-value">{s.aa_points}</div>
             <div className="tile-label">AA points</div>
           </div>
+          )}
+          {show("vitals", "accuracy") && (
           <div className="tile">
             <div className="tile-value">{s.hit_rate}%</div>
             <div className="tile-label">Hit rate</div>
           </div>
+          )}
+          {show("vitals", "accuracy") && (
           <div className="tile">
             <div className="tile-value">{s.skill_ups}</div>
             <div className="tile-label">Skill-ups</div>
           </div>
+          )}
+          {show("vitals", "coin") && (
           <div className="tile" data-accent="milestone">
             <div className="tile-value">{fmtCoin(s.coin_copper ?? 0)}</div>
             <div className="tile-label">Coin earned</div>
           </div>
+          )}
+          {show("vitals", "coin") && (
           <div className="tile" data-accent="out">
             <div className="tile-value">{s.crits ?? 0}</div>
             <div className="tile-label">Crits ✦</div>
           </div>
+          )}
         </div>
 
-        {s.loots.length > 0 && (
+        {show("vitals", "loot") && s.loots.length > 0 && (
           <div className="loot-list">
             <h3>Recent loot</h3>
             <ul>
@@ -312,7 +343,7 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
-        {Object.keys(snap.unlock_loot ?? {}).length > 0 && (
+        {show("vitals", "unlocks") && Object.keys(snap.unlock_loot ?? {}).length > 0 && (
           <div className="loot-list unlock-list">
             {/* Nothing in the game says a Gnoll Fang is 1/1200th of a
                 Barbarian at the moment you loot it, and the cost of not
@@ -336,7 +367,7 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
-        {trios.length > 1 && (
+        {show("vitals", "trio") && trios.length > 1 && (
           <div className="loot-list hunt-list">
             <h3>Trio comparison</h3>
             <table className="hunt-table">
@@ -408,7 +439,7 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
-        {sessions.length > 0 && !showAllTime && (
+        {show("vitals", "sessions") && sessions.length > 0 && !showAllTime && (
           <div className="loot-list hunt-list">
             <h3>Past sessions</h3>
             <table className="hunt-table">
@@ -443,7 +474,7 @@ export const CharacterPanel = memo(function CharacterPanel({
           </div>
         )}
 
-        {snap.mob_stats.length > 0 && (
+        {show("vitals", "hunting") && snap.mob_stats.length > 0 && (
           <div className="loot-list hunt-list">
             <h3>Session hunting</h3>
             <table className="hunt-table">

@@ -9,6 +9,7 @@ import type {
   FilteredContributor,
 } from "@/lib/types";
 import { trustAll, trustMember } from "@/lib/api";
+import { usePanelPrefs } from "@/lib/panelPrefs";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -92,6 +93,7 @@ export const EncounterPanel = memo(function EncounterPanel({
   // Names the player has ruled on this render, so a row leaves immediately
   // instead of lingering until the next snapshot lands.
   const [ruled, setRuled] = useState<Record<string, boolean>>({});
+  const { show } = usePanelPrefs();
   // Adding everyone can push the roster past what a group holds, and a
   // wrong name credits damage that is not yours -- so that one asks twice.
   // Ignoring everyone is reversible by any join, invite or group line, so
@@ -129,6 +131,7 @@ export const EncounterPanel = memo(function EncounterPanel({
   const toggleOpen = () => {
     setOpen((v) => {
       localStorage.setItem("eql.encOpen", v ? "0" : "1");
+      window.dispatchEvent(new Event("eql:collapse"));
       return !v;
     });
   };
@@ -203,7 +206,7 @@ export const EncounterPanel = memo(function EncounterPanel({
                 const d = enc.defense ?? {};
                 const avoided = Object.values(d).reduce((a, b) => a + b, 0);
                 const attacks = avoided + (enc.in_hits ?? 0);
-                if (!attacks) return null;
+                if (!attacks || !show("encounter", "defense")) return null;
                 const parts = ["dodge", "parry", "block", "riposte", "miss"]
                   .filter((k) => d[k])
                   .map((k) => `${k} ${d[k]}`)
@@ -215,7 +218,7 @@ export const EncounterPanel = memo(function EncounterPanel({
                   </div>
                 );
               })()}
-              {enc.resists && Object.keys(enc.resists).length > 0 && (
+              {show("encounter", "defense") && enc.resists && Object.keys(enc.resists).length > 0 && (
                 <div className="enc-defense">
                   resisted —{" "}
                   {Object.entries(enc.resists)
@@ -223,7 +226,7 @@ export const EncounterPanel = memo(function EncounterPanel({
                     .join(" · ")}
                 </div>
               )}
-              {(enc.timeline?.length ?? 0) > 2 && (
+              {show("encounter", "timeline") && (enc.timeline?.length ?? 0) > 2 && (
                 <div className="enc-timeline" aria-label="Damage over the fight (2s buckets)">
                   {(() => {
                     const tl = enc.timeline ?? [];
@@ -250,8 +253,10 @@ export const EncounterPanel = memo(function EncounterPanel({
               )}
             </div>
 
-            <AbilityTable abilities={enc.abilities.filter((a) => a.kind !== "pet")} />
-            {enc.abilities.some((a) => a.kind === "pet") && (
+            {show("encounter", "abilities") && (
+              <AbilityTable abilities={enc.abilities.filter((a) => a.kind !== "pet")} />
+            )}
+            {show("encounter", "pet") && enc.abilities.some((a) => a.kind === "pet") && (
               <div className="enc-agg">
                 <h3>
                   Pet ·{" "}
@@ -265,7 +270,7 @@ export const EncounterPanel = memo(function EncounterPanel({
               </div>
             )}
 
-            {enc.heals.length > 0 && (
+            {show("encounter", "heals") && enc.heals.length > 0 && (
               <div className="enc-agg">
                 <h3>Healing · {fmt(enc.total_healing)}</h3>
                 <AbilityTable abilities={enc.heals} />
@@ -296,7 +301,7 @@ export const EncounterPanel = memo(function EncounterPanel({
               </div>
             )}
 
-            {(filtered ?? []).some((f) => !ruled[f.name]) && (
+            {show("encounter", "filtered") && (filtered ?? []).some((f) => !ruled[f.name]) && (
               <div className="enc-agg enc-filtered">
                 <h3>Not counted</h3>
                 <p className="enc-filtered-why">
@@ -415,7 +420,7 @@ export const EncounterPanel = memo(function EncounterPanel({
               </div>
             )}
 
-            {enc.allies.length > 1 && (
+            {show("encounter", "group") && enc.allies.length > 1 && (
               <div className="enc-agg">
                 <h3>Group — this fight</h3>
                 <table className="enc-table">

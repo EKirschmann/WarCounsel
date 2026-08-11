@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { usePanelPrefs } from "@/lib/panelPrefs";
 import { ItemHover } from "./ItemHover";
 
 /* Quests your bags are already carrying items for.
@@ -55,6 +56,7 @@ const SECTIONS: { key: string; label: string; note: string }[] = [
 ];
 
 export function QuestPanel({ level }: { level?: number | null }) {
+  const { show } = usePanelPrefs();
   const [rows, setRows] = useState<QuestRow[] | null>(null);
   const [scanned, setScanned] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -144,6 +146,7 @@ export function QuestPanel({ level }: { level?: number | null }) {
         )}
 
         {SECTIONS.map((sec) => {
+          if (!show("quests", sec.key)) return null;
           const rowsIn = shown.filter((q) => (q.kind || "other") === sec.key);
           if (rowsIn.length === 0) return null;
           return (
@@ -241,7 +244,7 @@ export function QuestPanel({ level }: { level?: number | null }) {
           </button>
         )}
 
-        {outEra.length > 0 && (
+        {show("quests", "out_of_era") && outEra.length > 0 && (
           <>
             <div className="adv-sub" style={{ marginTop: 14 }}>
               Out of era — {outEra.length}

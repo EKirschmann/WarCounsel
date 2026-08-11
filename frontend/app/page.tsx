@@ -12,6 +12,7 @@ import { AtlasPanel } from "@/components/AtlasPanel";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { EncounterPanel } from "@/components/EncounterPanel";
 import { WarLedger } from "@/components/WarLedger";
+import { usePanelPrefs } from "@/lib/panelPrefs";
 
 const MAX_ROWS = 300;
 
@@ -106,6 +107,56 @@ export default function Home() {
   const status = useWebSocket(onMessage);
   const [chars, setChars] = useState<CharacterEntry[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { show } = usePanelPrefs();
+  // Collapsed side panels shrink to a 42px strip. Tracked here, not only in
+  // CSS, because the number of tracks depends on which panels Settings left
+  // switched on -- the two facts have to be resolved together.
+  const [collapsed, setCollapsed] = useState({ ledger: false, enc: false });
+  useEffect(() => {
+    const read = () =>
+      setCollapsed({
+        ledger: localStorage.getItem("eql.ledgerOpen") === "0",
+        enc: localStorage.getItem("eql.encOpen") === "0",
+      });
+    read();
+    window.addEventListener("eql:collapse", read);
+    return () => window.removeEventListener("eql:collapse", read);
+  }, []);
+  const showVitals = show("vitals");
+  const showLedger = show("ledger");
+  const showEnc = show("encounter");
+  const showQuests = show("quests");
+  // Only set when something is OFF, so the default layout stays exactly
+  // the stylesheet's — including its media queries, which a blanket
+  // inline override would have flattened.
+  // The single description of this grid, because the widths depend on three
+  // things at once: which panels Settings left on, which are collapsed to a
+  // 42px strip, and the viewport. It used to be four CSS combinations that
+  // each assumed all four panels existed.
+  //
+  // A collapsed OR hidden side panel hands its width to the OTHER side
+  // panel, not to the centre — the encounter breakdown is what people widen
+  // the ledger away for, and it reflows into columns once it has the room.
+  const ledgerSlim = !showLedger || collapsed.ledger;
+  const encSlim = !showEnc || collapsed.enc;
+  const cols = (vitals: string, centre: string, ledger: string, enc: string) =>
+    [showVitals && vitals, centre, showLedger && ledger, showEnc && enc]
+      .filter(Boolean)
+      .join(" ");
+  const hudCols = {
+    "--hud-cols": cols(
+      "320px",
+      "minmax(380px, 1fr)",
+      collapsed.ledger ? "42px" : encSlim ? "minmax(380px, 1fr)" : "380px",
+      collapsed.enc ? "42px" : ledgerSlim ? "minmax(560px, 640px)" : "300px",
+    ),
+    "--hud-cols-wide": cols(
+      "340px",
+      "minmax(760px, 1fr)",
+      collapsed.ledger ? "42px" : encSlim ? "minmax(420px, 1fr)" : "420px",
+      collapsed.enc ? "42px" : ledgerSlim ? "minmax(640px, 760px)" : "340px",
+    ),
+  } as React.CSSProperties;
   const [activeFile, setActiveFile] = useState<string | null>(null);
 
   useEffect(() => {
@@ -240,8 +291,12 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="hud-grid" data-combat={centerOpen ? undefined : "1"}>
-        <CharacterPanel snap={snap} onSnapChange={setSnap} />
+      <div
+        className="hud-grid"
+        data-combat={centerOpen ? undefined : "1"}
+        style={hudCols}
+      >
+        {showVitals && <CharacterPanel snap={snap} onSnapChange={setSnap} />}
         {centerOpen ? (
           <div className="center-stack">
             <div className="tab-row" role="tablist">
@@ -261,6 +316,7 @@ export default function Home() {
               >
                 Advisor
               </button>
+              {showQuests && (
               <button
                 role="tab"
                 aria-selected={centerTab === "quests"}
@@ -269,6 +325,7 @@ export default function Home() {
               >
                 Quests
               </button>
+              )}
               <button
                 type="button"
                 className="tab-collapse"
@@ -280,7 +337,7 @@ export default function Home() {
             </div>
             {centerTab === "atlas" ? (
               <AtlasPanel zone={snap?.zone ?? null} position={snap?.position ?? null} />
-            ) : centerTab === "quests" ? (
+            ) : centerTab === "quests" && showQuests ? (
               <QuestPanel level={snap?.level ?? null} />
             ) : (
               <AdvisorPanel snap={snap} onSnapChange={setSnap} />
@@ -296,13 +353,15 @@ export default function Home() {
             Atlas · Advisor ▸
           </button>
         )}
-        <WarLedger rows={rows} />
+        {showLedger && <WarLedger rows={rows} />}
+        {showEnc && (
         <EncounterPanel
           encounters={snap?.encounters ?? []}
           summary={snap?.ability_summary ?? null}
           lastDeath={snap?.last_death ?? null}
           filtered={snap?.filtered}
         />
+        )}
       </div>
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} />

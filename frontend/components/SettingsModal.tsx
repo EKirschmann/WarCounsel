@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet, apiSend } from "@/lib/api";
 import type { LlmProbe } from "@/lib/types";
 import { OcrSettings } from "./OcrSettings";
+import { PanelPresets, PanelSettings } from "./PanelSettings";
 import { OverlaySettings } from "./OverlaySettings";
 import { TriggerSettings } from "./TriggerSettings";
 
@@ -147,6 +148,23 @@ function modelFor(provider: string, llm: SettingsData["llm"]): string {
   }
 }
 
+/** Left-rail entries. Panels sit between the general settings and the
+ *  peripheral ones, because they are what people actually adjust. */
+const PANEL_TABS = [
+  { key: "vitals", label: "Vitals & Session" },
+  { key: "encounter", label: "Encounter" },
+  { key: "quests", label: "Quests" },
+  { key: "ledger", label: "War Ledger" },
+];
+const RAIL = [
+  { key: "general", label: "General" },
+  ...PANEL_TABS,
+  { key: "overlay", label: "Overlay" },
+  { key: "triggers", label: "Triggers" },
+  { key: "ocr", label: "Screen reading" },
+  { key: "llm", label: "Advisor model" },
+];
+
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<SettingsData | null>(null);
   const [gameDir, setGameDir] = useState("");
@@ -164,6 +182,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   // ANOTHER machine, so it cannot be a fixed default.
   const [ollamaUrl, setOllamaUrl] = useState("");
   const [ctxLimit, setCtxLimit] = useState("");
+  const [tab, setTab] = useState("general");
   const [customUrl, setCustomUrl] = useState("");
   const [probe, setProbe] = useState<LlmProbe | null>(null);
   const [probing, setProbing] = useState(false);
@@ -340,8 +359,26 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         {!data && !error && <p className="chat-empty">Loading…</p>}
 
         {data && (
-          <div className="modal-body">
-            <section className="set-block">
+          <div className="modal-body set-split">
+            {/* A rail, because the modal had grown to six stacked blocks and
+                finding the overlay switches meant scrolling past the model
+                picker. Panels get their own entries so "stop showing me
+                deaths" has somewhere obvious to live. */}
+            <nav className="set-rail" aria-label="Settings sections">
+              {RAIL.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  data-active={tab === r.key}
+                  onClick={() => setTab(r.key)}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </nav>
+            <div className="set-pane">
+            {tab === "general" && (
+<section className="set-block">
               <label htmlFor="set-game">Game folder</label>
               <div className="set-row">
                 <input
@@ -378,8 +415,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 </p>
               )}
             </section>
+)}
 
-            <section className="set-block">
+            {tab === "llm" && (
+<section className="set-block">
               <label htmlFor="set-provider">Advisor model</label>
               <select
                 id="set-provider"
@@ -654,8 +693,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 </>
               )}
             </section>
+)}
 
-            <section className="set-block">
+            {tab === "overlay" && (
+<section className="set-block">
               <label>Overlay</label>
               <p className="set-note">
                 Pick what the in-game overlay shows. The rest stays here in the
@@ -663,8 +704,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               </p>
               <OverlaySettings />
             </section>
+)}
 
-            <section className="set-block">
+            {tab === "triggers" && (
+<section className="set-block">
               <label>Triggers</label>
               <p className="set-note">
                 Watch the log for the things you would otherwise miss — a
@@ -673,8 +716,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               </p>
               <TriggerSettings />
             </section>
+)}
 
-            <section className="set-block">
+            {tab === "ocr" && (
+<section className="set-block">
               <label>Screen reading (OCR)</label>
               <p className="set-note">
                 Optional and Windows-only. The app reads two small boxes on your
@@ -682,8 +727,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               </p>
               <OcrSettings />
             </section>
+)}
 
-            <section className="set-block">
+            {tab === "general" && (
+<section className="set-block">
               <p className="set-note">
                 Data folder: <code>{data.data_dir}</code>
                 <br />
@@ -691,9 +738,31 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 {data.packaged ? " (packaged build)" : ""}
               </p>
             </section>
+)}
 
             {error && <p className="set-note" data-ok="0">{error}</p>}
 
+            {PANEL_TABS.some((t) => t.key === tab) && (
+              <section className="set-block">
+                <label>{PANEL_TABS.find((t) => t.key === tab)!.label}</label>
+                <p className="set-note">
+                  Choose what this panel shows. Kept separate from the overlay:
+                  a glance strip and a full column want different things.
+                </p>
+                <PanelSettings active={tab} />
+              </section>
+            )}
+            {tab === "general" && (
+              <section className="set-block">
+                <label>Panel presets</label>
+                <p className="set-note">
+                  Starting points for every panel at once. Adjust individual
+                  panels from the list on the left.
+                </p>
+                <PanelPresets />
+              </section>
+            )}
+            </div>
             <div className="modal-foot">
               <button type="button" onClick={onClose} disabled={busy}>
                 Cancel

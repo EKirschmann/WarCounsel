@@ -58,7 +58,7 @@ body {
 
 .hud-grid {
   display: grid;
-  grid-template-columns: 320px minmax(380px, 1fr) 380px 300px;
+  grid-template-columns: var(--hud-cols, 320px minmax(380px, 1fr) 380px 300px);
   gap: 16px;
   flex: 1;
   min-height: 0;
@@ -77,7 +77,7 @@ body {
 /* wide monitors (2560px class): hand the spare real estate to the atlas */
 @media (min-width: 1920px) {
   .hud { max-width: 2460px; }
-  .hud-grid { grid-template-columns: 340px minmax(760px, 1fr) 420px 340px; }
+  .hud-grid { grid-template-columns: var(--hud-cols-wide, 340px minmax(760px, 1fr) 420px 340px); }
 }
 
 /* ---- header -------------------------------------------------------------- */
@@ -1653,21 +1653,21 @@ button.app-version:hover { color: var(--gold-bright); }
   min-height: 0;
   overflow-y: auto;
 }
-.hud-grid[data-combat] > .panel:last-child .panel-body {
+.hud-grid[data-combat] > .enc-panel .panel-body {
   column-width: 360px;
   column-gap: 20px;
 }
-.hud-grid[data-combat] > .panel:last-child .enc-summary,
-.hud-grid[data-combat] > .panel:last-child .enc-agg {
+.hud-grid[data-combat] > .enc-panel .enc-summary,
+.hud-grid[data-combat] > .enc-panel .enc-agg {
   break-inside: avoid;
 }
-.hud-grid[data-combat] > .panel:last-child .enc-agg {
+.hud-grid[data-combat] > .enc-panel .enc-agg {
   margin-top: 0;
   padding-top: 14px;
 }
-.hud-grid[data-combat] > .panel:first-child { grid-row: 1; grid-column: 1; }
+.hud-grid[data-combat] > .vitals-panel { grid-row: 1; grid-column: 1; }
 .hud-grid[data-combat] .center-reopen { grid-row: 1 / -1; grid-column: 2; }
-.hud-grid[data-combat] > .panel:last-child { grid-row: 1; grid-column: 3; }
+.hud-grid[data-combat] > .enc-panel { grid-row: 1; grid-column: 3; }
 .hud-grid[data-combat] .ledger-panel {
   grid-row: 2;
   grid-column: 1 / -1;
@@ -1715,27 +1715,19 @@ button.app-version:hover { color: var(--gold-bright); }
   .center-stack > .panel { min-height: 0; overflow-y: auto; }
 }
 
-/* collapsed ledger in NORMAL mode: shrink the whole grid column to a slim
-   vertical strip (combat mode keeps the horizontal bottom bar) */
-/* the ledger's freed width goes to the ENCOUNTER panel, which reflows
-   into columns once it is wide enough */
-.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) {
-  grid-template-columns: 320px minmax(380px, 1fr) 42px minmax(560px, 640px);
-}
-@media (min-width: 1920px) {
-  .hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) {
-    grid-template-columns: 340px minmax(760px, 1fr) 42px minmax(640px, 760px);
-  }
-}
-.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .panel:last-child .panel-body {
+/* Column WIDTHS for a collapsed panel now come from page.tsx, which is the
+   only place that knows both what is collapsed and what Settings switched
+   off. Four hand-written combinations used to live here and each assumed
+   all four panels existed. Everything below is the strip's own styling. */
+.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .enc-panel .panel-body {
   column-width: 290px;
   column-gap: 18px;
 }
-.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .panel:last-child .enc-summary,
-.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .panel:last-child .enc-agg {
+.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .enc-panel .enc-summary,
+.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .enc-panel .enc-agg {
   break-inside: avoid;
 }
-.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .panel:last-child .enc-agg {
+.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]) > .enc-panel .enc-agg {
   margin-top: 0;
   padding-top: 14px;
 }
@@ -2528,20 +2520,6 @@ button.app-version:hover { color: var(--gold-bright); }
    express at all. */
 .enc-panel[data-collapsed] { max-height: none; }
 
-.hud-grid:not([data-combat]):has(.enc-panel[data-collapsed]) {
-  grid-template-columns: 320px minmax(380px, 1fr) minmax(380px, 1fr) 42px;
-}
-.hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]):has(.enc-panel[data-collapsed]) {
-  grid-template-columns: 320px minmax(380px, 1fr) 42px 42px;
-}
-@media (min-width: 1920px) {
-  .hud-grid:not([data-combat]):has(.enc-panel[data-collapsed]) {
-    grid-template-columns: 340px minmax(760px, 1fr) minmax(420px, 1fr) 42px;
-  }
-  .hud-grid:not([data-combat]):has(.ledger-panel[data-collapsed]):has(.enc-panel[data-collapsed]) {
-    grid-template-columns: 340px minmax(760px, 1fr) 42px 42px;
-  }
-}
 
 /* the strip itself: title turned on its side, controls out of the way */
 .hud-grid:not([data-combat]) .enc-panel[data-collapsed] .panel-title {
@@ -2639,4 +2617,73 @@ button.app-version:hover { color: var(--gold-bright); }
   color: var(--muted, rgba(226, 222, 214, .42));
   border: none;
   vertical-align: super;
+}
+
+/* --- Settings rail -------------------------------------------------------
+   Six stacked blocks meant scrolling past the model picker to reach the
+   overlay switches. A rail turns that into one click, and gives each panel
+   somewhere obvious to own its own visibility choices. */
+.set-split { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 0; }
+.set-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 10px 4px 0;
+  border-right: 1px solid rgba(200, 170, 110, .18);
+}
+.set-rail button {
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--muted, rgba(226, 222, 214, .6));
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+}
+.set-rail button:hover { color: var(--ink, #e2ded6); background: rgba(255,255,255,.03); }
+.set-rail button[data-active="true"] {
+  color: var(--gold, #c8aa6e);
+  border-left-color: var(--gold, #c8aa6e);
+  background: rgba(200, 170, 110, .08);
+}
+.set-rail button:focus-visible { outline: 2px solid var(--gold, #c8aa6e); outline-offset: -2px; }
+.set-pane { padding-left: 16px; min-width: 0; }
+
+/* per-panel field switches */
+/* The master switch governs every field under it, so it cannot read as one
+   more field in the list -- it sits above a rule, in the panel's own type. */
+.pp-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(200, 170, 110, .18);
+}
+.pp-fields { display: flex; flex-direction: column; gap: 3px; margin-top: 10px; }
+.pp-fields[data-off] { opacity: .4; }
+.pp-field { display: flex; align-items: flex-start; gap: 6px; font-size: 11.5px; }
+.pp-hint { color: var(--muted, rgba(226, 222, 214, .5)); }
+.pp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-presets button {
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  color: var(--gold, #c8aa6e);
+  background: transparent;
+  border: 1px solid rgba(200, 170, 110, .34);
+  border-radius: 0;
+  cursor: pointer;
+}
+.pp-presets button:hover { background: rgba(200, 170, 110, .12); }
+
+.pp-saved {
+  font-size: 10.5px;
+  color: var(--muted, rgba(226, 222, 214, .5));
+  margin: 7px 0 0;
 }

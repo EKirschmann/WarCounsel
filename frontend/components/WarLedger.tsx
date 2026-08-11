@@ -1,10 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePanelPrefs } from "@/lib/panelPrefs";
 import type { LedgerRow } from "@/lib/types";
 
 /** Events that are ambient-world noise, not the player's own combat. */
 const OTHER_TYPES = new Set(["other_death", "non_melee"]);
+
+/* Which Settings switch owns a row.
+ *
+ * Keyed on the EVENT TYPE, not on classify()'s colour kind: "milestone"
+ * covers a level-up, a coin split and a faction hit at once, so hiding
+ * loot by colour would take the ding with it. Anything unlisted lands in
+ * "misc", which is also what a type this build has never seen gets --
+ * an unknown row still renders unless misc is switched off.
+ */
+const LEDGER_FIELD: Record<string, string> = {
+  melee_out: "damage", spell_out: "damage", melee_in: "damage",
+  spell_in: "damage", ds_out: "damage", non_melee: "damage",
+  dot_out: "damage", miss_out: "damage", miss_in: "damage",
+  rune: "damage", self_hurt: "damage", stunned: "damage",
+  heal_in: "heals", heal_out: "heals",
+  cast: "casts", other_cast: "casts", interrupt: "casts",
+  fizzle: "casts", resist: "casts", buff_fade: "casts",
+  mesmerized: "casts", mend: "casts", cooldown_readout: "casts",
+  loot: "loot", coin: "loot", merge: "loot", destroyed: "loot", roll: "loot",
+};
 
 /** kind → left-rule + value color (see globals.css [data-kind]) */
 function classify(r: LedgerRow): {
@@ -142,6 +163,7 @@ const VISIBLE_ROWS = 50;
 export function WarLedger({ rows: allRows }: { rows: LedgerRow[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
+  const { show } = usePanelPrefs();
   const [mineOnly, setMineOnly] = useState(true);
   const [open, setOpen] = useState(true);
   useEffect(() => {
@@ -150,6 +172,7 @@ export function WarLedger({ rows: allRows }: { rows: LedgerRow[] }) {
   const toggleOpen = () => {
     setOpen((v) => {
       localStorage.setItem("eql.ledgerOpen", v ? "0" : "1");
+      window.dispatchEvent(new Event("eql:collapse"));
       return !v;
     });
   };
@@ -204,6 +227,7 @@ export function WarLedger({ rows: allRows }: { rows: LedgerRow[] }) {
         ) : (
           <ul className="ledger">
             {rows.map((r, i) => {
+              if (!show("ledger", LEDGER_FIELD[r.type] ?? "misc")) return null;
               const c = classify(r);
               if (c.divider) {
                 return (

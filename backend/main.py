@@ -1673,6 +1673,22 @@ def _items_including_pet(inv) -> list:
     return items
 
 
+@app.get("/api/panel/prefs")
+async def get_panel_prefs():
+    """What each web panel shows, plus the schema the UI renders from."""
+    from backend import panel_prefs
+    return panel_prefs.schema()
+
+
+@app.post("/api/panel/prefs")
+async def post_panel_prefs(body: dict):
+    """Merge a partial change. A preset name replaces the lot."""
+    from backend import panel_prefs
+    if body.get("preset"):
+        return {"prefs": panel_prefs.apply_preset(str(body["preset"]))}
+    return {"prefs": panel_prefs.save(body or {})}
+
+
 @app.get("/api/quests")
 async def get_quests():
     """Owned items matched to the quests that reference them.
