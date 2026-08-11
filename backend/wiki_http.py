@@ -121,7 +121,19 @@ async def fetch_page_wikitext(title: str):
         return await asyncio.to_thread(work)
     except Exception as e:
         logger.warning("HTTP wiki wikitext %r failed: %s", title, e)
-        return None
+        # Same distinction as fetch_page_html: an outage is not an answer,
+        # and callers must not cache it as one.
+        raise WikiUnavailable(str(e)) from e
+
+
+class WikiUnavailable(Exception):
+    """The wiki could not be reached. Distinct from a page not existing.
+
+    Both used to surface as None, so a timeout was indistinguishable from
+    an absent page -- and callers cached the "absent" answer. One outage
+    therefore wrote a miss for every item and kept the result for an hour
+    after the wiki came back.
+    """
 
 
 async def fetch_page_html(title: str):
@@ -139,7 +151,7 @@ async def fetch_page_html(title: str):
         return await asyncio.to_thread(work)
     except Exception as e:
         logger.warning("HTTP wiki html %r failed: %s", title, e)
-        return None
+        raise WikiUnavailable(str(e)) from e
 
 
 async def search_pages(query: str, limit: int = 10) -> list:

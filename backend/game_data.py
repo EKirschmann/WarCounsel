@@ -824,8 +824,16 @@ async def item_acquisition(name: str) -> dict:
     cached = wiki_page_cache.get("item_acq1", key)
     if cached is not None:
         return cached
-    from backend.wiki_http import fetch_page_html
-    html = await fetch_page_html(base)
+    from backend.wiki_http import WikiUnavailable, fetch_page_html
+    try:
+        html = await fetch_page_html(base)
+    except WikiUnavailable:
+        # The wiki is DOWN, not silent about this item. Serve whatever we
+        # last knew and cache NOTHING -- writing a miss here is what turned
+        # one outage into an hour of empty results after it had passed.
+        stale = wiki_page_cache.get_stale("item_acq1", key)
+        return stale if stale is not None else {
+            "item": base, "sections": [], "available": False, "offline": True}
     if html is None:
         stale = wiki_page_cache.get_stale("item_acq1", key)
         if stale is not None:
@@ -1163,7 +1171,12 @@ async def spell_vendors(spell: str) -> list:
                 rows.append({"zone": zone, "vendor": vendor,
                              "where": where, "loc": loc})
     except Exception:
+        # Do NOT fall through to the cache write below. Caching an empty
+        # result after a failure keeps the failure alive for the full TTL
+        # long after the wiki has recovered -- the same trap item
+        # acquisition fell into, one line further down.
         logger.exception("spell_vendors(%s) failed", spell)
+        return wiki_page_cache.get_stale("spell_vendors", key) or []
     wiki_page_cache.set(rows, WIKI_TTL, "spell_vendors", key)
     return rows
 

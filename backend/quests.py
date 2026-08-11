@@ -112,14 +112,20 @@ def _parse_quest(wikitext: str) -> dict:
     return out
 
 
-def _have(held: dict, item_names: list) -> int:
-    """How many of the quest's items you are carrying, across every stack.
+def _have(held: dict, item_names: list, only: Optional[str] = None) -> int:
+    """How many of the counted item you are carrying, across every stack.
 
-    The export's stack column was being discarded, so 27 gnoll fangs and 42
-    phosphorous powder both counted as one and every unlock looked
-    untouched. It is the one number here that is exact.
+    `only` names the ONE item a requirement refers to. Gnoll Bounty also
+    references a Water Flask and a Ration, and summing all three read
+    190/1200 against a total that is 1200 GNOLL FANGS -- a progress bar
+    inflated by unrelated things sharing a page.
+
+    The export's stack column was being discarded too, so 27 fangs and 42
+    powder both counted as one. Both halves had to be right before a bar
+    could mean anything.
     """
-    return sum(held.get(n, {}).get("count", 0) for n in item_names)
+    names = [only] if only else item_names
+    return sum(held.get(n, {}).get("count", 0) for n in names)
 
 
 def _unlocks(kind: str, page: dict) -> Optional[str]:
@@ -284,7 +290,7 @@ async def quests_for_items(items: list, level=None) -> list:
                 "rewards": [f"{rec['race']} unlock"],
                 "kind": "race", "unlocks": rec.get("race"),
                 "needed": rec.get("total"),
-                "have": _have(held, item_names),
+                "have": _have(held, item_names, (extra or {}).get("item")),
                 "per_turnin": rec.get("per_turnin"),
                 "note": rec.get("note"),
                 "era": None, "out_of_era": False,
@@ -315,7 +321,8 @@ async def quests_for_items(items: list, level=None) -> list:
             "unlocks": (extra["race"] if extra
                         else _unlocks(_kind(quest, page, item_names), page)),
             "needed": (extra or {}).get("total"),
-            "have": _have(held, item_names),
+            "have": _have(held, item_names,
+                          (extra or {}).get("item")),
             "per_turnin": (extra or {}).get("per_turnin"),
             "note": (extra or {}).get("note"),
             "era": page.get("era"),
