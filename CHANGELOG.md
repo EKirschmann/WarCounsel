@@ -4,6 +4,43 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.7.0 — 2026-08-10
+
+**New: a Quests tab.** Your inventory export says what you are carrying,
+item wiki pages say which quests want each item, and quest pages carry the
+giver, zone, level and reward. Joined together, a bag of oddments becomes a
+list of things you are already partway through. On one character, 127 items
+matched 54 quests — including a Thex Mallet with both the hilt and the head
+sitting in different places.
+
+Grouped by what the quest is FOR — race unlocks, class quests, equipment,
+spells, faction turn-ins — using the wiki's own categories rather than
+labels we invented. Race unlocks name the race, class quests name the
+classes. Out-of-era content (Kunark and later, which this game does not
+implement) sits in its own section at the bottom: the items are real and in
+your bags, so the section answers "why am I carrying this".
+
+**Progress bars, where the number is actually known.** The race-unlock table
+states exact totals and your export states exact stack sizes, so those rows
+show real progress — 42/800 toward Froglok. Wiki quests get no bar, because
+their counts live in walkthrough prose and a number scraped from a sentence
+would send you farming the wrong amount. A bar on some rows and not others
+is the honest version of knowing one number and not the other.
+
+**Fixed: stack sizes were being thrown away.** The inventory export's count
+column was parsed and discarded, so 27 gnoll fangs and 42 phosphorous
+powder both read as one item. This affected anything that counted what you
+own.
+
+**Fixed: a wiki outage used to persist after the wiki recovered.** A timeout
+and a missing page looked identical to the code, so a timeout was cached as
+"this item has no data" — for an hour, or a day for vendor lookups. One
+outage could empty the quest tab and keep it empty. Failures are now told
+apart from answers, and never cached.
+
+**The Encounter panel can be collapsed**, like the War Ledger, and the
+Quests tab has the same A−/A+ text size control the Encounter panel has.
+
 ## v2.6.2 — 2026-08-10
 
 **Leveling-chart zones now route.** The community hunting sheet spells some
