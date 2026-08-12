@@ -601,6 +601,13 @@ throttled `state` pushes. REST highlights (see main.py for all):
   (they read as phantom ceilings). Ceilings are never extracted.
 - 3D camera: follow mode translates camera + orbit target by the hero's
   delta (user angle/zoom preserved); panning off-target releases the lock.
+- **Difficulty comes in TWO shapes.** `RE_DIFFICULTY` handled the
+  parenthetical form ("Befallen 4 (Refined)") and nothing handled the bare
+  tier EQL appends to instanced zones ("Plane of Hate D1"), so a public D1
+  instance charted as nothing at all — issue #7. `RE_DIFF_TIER` strips it.
+  Verified against the client's own `Resources/ZoneNames.txt` first: no zone
+  in any of the 699 rows ends in D<digits>, so the strip cannot eat a real
+  name. That check is the evidence the no-fuzzy rule demands.
 - Zone names: `normalize_zone()` strips DECORATORS only — difficulty suffix
   ("Befallen 4 (Refined)"), leading article, and EQL's "Expedition" instance
   wrapper ("New Sebilis Expedition" → "New Sebilis"). New zone = `ZONE_FILES`
@@ -1343,6 +1350,21 @@ model selection itself is runtime-switchable in the UI.
 
 ## Settings & secrets (the gear in the header)
 
+- **`app_config` stores every override as a STRING, and neither caller
+  validates on assignment** — so `"false"` lands on a bool field intact and
+  reads as TRUE. `allow_spellset_write` saved correctly, the file on disk was
+  right, and the flag stayed on. `app_config.apply(target)` is now the single
+  place that pushes overrides onto a settings object and coerces against what
+  the field already holds; the startup validator and `POST /api/settings` had
+  each written that loop themselves, so the bug existed twice.
+- **`allow_spellset_write` is OFF by default** (`config.py`, allow-listed in
+  `app_config.FIELDS`, switched under Settings ▸ General). Writing the
+  `[SpellLoadouts]` section of `LO*.ini` is the ONLY thing this app writes
+  inside the game folder, and it is the one place a strict reading of the
+  Daybreak Terms has anything to bite on — so it is the player's decision,
+  not the installer's. Same reasoning that keeps `eqclient.ini` read-only.
+  The gate lives on the ENDPOINT, not only in the UI: a hidden button is not
+  a closed endpoint.
 - **Three layers, and they do not mix.** `.env` is the base; the UI writes
   non-secret overrides to `data/app_config.json` (applied in `config.py`'s
   validator BEFORE Logs/ and maps/ derive, so a folder chosen in the panel

@@ -21,7 +21,7 @@ FIELDS = ("eql_game_dir", "eql_character_name", "llm_provider",
           "openai_model", "custom_model", "custom_base_url",
           "lmstudio_base_url", "model",
           "ollama_base_url", "ollama_model", "anthropic_model",
-          "llm_context_limit")
+          "llm_context_limit", "allow_spellset_write")
 
 _PATH = data_path("app_config.json")
 
@@ -51,6 +51,24 @@ def update(values: dict) -> dict:
     _PATH.parent.mkdir(parents=True, exist_ok=True)
     _PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return data
+
+
+def apply(target: Any) -> None:
+    """Push the stored overrides onto a live settings object.
+
+    Every override is stored as a STRING (see `update`), and neither caller
+    validates on assignment -- so "false" lands on a bool field intact and
+    reads as TRUE, which is exactly what happened to allow_spellset_write:
+    the switch saved correctly, the file on disk was right, and the flag
+    stayed on. The coercion lives HERE because the startup validator and the
+    settings POST both need it and both had written the loop themselves.
+    """
+    for field, value in load().items():
+        if not hasattr(target, field):
+            continue
+        if isinstance(getattr(target, field), bool):
+            value = str(value).strip().lower() in ("1", "true", "yes", "on")
+        setattr(target, field, value)
 
 
 def get(field: str, fallback: Any = "") -> Any:

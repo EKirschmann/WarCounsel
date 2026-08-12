@@ -2687,3 +2687,24 @@ button.app-version:hover { color: var(--gold-bright); }
   color: var(--muted, rgba(226, 222, 214, .5));
   margin: 7px 0 0;
 }
+
+/* A switch inside a settings block, distinct from the label-above-input
+   pattern the text fields use. */
+.set-block label.set-check,
+.set-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  font-size: 12px;
+  letter-spacing: .02em;
+  cursor: pointer;
+  /* .set-block's labels are section HEADINGS -- small-caps, tracked out.
+     Inheriting that made this read as a heading with a checkbox glued to
+     it rather than as a control you operate. */
+  text-transform: none;
+  font-weight: 500;
+  color: var(--text, #e2ded6);
+}
+.set-block label.set-check input,
+.set-check input { cursor: pointer; margin: 0; }

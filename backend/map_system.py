@@ -226,7 +226,15 @@ _symmetrise(ZONE_GRAPH)
 
 # Difficulty/instance suffixes -- "Befallen 2 (Adaptive)", "Befallen 4 (Refined)"
 # etc. Every difficulty tier uses the same chart as the base zone.
+# Two shapes of difficulty decorator: the parenthetical one
+# ("Befallen 4 (Refined)") and the bare tier EQL appends to instanced
+# zones ("Plane of Hate D1"). The second went unhandled, so a public
+# D1 instance charted as nothing at all -- reported as issue #7.
+# Checked against the client's own Resources/ZoneNames.txt before
+# adding it: no zone in any of the 699 rows ends in D<digits>, so
+# this cannot eat a real name.
 RE_DIFFICULTY = re.compile(r"\s*\d*\s*\([a-z ]+\)\s*$", re.IGNORECASE)
+RE_DIFF_TIER = re.compile(r"\s+d\d+\s*$", re.IGNORECASE)
 
 
 def normalize_zone(name: str) -> str:
@@ -243,7 +251,7 @@ def normalize_zone(name: str) -> str:
     New vs Old Sebilis), so a close-enough match would silently draw the
     wrong dungeon. Anything past decorators goes in ZONE_ALIASES, by hand.
     """
-    n = RE_DIFFICULTY.sub("", name).strip()
+    n = RE_DIFF_TIER.sub("", RE_DIFFICULTY.sub("", name)).strip()
     if n.lower().startswith("the "):
         n = n[4:]
     return n

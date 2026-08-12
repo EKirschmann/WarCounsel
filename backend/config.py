@@ -164,10 +164,8 @@ class Settings(BaseSettings):
         # maps/ derive, so a game folder picked from the settings panel
         # behaves exactly like one written into .env. (Secrets are resolved
         # separately, at use time -- see backend/secrets_store.py.)
-        from backend.app_config import load as _overrides
-        for _field, _value in _overrides().items():
-            if hasattr(self, _field):
-                setattr(self, _field, _value)
+        from backend.app_config import apply as _apply_overrides
+        _apply_overrides(self)
         game = Path(self.eql_game_dir)
         if not game.is_dir():
             # custom install path: the Daybreak uninstall registry key on
@@ -191,6 +189,14 @@ class Settings(BaseSettings):
         return self
 
     # MCP (optional -- the advisor degrades to ungrounded counsel when absent)
+    # The ONE thing this app writes inside the game folder: the
+    # [SpellLoadouts] section of LO*.ini, so /memspellset can recall a
+    # suggested bar. Off by default and switched on in Settings. Writing a
+    # file the game owns is the only place a strict reading of the Daybreak
+    # Terms has anything to bite on, so it is a decision the player makes
+    # rather than one the installer makes for them. eqclient.ini stays
+    # read-only for the same reason -- see backend/eqclient.py.
+    allow_spellset_write: bool = False
     mcp_enabled: bool = True
     mcp_server_dir: str = ""                  # clone path; empty = wiki over HTTP
     mcp_node_path: str = "node"

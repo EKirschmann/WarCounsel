@@ -32,6 +32,7 @@ type GameVerdict = {
 };
 
 type SettingsData = {
+  allow_spellset_write?: boolean;
   game: GameVerdict;
   detected_game_dir: string | null;
   data_dir: string;
@@ -167,6 +168,7 @@ const RAIL = [
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<SettingsData | null>(null);
+  const [allowSetWrite, setAllowSetWrite] = useState(false);
   const [gameDir, setGameDir] = useState("");
   const [provider, setProvider] = useState("none");
   const [model, setModel] = useState("");
@@ -207,6 +209,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         setOllamaUrl(d.llm.ollama_base_url ?? "");
         setCtxLimit(d.llm.context?.manual ?? "");
         setCustomUrl(d.llm.custom_base_url ?? "");
+        setAllowSetWrite(d.allow_spellset_write === true);
         setVerdict(d.game);
       })
       .catch((e) => setError(String(e)));
@@ -304,6 +307,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       // returns to following the server, which a conditional send could not
       // express.
       body.llm_context_limit = ctxLimit.trim();
+      // Sent as a string because app_config stores every override that way;
+      // "" would CLEAR the override rather than set it false, so both states
+      // are spelled out.
+      body.allow_spellset_write = allowSetWrite ? "true" : "false";
       // Only send a key when one was typed. Omitting it leaves whatever is
       // stored untouched — saving the game folder must never wipe a key.
       const field = keyFieldFor(provider);
@@ -414,6 +421,25 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   {verdict.ok ? "✓" : "✕"} {verdict.reason}
                 </p>
               )}
+
+              <label className="set-check" htmlFor="set-spellset-write">
+                <input
+                  id="set-spellset-write"
+                  type="checkbox"
+                  checked={allowSetWrite}
+                  onChange={(e) => setAllowSetWrite(e.target.checked)}
+                />
+                Write spell sets into the game folder
+              </label>
+              <p className="set-note">
+                Lets the Advisor save a suggested bar as an in-game spell set,
+                so <code>/memspellset</code> loads the whole thing at once. It
+                edits the <code>[SpellLoadouts]</code> section of your{" "}
+                <code>LO*.ini</code> and backs the file up first. This is the
+                only file WarCounsel writes inside the game folder, so it is
+                off until you switch it on — everything else it stores stays
+                in its own data folder.
+              </p>
             </section>
 )}
 
