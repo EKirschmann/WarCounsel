@@ -74,7 +74,7 @@ Rules:
   - must_have: the core spells that should always be memorized, in priority order (typically 5-7).
   - should_have: fills the REMAINING slots, in priority order — must_have + should_have together must total EXACTLY __SLOTS_NOTE__ picks.
   - nice_to_have: 10-14 EXTRA alternatives beyond the slot count, in priority order, so the player can swap by situation (different zone, tougher pulls, low mana).
-- prebuffs: every entry's reason must say WHAT IT DOES and why it matters for this focus, using the effect shown beside it — "Permanent buff." is not a reason. Include long buffs worth re-casting between pulls, not only permanent ones. Separate from the loadout — list PERMANENT buffs (marked in the character data) FIRST: they persist until death, are cast exactly once, and must never be described as needing refreshing. Then long-duration self-buffs worth keeping up (damage shields like Bramblecoat, AC/HP buffs, Spirit of Wolf). The player memorizes one temporarily, casts it, then swaps the slot back to combat spells — so do NOT waste loadout slots on long buffs; put them here. Owned and level-legal only.
+- prebuffs: every entry's reason must say WHAT IT DOES and why it matters for this focus, using the effect shown beside it — "Permanent buff." is not a reason. Include long buffs worth re-casting between pulls, not only permanent ones. Separate from the loadout — list PERMANENT buffs (marked in the character data) FIRST: they persist until death, are cast exactly once, and must never be described as needing refreshing. Then long-duration self-buffs worth keeping up (damage shields like Bramblecoat, AC/HP buffs, Spirit of Wolf). The player memorizes one temporarily, casts it, then swaps the slot back to combat spells — so do NOT waste loadout slots on long buffs; put them here. Owned and level-legal only. At most __SLOTS_NOTE__ entries: they are memorized to be cast, so a longer routine does not fit the book in one pass.
 - If the character data says NO PET, never recommend pet spells of any kind — no pet haste, no shrink, no pet heals, no pet buffs. They target a pet slot that will be empty. Summoned-pet lines (skeletons, elementals, warders): only ever slot the HIGHEST-level pet the character owns — older ranks are strictly weaker versions of the same pet.
 - Respect the focus STRICTLY: for solo focuses, never slot group-only utility — resurrection and corpse-recovery lines, buffs that can only target others — those are dead slots when playing alone.
 - If a "Missing spells they could BUY" list is present, fold the best purchases into note or horizon (say they are vendor purchases).
@@ -758,7 +758,8 @@ async def _compose_builtin(ctx, bycat, replaced, grounded_any,
     # cast. The effects are in the spell record either way.
     prebuffs = [entry(i, (_buff_effects(i["name"]) or "positive-effect buff")
                       + " — cast it, then swap the slot back to combat spells")
-                for i in (bycat.get("buff") or [])[:6]]
+                for i in (bycat.get("buff") or [])]
+    prebuffs = _cap_prebuffs(prebuffs, ctx)
     horizon = []
     if level is not None:
         for s in book.get("castable", []):
@@ -1555,6 +1556,7 @@ async def generate_advice(ctx: dict) -> dict:
         for d in _pre_clashes:
             logger.info("Dropped prebuff %s — %s occupies the same slot (%s)",
                         d["name"], d["conflict_with"], d["conflict_slot"])
+        prebuffs = _cap_prebuffs(prebuffs, ctx)
         for s in prebuffs:
             s["level"] = level_by_name.get(str(s["name"]).lower())
         replace = _clean_list(data.get("replace"), ("using", "upgrade", "why"),
@@ -1984,6 +1986,29 @@ def _backfill_prebuffs(picks: list, ctx: dict) -> list:
                       "reason": (_buff_effects(sp["name"]) or "long buff")
                                 + " — worth re-casting between pulls"})
     return picks
+
+
+def _cap_prebuffs(picks: list, ctx: dict) -> list:
+    """A pre-buff routine has to fit in the spellbook too.
+
+    You cast these by memorizing one, casting it, and swapping the gem back,
+    so the list is bounded by the same gem count as the loadout. Seventeen
+    entries against a fourteen-slot book describes something the player
+    cannot actually do in one pass, and the overflow was silent.
+
+    PERMANENTS are kept first wherever they were proposed. They are cast
+    once and hold until death, so they earn their gem far more cheaply than
+    a buff re-cast between every pull -- if anything has to go, it is not
+    those.
+    """
+    slots = ctx.get("spell_slots") or 8
+    perm = {n.lower() for n in (ctx.get("_permanent") or [])}
+    keep = [p for p in picks if (p.get("name") or "").lower() in perm]
+    keep += [p for p in picks if (p.get("name") or "").lower() not in perm]
+    if len(keep) > slots:
+        logger.info("Pre-buffs trimmed to the %d spell slots (dropped %s)",
+                    slots, [p.get("name") for p in keep[slots:]])
+    return keep[:slots]
 
 
 def _describe_prebuffs(picks: list) -> list:

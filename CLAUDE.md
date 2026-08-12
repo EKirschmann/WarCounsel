@@ -764,6 +764,14 @@ display**; failing entries are dropped and logged, never shown. The gates
   effects are a subset of Skin like Steel's at lower magnitudes, and it
   occupies `ac-slot-4`, so the two genuinely stack; a subset rule would drop
   exactly the buff this section was fixed to restore.
+- **Pre-buffs are capped at `spell_slots`, the same gem count as the
+  loadout** (`_cap_prebuffs`). They are cast by memorizing one, casting it
+  and swapping the gem back, so a seventeen-entry routine against a
+  fourteen-slot book describes something nobody can do in one pass — and the
+  overflow was silent. PERMANENTS are kept first wherever they were
+  proposed: cast once, held until death, so they earn a gem far more cheaply
+  than anything re-cast between pulls. The prompt states the same limit; the
+  cap enforces it, per the house rule that the gate is authoritative.
 - **Magnitude orders the pre-buff list; it must not decide membership.**
   "hit points 50" over "armor class 21" over "strength 5" ranks three
   unrelated numbers. Sorting by it and then capping at 8 is how Holy Armor,
