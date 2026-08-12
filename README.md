@@ -95,6 +95,42 @@ turn off is still in the web view, which has room for it:
   class-colored bars up to raid size, damage/DPS modes, this-fight or
   last-5-fights segments; closes itself when the game exits
 
+## A note on third-party tools and the EQL Terms of Service
+
+Game Jawn and Daybreak do not review, approve, or endorse any third-party
+add-on, including this one. That applies no matter how harmless a tool looks,
+and it applies here. Read [sections 7 and 10 of the Daybreak Terms of
+Service](https://www.daybreakgames.com/terms-of-service) and decide for
+yourself.
+
+What WarCounsel does, stated plainly so you can judge it:
+
+- **It reads. It does not play.** It tails the log file your client writes
+  when you type `/log on`, and reads data files the client ships
+  (`spells_us.txt`, `ZoneNames.txt`, zone geometry, your `/outputfile`
+  exports). It sends no input to the game, automates nothing, and every
+  action it suggests is one you perform yourself.
+- **It never touches game memory or network traffic.** No injection, no
+  packet capture, no reverse engineering of the client.
+- **It writes exactly one file inside the game folder**, and only when you
+  press the button: the `[SpellLoadouts]` section of your `LO*.ini`, so
+  `/memspellset` can recall a suggested loadout. It backs the file up first.
+  Nothing else it stores leaves its own `data/` folder.
+- **Optional screen reading (OCR)** reads pixels from your own screen for
+  numbers the log never prints. It reads the picture, not the game.
+- **It is free and MIT-licensed.** No paid tier, no purchase component,
+  nothing paywalled.
+- **What leaves your machine:** a version check against GitHub; wiki lookups
+  to eqlwiki for item and spell pages; and, only if you configure an LLM
+  provider yourself, your character context to that provider. Run it with a
+  local model, or no model at all, and nothing about your character leaves
+  the machine.
+
+None of this is legal advice and I am not a lawyer. The risk of using any
+third-party tool is yours, the Terms are the authority, and if a rule
+changes I would rather remove a feature than argue about it. If you believe
+something here crosses a line, open an issue — I will take it seriously.
+
 ## Get it
 
 Three ways to run it, and **the .exe is the one to pick if you just want to

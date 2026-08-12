@@ -26,6 +26,18 @@ away:
 - **Vendored third-party code and data keep their own licences**, listed
   below. MIT on this repo doesn't relicense them.
 
+## Terms of Service
+
+No third-party add-on is reviewed, approved, or endorsed by Game Jawn or
+Daybreak — this one included. What this app reads, what it writes, and what
+leaves your machine are all itemised under "A note on third-party tools and
+the EQL Terms of Service" in README.md, so you can weigh it against
+[sections 7 and 10 of the Daybreak Terms](https://www.daybreakgames.com/terms-of-service)
+yourself. The short version: it reads the log and the client's own data
+files, never touches game memory or network traffic, automates nothing, and
+writes exactly one file inside the game folder (your `LO*.ini` spell sets,
+on a button press, after backing it up).
+
 ## Vendored material, with thanks
 
 - Community-measured spell durations and raid triggers in
