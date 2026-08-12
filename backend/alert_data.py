@@ -19,8 +19,10 @@ debuffs, which need timers just as much and never tick — a shaman
 has no other way to know when a slow or a malaise has dropped.
 The druid pass incidentally covers nine RANGER spells that share a
 name and an identical duration. Regeneration is additionally included
-as a SHAMAN/DRUID heal-over-time requested for the same live timer view,
-using its 205-tick game duration.
+as a SHAMAN/DRUID heal-over-time requested for the same live timer view.
+Its 205-tick client value is a CAP, not its level-34 duration: duration
+formula 10 is `3 * caster level + 10` ticks. LEVEL_DURATION_ROWS keeps
+that exception explicit so the timer follows the character level.
 
 Still pack-only, and still missing every hostile spell with a
 duration: Enchanter (36, INCLUDING the whole charm/mez line at
@@ -249,7 +251,7 @@ SPELL_TIMERS = {
     "pyrocuror": 114,
     "quivering veil of xarn": 18,
     "rapture": 24,
-    "regeneration": 1230,      # [eqlbuilds] 205 ticks
+    "regeneration": 1230,      # [client cap] formula 10, max 205 ticks
     "remedy | ${2} <--": 3,
     "rest the dead": 180,      # [eqlbuilds] 30 ticks
     "root": 48,                # [eqlbuilds] 8 ticks
@@ -434,6 +436,17 @@ BASE_DURATION_ROWS = frozenset({
     "walking sleep",
     "wave of enfeeblement",
 })
+
+# spell -> (client buff-duration formula, cap in ticks, minimum cast level)
+#
+# Most SPELL_TIMERS rows are fixed durations. Regeneration's spell row is
+# `formula 10 / cap 205`; presenting the cap as its duration made a level-34
+# cast show 20m30s in WarCounsel while the client rounded 11m12s up to "12m".
+# The minimum level is the earliest any class can cast it (Shaman 23) and is
+# the conservative fallback until /who or another level line is available.
+LEVEL_DURATION_ROWS = {
+    "regeneration": (10, 205, 23),
+}
 
 # Duration gained per upgrade tier (eqltools.com /learn/spell-upgrades,
 # 2026-07-30): +10%/tier for buffs and debuffs, +5%/tier for DoTs and HoTs,

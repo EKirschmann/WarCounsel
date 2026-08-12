@@ -9,10 +9,11 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from backend.alert_data import BASE_DURATION_ROWS, SPELL_TIMERS
+from backend.alert_data import (BASE_DURATION_ROWS, LEVEL_DURATION_ROWS,
+                                SPELL_TIMERS)
 from backend.log_system.events import CastBegin
 from backend.log_system.parser import parse_line
-from backend.state_tracker import CharacterTracker
+from backend.state_tracker import CharacterTracker, _level_scaled_duration
 
 
 NECROMANCER_DOT_BASE_SECONDS = {
@@ -75,14 +76,25 @@ def test_regeneration_and_scourge_are_tier_scalable_game_data():
     assert SPELL_TIMERS["regeneration"] == 205 * 6
     assert SPELL_TIMERS["scourge"] == 12 * 6
     assert {"regeneration", "scourge"} <= BASE_DURATION_ROWS
+    assert LEVEL_DURATION_ROWS["regeneration"] == (10, 205, 23)
+
+
+def test_regeneration_formula_10_uses_level_and_caps():
+    cap = SPELL_TIMERS["regeneration"]
+    assert _level_scaled_duration("regeneration", cap, None) == 79 * 6
+    assert _level_scaled_duration("regeneration", cap, 34) == 112 * 6
+    assert _level_scaled_duration("regeneration", cap, 50) == 160 * 6
+    assert _level_scaled_duration("regeneration", cap, 65) == 205 * 6
+    assert _level_scaled_duration("regeneration", cap, 99) == 205 * 6
 
 
 @pytest.mark.parametrize(
     "spell, expected_seconds",
-    [("Regeneration", 1230), ("Scourge", 72)],
+    [("Regeneration", 672), ("Scourge", 72)],
 )
 def test_requested_casts_start_live_timers(spell, expected_seconds):
     tracker = CharacterTracker("Tuldiyen", "halas")
+    tracker.level = 34
     ts = datetime(2026, 8, 11, 20, 0, 0)
     event = parse_line(
         f"[Tue Aug 11 20:00:00 2026] You begin casting {spell}.",
