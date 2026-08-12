@@ -1725,7 +1725,12 @@ async def get_quests():
     except Exception as exc:
         logger.exception("quest scan failed")
         raise HTTPException(500, f"quest scan failed: {str(exc)[:120]}")
-    return {"quests": rows, "items_scanned": len({i.get("name") for i in items}),
+    names = sorted({str(i.get("name")) for i in items if i.get("name")})
+    # The NAMES, not just the count. Searching the tab for something you
+    # just looted has three honest answers -- a quest wants it, you are
+    # carrying it and no quest page mentions it, or it is not in your bags
+    # at all -- and the panel cannot tell the last two apart from a count.
+    return {"quests": rows, "items_scanned": len(names), "items": names,
             "level": tracker.level}
 
 

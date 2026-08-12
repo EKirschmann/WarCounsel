@@ -59,6 +59,12 @@ export function QuestPanel({ level }: { level?: number | null }) {
   const { show } = usePanelPrefs();
   const [rows, setRows] = useState<QuestRow[] | null>(null);
   const [scanned, setScanned] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  // Every item name the scan looked at. Without it, a search that finds
+  // nothing cannot say WHY -- "you are carrying this and no quest wants it"
+  // and "this is not in your bags" are different answers and the useful
+  // one is the first.
+  const [items, setItems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -85,10 +91,12 @@ export function QuestPanel({ level }: { level?: number | null }) {
       const d = await apiGet<{
         quests: QuestRow[];
         items_scanned?: number;
+        items?: string[];
         note?: string;
       }>("/api/quests");
       setRows(d.quests ?? []);
       setScanned(d.items_scanned ?? null);
+      setItems(d.items ?? []);
       if (d.note) setErr(d.note);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "scan failed");
@@ -102,12 +110,30 @@ export function QuestPanel({ level }: { level?: number | null }) {
   }, [scan]);
 
   const all = rows ?? [];
+  // Matching runs over EVERY loaded row, and searching lifts the 25-row cap:
+  // a filter that only sees what is already on screen finds nothing and
+  // reads as broken. Giver and zone are searchable too — "who wants this"
+  // and "what can I finish while I am here" are the same question asked
+  // from either end.
+  const needle = query.trim().toLowerCase();
+  const hit = (r: QuestRow) =>
+    !needle
+    || r.quest.toLowerCase().includes(needle)
+    || r.items.some((i) => i.name.toLowerCase().includes(needle))
+    || (r.giver ?? "").toLowerCase().includes(needle)
+    || (r.zone ?? "").toLowerCase().includes(needle)
+    || (r.unlocks ?? "").toLowerCase().includes(needle)
+    || (r.rewards ?? []).some((x) => x.toLowerCase().includes(needle));
+  const found = all.filter(hit);
+  const carrying = needle
+    ? items.find((n) => n.toLowerCase().includes(needle))
+    : undefined;
   // Out-of-era quests are the Kunark-and-later content EQL does not
   // implement. Kept, because the ITEMS are real and sit in your bags —
   // but moved below, because they are not things you can go and do.
-  const inEra = all.filter((q) => !q.out_of_era);
-  const outEra = all.filter((q) => q.out_of_era);
-  const shown = showAll ? inEra : inEra.slice(0, 25);
+  const inEra = found.filter((q) => !q.out_of_era);
+  const outEra = found.filter((q) => q.out_of_era);
+  const shown = showAll || needle ? inEra : inEra.slice(0, 25);
 
   return (
     <section className="panel quest-panel">
@@ -130,6 +156,21 @@ export function QuestPanel({ level }: { level?: number | null }) {
             under every section heading — explained the design to someone who
             only wants to know whether they can finish a quest. It lives in
             tooltips now, where it is available and not in the way. */}
+        <div className="quest-search">
+          <input
+            type="search"
+            value={query}
+            placeholder="Search items, quests, givers, zones…"
+            aria-label="Search quests"
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {needle && (
+            <button type="button" onClick={() => setQuery("")} title="Clear the search">
+              clear
+            </button>
+          )}
+        </div>
+
         <p
           className="adv-note"
           title="From your /outputfile inventory export joined to the wiki. Counts are what you hold; the required amount lives in each quest's walkthrough, so follow the link rather than trusting a number here. Class and level are shown but never used to hide a row — you will change trio and the items keep."
@@ -142,6 +183,32 @@ export function QuestPanel({ level }: { level?: number | null }) {
         {rows && rows.length === 0 && !err && (
           <p className="adv-note">
             Nothing you are carrying is referenced by a quest page.
+          </p>
+        )}
+
+        {/* An empty result has more than one cause, and the useful one is
+            not "no match". If the thing you searched for IS in your bags,
+            say so — that is the answer to "is this worth keeping". */}
+        {needle && rows && found.length === 0 && (
+          <p className="adv-note">
+            {carrying ? (
+              <>
+                You are carrying <strong>{carrying}</strong>, and no quest page
+                references it. Nothing here says it is safe to sell — only that
+                the wiki does not tie it to a quest.
+              </>
+            ) : (
+              <>
+                No quest, item, giver or zone here matches &ldquo;
+                {query.trim()}&rdquo;.
+              </>
+            )}
+          </p>
+        )}
+
+        {needle && found.length > 0 && (
+          <p className="adv-note">
+            {found.length} of {all.length} quests match &ldquo;{query.trim()}&rdquo;.
           </p>
         )}
 
@@ -238,7 +305,7 @@ export function QuestPanel({ level }: { level?: number | null }) {
           );
         })}
 
-        {inEra.length > 25 && !showAll && (
+        {!needle && inEra.length > 25 && !showAll && (
           <button type="button" className="adv-rescan" onClick={() => setShowAll(true)}>
             show the other {inEra.length - 25}
           </button>

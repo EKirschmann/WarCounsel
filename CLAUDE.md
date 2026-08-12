@@ -459,6 +459,17 @@ source of truth the panel renders from), so there is one pattern to learn.
 - Combat-mode and slim-ledger rules address `.vitals-panel` / `.enc-panel`
   by CLASS. `> .panel:last-child` silently retargeted the ledger the moment
   the encounter panel was switched off.
+- **The Quests search matches over EVERY loaded row and lifts the 25-row
+  cap** — a filter that only sees what is already on screen finds nothing
+  and reads as broken. It covers item names, quest names, givers, zones,
+  unlocks and rewards, so the not-found message says exactly that rather
+  than claiming it only searched your bags.
+- **`GET /api/quests` returns the scanned item NAMES, not just the count**,
+  because an empty search result has two very different causes: you are
+  carrying the thing and no quest page wants it, or it is not in your bags.
+  The first is the answer to "is this worth keeping" and a count cannot
+  express it. The wording stops short of "safe to sell" — the wiki not
+  tying an item to a quest is not evidence that nothing does.
 - Quests is a TAB, not a column, so its switch hides the tab button; if it
   was the open tab the Advisor shows rather than an empty stack.
   - When exactly ONE section survives, its header is SUPPRESSED — there is
