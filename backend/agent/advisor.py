@@ -370,7 +370,35 @@ _SELF_TARGET = 6
 # long time and land on you, so every structural test for a buff passes --
 # but you cast them for a specific pull, not as part of buffing up, and
 # they were crowding the real buffs out of the list.
-_NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67, 12, 28}
+# 99 is root and 22 is charm. Treeform is a self-target 36-minute spell, so
+# every structural test for a pre-buff passed -- and it plants you in the
+# ground. Befriend Animal and Charm Animals last 20 minutes and are cast on
+# something you intend to fight beside, not on yourself.
+_NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67, 12, 28, 99, 22}
+
+# targetTypeId, read off spells whose purpose is unambiguous rather than
+# assumed from the id: 5 is an enemy (Stun, Fear, Lightning Bolt, Ensnare),
+# 9 an animal you are charming (Befriend Animal), 14 your pet (Feral
+# Spirit). What is left is 6 self (Yaulp, Bramblecoat), 51 a single friendly
+# target (Center, Holy Armor, Symbol of Transal) and 41/43 their group
+# versions (Protection of Steel, Scale of Wolf).
+_BUFFABLE_TARGETS = {6, 41, 43, 51}
+
+
+def _is_prebuff(e: dict) -> bool:
+    """Does this spell leave a lasting effect on YOU or your group?
+
+    Both halves were a bug before they were a check. The TARGET matters
+    because Ensnare is a 14-minute effect and nothing asked who it lands on,
+    so a snare was offered as something to cast before a pull. The EFFECT
+    matters because Treeform is self-target and long and roots you in place.
+    Duration and ownership say nothing about either.
+    """
+    from backend.game_data import _primary_effect
+    if e.get("targetTypeId") not in _BUFFABLE_TARGETS:
+        return False
+    pe = _primary_effect(e)
+    return not (pe and pe[0] in _NOT_A_BUFF_SPAS)
 
 
 # How far ahead the horizon looks. The wiki/builds context already spans
@@ -417,7 +445,6 @@ def _long_buffs(ctx: dict) -> List[str]:
     other half of a pre-buff routine and was never mentioned.
     """
     from backend import builds_data
-    from backend.game_data import _primary_effect
     level = ctx.get("level")
     perm = {n.lower() for n in (ctx.get("_permanent") or [])}
     out = []
@@ -432,13 +459,22 @@ def _long_buffs(ctx: dict) -> List[str]:
         ticks = e.get("durationTicks") or 0
         if ticks < 100:          # under ~10 minutes: not worth a pre-cast
             continue
-        pe = _primary_effect(e)
-        if pe and pe[0] in _NOT_A_BUFF_SPAS:
+        if not _is_prebuff(e):
             continue
-        eff = _buff_effects(sp["name"])
-        out.append(f"{sp['name']} ({round(ticks * 6 / 60)}min"
-                   + (f", {eff}" if eff else "") + ")")
-    return out[:12]
+        out.append({"name": sp["name"], "level": sp["level"], "_ticks": ticks})
+    # Supersession runs BEFORE the cap. The spellbook is ordered low level to
+    # high, so truncating it kept Skin like Rock and Center and cut the Skin
+    # like Steel and Symbol of Transal that replace them -- the same failure
+    # the missing-spells shopping list had, where an ascending cap kept the
+    # 25 LOWEST and anyone with a backlog got an empty list.
+    kept, _sup = _gate_stacking(out)
+    kept.sort(key=lambda b: -(b.get("level") or 0))
+    lines = []
+    for b in kept[:24]:
+        eff = _buff_effects(b["name"])
+        lines.append(f"{b['name']} ({round(b['_ticks'] * 6 / 60)}min"
+                     + (f", {eff}" if eff else "") + ")")
+    return lines
 
 
 def _permanent_buffs(ctx: dict) -> List[str]:
@@ -1211,27 +1247,37 @@ def _gate_stacking(picks: List[dict]) -> tuple:
         if not slots:
             kept.append(pick)
             continue
-        loser = None
+        # EVERY claimed slot has to be considered, not the first one found.
+        # Skin like Steel occupies both ac-slot-1 and the druid hp/ac line;
+        # stopping at the first meant it displaced Center and never looked
+        # at the line where Skin like Rock was still sitting, so the pair it
+        # was supposed to replace survived alongside it.
+        beaten_by = None                 # slot where this pick is the weaker
+        displaces = []                   # (slot, index) this pick outranks
         for slot, position in slots.items():
             held = claimed.get(slot)
             if held is None:
                 continue
             held_pos, held_idx = held
             if position > held_pos:
-                loser = (slot, held_idx)       # incoming is the upgrade
+                displaces.append((slot, held_idx))
+            else:
+                beaten_by = slot
                 break
-            loser = (slot, None)               # incoming is the weaker one
-            break
-        if loser and loser[1] is None:
-            slot = loser[0]
-            dropped.append({**pick, "conflict_slot": slot,
-                            "conflict_with": kept[claimed[slot][1]]["name"]})
+        if beaten_by is not None:
+            dropped.append({**pick, "conflict_slot": beaten_by,
+                            "conflict_with": kept[claimed[beaten_by][1]]["name"]})
             continue
-        if loser:
-            slot, idx = loser
-            displaced = kept[idx]
-            dropped.append({**displaced, "conflict_slot": slot,
-                            "conflict_with": name})
+        if displaces:
+            # Tombstone rather than remove: `claimed` holds indices into
+            # `kept`, and compacting the list mid-loop invalidates them.
+            for slot, idx in displaces:
+                if kept[idx] is None:
+                    continue
+                dropped.append({**kept[idx], "conflict_slot": slot,
+                                "conflict_with": name})
+                kept[idx] = None
+            idx = displaces[0][1]
             kept[idx] = pick
             for sl_, pos_ in slots.items():
                 claimed[sl_] = (pos_, idx)
@@ -1239,7 +1285,7 @@ def _gate_stacking(picks: List[dict]) -> tuple:
         kept.append(pick)
         for sl_, pos_ in slots.items():
             claimed[sl_] = (pos_, len(kept) - 1)
-    return kept, dropped
+    return [k for k in kept if k is not None], dropped
 
 
 def _gate_aas(items: List[dict], owned: dict, meta: dict) -> List[dict]:
@@ -1864,13 +1910,26 @@ def _backfill_prebuffs(picks: list, ctx: dict) -> list:
         e = builds_data.spell_entry(sp["name"])
         if not e or (e.get("durationTicks") or 0) < 100:
             continue
-        pe = _primary_effect(e)
-        if not pe or pe[0] in _NOT_A_BUFF_SPAS:
+        if not _is_prebuff(e):
             continue
-        cands.append((abs(pe[1] or 0), sp))
-    cands.sort(key=lambda c: -c[0])
-    for _mag, sp in cands[:8]:
-        picks.append({"name": sp["name"], "cls": sp.get("cls") or "",
+        pe = _primary_effect(e)
+        if not pe:
+            continue
+        cands.append({"name": sp["name"], "cls": sp.get("cls") or "",
+                      "level": sp["level"], "_mag": abs(pe[1] or 0)})
+    # Same ordering trap as _long_buffs: the weaker half of a line would
+    # otherwise spend the slots its own upgrade needed.
+    cands, _sup = _gate_stacking(cands)
+    # Presentation order only. Magnitudes across DIFFERENT effects are not
+    # comparable -- "hit points 50" over "armor class 21" over "strength 5"
+    # ranks three unrelated numbers -- so this decides the order and must
+    # not decide membership. It used to cap at 8, which is how Holy Armor,
+    # Strength of Earth and Shield of Brambles went missing: small numbers,
+    # real buffs, nothing superseding them. Supersession above has already
+    # removed everything genuinely redundant, so what is left is offered.
+    cands.sort(key=lambda c: -c["_mag"])
+    for sp in cands[:16]:
+        picks.append({"name": sp["name"], "cls": sp["cls"],
                       "level": sp["level"],
                       "reason": (_buff_effects(sp["name"]) or "long buff")
                                 + " — worth re-casting between pulls"})
@@ -1981,9 +2040,9 @@ def _gate_prebuffs(picks: list) -> list:
         if not e:
             out.append(p)
             continue
-        pe = _primary_effect(e)
-        if pe and pe[0] in _NOT_A_BUFF_SPAS:
-            logger.info("Dropped prebuff (not a buff effect): %s", p.get("name"))
+        if not _is_prebuff(e):
+            logger.info("Dropped prebuff (lands on nobody you are buffing, "
+                        "or is not a buff effect): %s", p.get("name"))
             continue
         ticks = e.get("durationTicks") or 0
         if ticks > 0:

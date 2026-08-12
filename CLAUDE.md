@@ -722,6 +722,37 @@ display**; failing entries are dropped and logged, never shown. The gates
   rank-1 records fall back past id-10 charisma spacers). Owned picks
   superseded by another owned usable spell are dropped.
 - Long-duration buffs route to a separate `prebuffs` section.
+- **A pre-buff is decided by TARGET and EFFECT, not by duration.** Owning a
+  spell that lasts 14 minutes says nothing about whether you cast it on
+  yourself before a pull. Ensnare was offered as a pre-buff because nothing
+  asked who it lands on, and Treeform because nothing asked what it does —
+  self-target, 36 minutes, and it roots you in place. `_is_prebuff()` is the
+  one test all three paths share (`_long_buffs` for the prompt,
+  `_backfill_prebuffs` for the deterministic additions, `_gate_prebuffs` for
+  the verifier); before it, each checked a different subset.
+  - `_BUFFABLE_TARGETS = {6, 41, 43, 51}` — self, single friendly, and the
+    two group forms. Read off spells whose purpose is unambiguous (Stun,
+    Fear and Ensnare are 5; Befriend Animal is 9; Feral Spirit is 14) rather
+    than assumed from the id, the same evidence rule the zone table follows.
+  - Root (SPA 99) and charm (22) joined `_NOT_A_BUFF_SPAS` alongside
+    invisibility and the remote eye.
+- **Cap AFTER supersession, never before.** The spellbook runs low level to
+  high, so truncating it kept Skin like Rock and Center and cut the Skin
+  like Steel and Symbol of Transal that replace them. Identical in shape to
+  the `missing_spells` shopping list, where an ascending cap kept the 25
+  LOWEST and anyone with a backlog got an empty list.
+- **`_gate_stacking` must consider EVERY claimed slot.** It used to `break`
+  at the first one, so a spell occupying two slots resolved one conflict and
+  stopped: Skin like Steel displaced Center on `ac-slot-1` and never reached
+  `druid-spell-lines-hp-ac`, where Skin like Rock was still sitting, so the
+  pair it supersedes survived beside it. Displaced entries are TOMBSTONED
+  rather than removed — `claimed` holds indices into `kept`, and compacting
+  mid-loop invalidates them.
+- **Magnitude orders the pre-buff list; it must not decide membership.**
+  "hit points 50" over "armor class 21" over "strength 5" ranks three
+  unrelated numbers. Sorting by it and then capping at 8 is how Holy Armor,
+  Strength of Earth and Shield of Brambles went missing — small numbers,
+  real buffs, nothing superseding them.
 - **Locations are gated against the community Recommended-Levels table**:
   the raw WIKITEXT is parsed (the rendered page collapses empty cells) from
   in-era sections only (Antonica/Odus/Faydwer + Planes of Fear/Hate/Sky —
