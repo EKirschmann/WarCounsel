@@ -18,7 +18,9 @@ DoTs, plus the roots, snares, fears, charms, slows and resist
 debuffs, which need timers just as much and never tick — a shaman
 has no other way to know when a slow or a malaise has dropped.
 The druid pass incidentally covers nine RANGER spells that share a
-name and an identical duration.
+name and an identical duration. Regeneration is additionally included
+as a SHAMAN/DRUID heal-over-time requested for the same live timer view,
+using its 205-tick game duration.
 
 Still pack-only, and still missing every hostile spell with a
 duration: Enchanter (36, INCLUDING the whole charm/mez line at
@@ -247,6 +249,7 @@ SPELL_TIMERS = {
     "pyrocuror": 114,
     "quivering veil of xarn": 18,
     "rapture": 24,
+    "regeneration": 1230,      # [eqlbuilds] 205 ticks
     "remedy | ${2} <--": 3,
     "rest the dead": 180,      # [eqlbuilds] 30 ticks
     "root": 48,                # [eqlbuilds] 8 ticks
@@ -401,6 +404,7 @@ BASE_DURATION_ROWS = frozenset({
     "paralyzing earth",
     "plague",
     "poison bolt",
+    "regeneration",
     "rest the dead",
     "root",
     "scent of darkness",
