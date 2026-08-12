@@ -126,6 +126,41 @@ def _tier_scaled(base: str, secs: int, cast_name: str) -> int:
     return int(secs * (1 + TIER_DURATION_RATE * tier))
 
 
+def _duration_formula_ticks(formula: int, level: int) -> int:
+    """Return base duration ticks for EverQuest buff formulas 1 through 15."""
+    if formula == 1:
+        return level // 2 if level > 3 else 1
+    if formula == 2:
+        return level // 2 + 5 if level > 3 else 6
+    if formula == 3:
+        return 30 * level
+    if formula == 4:
+        return 50
+    if formula == 5:
+        return 2
+    if formula == 6:
+        return level // 2 + 2
+    if formula == 7:
+        return level
+    if formula == 8:
+        return level + 10
+    if formula == 9:
+        return 2 * level + 10
+    if formula == 10:
+        return 3 * level + 10
+    if formula == 11:
+        return 30 * (level + 3)
+    if formula == 12:
+        return level // 4 if level > 7 else 1
+    if formula == 13:
+        return 4 * level + 10
+    if formula == 14:
+        return 5 * (level + 2)
+    if formula == 15:
+        return 10 * (level + 10)
+    raise ValueError(f"unsupported buff duration formula: {formula}")
+
+
 def _level_scaled_duration(base: str, cap_seconds: int,
                            caster_level: Optional[int]) -> int:
     """Resolve level-based client buff duration formulas to seconds.
@@ -141,9 +176,9 @@ def _level_scaled_duration(base: str, cap_seconds: int,
         return cap_seconds
     formula, cap_ticks, minimum_level = rule
     level = max(caster_level or minimum_level, minimum_level)
-    if formula == 10:
-        ticks = 3 * level + 10
-    else:
+    try:
+        ticks = _duration_formula_ticks(formula, level)
+    except ValueError:
         logger.warning("unsupported timer duration formula %s for %r",
                        formula, base)
         return cap_seconds
