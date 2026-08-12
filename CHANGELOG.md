@@ -4,6 +4,35 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.8.1 — 2026-08-12
+
+**Writing spell sets into the game folder is now OFF until you switch it
+on.** Settings ▸ General. If you use the Advisor's "save this as a spell
+set" button with `/memspellset`, turn it back on there — nothing else
+changed about how it works.
+
+Why: editing the `[SpellLoadouts]` section of your `LO*.ini` is the only
+thing this app writes inside the game folder, and it is the one place a
+strict reading of the Daybreak Terms of Service has anything to bite on.
+That should be your decision rather than the installer's. It is the same
+reasoning that has always kept `eqclient.ini` read-only — other companions
+flip `Log=1` for you; this one does not write a game file it was not asked
+to write.
+
+**Fixed: instanced zones at difficulty 1 or higher charted nothing.**
+Reported as issue #7 — standing in Plane of Hate D1 showed no map, no
+geometry, no route. Difficulty comes in two shapes and only one was
+handled: `Befallen 4 (Refined)` was recognised, `Plane of Hate D1` was not,
+so the zone resolved to nothing at all and the Atlas simply sat blank. This
+affects every zone at D1 and above, not just Hate.
+
+**Fixed: a saved settings checkbox could not be turned back off.** Settings
+overrides are stored as text, and the string `"false"` was being read as
+true — so the switch saved, the file on disk was correct, and the setting
+stayed on. Found while building the toggle above. The two places that
+applied overrides had each written the same logic separately, so the bug
+existed twice; there is now one.
+
 ## v2.8.0 — 2026-08-12
 
 **Settings has a side-nav, and you choose what each panel shows.** A rail
