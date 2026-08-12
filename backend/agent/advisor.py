@@ -383,6 +383,27 @@ _NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67, 12, 28, 99, 22}
 # target (Center, Holy Armor, Symbol of Transal) and 41/43 their group
 # versions (Protection of Steel, Scale of Wolf).
 _BUFFABLE_TARGETS = {6, 41, 43, 51}
+# ...of which 41 and 43 are the GROUP forms (Protection of Steel is the group
+# twin of Skin like Steel, Scale of Wolf of Spirit of Wolf).
+_GROUP_TARGETS = {41, 43}
+
+
+def _prefers_group(name: str, solo: bool) -> int:
+    """Tie-break between a buff and its group twin. Higher wins.
+
+    Skin like Steel and Protection of Steel are the same 50 AC and 50 HP for
+    the same 36 minutes; the only difference is who ELSE it lands on. On
+    equal magnitudes the shape fallback kept whichever happened to come
+    first in the list, which is how a SOLO focus was handed the group
+    version of every armour buff. Solo, the group form lands on nobody else
+    and is at best equal; grouped, it is the entire point.
+
+    A TIE-BREAK only -- a stronger group buff still beats a weaker single
+    one, because that magnitude is a real difference and this is not.
+    """
+    from backend import builds_data
+    grp = (builds_data.spell_entry(name) or {}).get("targetTypeId") in _GROUP_TARGETS
+    return int(grp != solo)
 
 
 def _is_prebuff(e: dict) -> bool:
@@ -1841,12 +1862,33 @@ def _annotate_stacking(picks: list, ctx: dict) -> list:
     from backend import spell_lines
     book = ctx.get("spellbook") or {}
     level = ctx.get("level")
+    solo = (ctx.get("playstyle") or "").startswith("solo")
     owned = [b["name"] for b in book.get("castable", [])
              if level is None or b.get("level", 0) <= level]
     for p in picks:
         name = p.get("name") or ""
         slots = spell_lines.slots_for(name) or {}
         if not slots:
+            # No curated entry -- but its TWIN may have one. The table knows
+            # Skin like Wood and not Protection of Wood, so a solo player was
+            # offered the group form of a buff two upgrades out of date:
+            # nothing could compare it to anything. An OWNED spell applying
+            # the identical effect set at the identical magnitude is the same
+            # buff by another delivery, so it inherits that spell's verdict.
+            # Paired on effect shape, never on the name -- "Protection of"
+            # resembling "Skin like" is the reasoning the no-fuzzy rule
+            # exists to prevent.
+            sh = _effect_shape(name)
+            for twin in (owned if sh else []):
+                if twin.lower() == name.lower() or _effect_shape(twin) != sh:
+                    continue
+                beats = [o for o in owned
+                         if o.lower() != twin.lower()
+                         and spell_lines.supersedes(o, twin)]
+                if beats:
+                    p["superseded_by"] = beats[0]
+                    p["_drop"] = True
+                break
             continue
         beaten_by = [o for o in owned
                      if o.lower() != name.lower() and spell_lines.supersedes(o, name)]
@@ -1878,7 +1920,15 @@ def _annotate_stacking(picks: list, ctx: dict) -> list:
         if prev is None:
             shapes[ids] = (mag, p)
             continue
-        keep, drop = (prev[1], p) if prev[0] >= mag else (p, prev[1])
+        if mag != prev[0]:
+            keep, drop = (prev[1], p) if prev[0] > mag else (p, prev[1])
+        else:
+            # Same effect, same size: who it lands on is the only thing left
+            # to choose by, so ask the focus rather than the list order.
+            keep, drop = ((p, prev[1])
+                          if _prefers_group(p.get("name") or "", solo)
+                             > _prefers_group(prev[1].get("name") or "", solo)
+                          else (prev[1], p))
         shapes[ids] = (max(prev[0], mag), keep)
         drop["_drop"] = True
         keep.setdefault("overwrites", []).append(drop.get("name"))

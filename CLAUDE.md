@@ -748,6 +748,22 @@ display**; failing entries are dropped and logged, never shown. The gates
   pair it supersedes survived beside it. Displaced entries are TOMBSTONED
   rather than removed — `claimed` holds indices into `kept`, and compacting
   mid-loop invalidates them.
+- **Equal magnitudes are broken by the PLAYSTYLE, not by list order.** Skin
+  like Steel and Protection of Steel are the same 50 AC / 50 HP for the same
+  36 minutes; the only difference is who else it lands on. `_effect_shape`'s
+  fallback kept whichever came first, which handed a `solo_dps` character
+  the group form of every armour buff. `_prefers_group()` decides it —
+  solo prefers the single-target twin, grouped prefers the group one. A
+  TIE-BREAK only: a stronger group buff still beats a weaker single one.
+- A group form the curated table does not carry inherits its twin's verdict
+  when the player owns that twin (paired on identical effect SHAPE and
+  magnitude, never on the name — "Protection of" resembling "Skin like" is
+  what the no-fuzzy rule exists to prevent). When the twin is NOT owned the
+  group form survives uncompared, which is the partial-coverage rule working
+  as intended. **Do not "fix" that with a subset rule** — Holy Armor's
+  effects are a subset of Skin like Steel's at lower magnitudes, and it
+  occupies `ac-slot-4`, so the two genuinely stack; a subset rule would drop
+  exactly the buff this section was fixed to restore.
 - **Magnitude orders the pre-buff list; it must not decide membership.**
   "hit points 50" over "armor class 21" over "strength 5" ranks three
   unrelated numbers. Sorting by it and then capping at 8 is how Holy Armor,
