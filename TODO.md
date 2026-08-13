@@ -277,3 +277,126 @@ pets could fold into their owner properly.
 
 Worth checking whether such a list exists and what licence it carries
 before assuming it can be vendored.
+
+---
+
+## Adopting from everquest-companion (jmoyers)
+
+**Status:** compared 2026-08-13 against its README and feature site
+(<https://github.com/jmoyers/everquest-companion>,
+<https://jmoyers.github.io/everquest-companion/>). Source not read; claims
+below are from its own documentation, so verify before copying a mechanism.
+MIT-adjacent check needed before vendoring anything — see NOTICE.md rules.
+
+Same premise as ours: log file only, no memory reading, no injection. It is
+Electron/TypeScript, Windows-only, borderless mode required. So its wins are
+in PRESENTATION and RETENTION, not in access to better data — everything it
+draws, our parser already sees.
+
+### 1. Per-hit retention, and the two features it unlocks
+
+**The one architectural gap.** `state_tracker.apply()` folds every hit
+straight into counters (`abilities[name] = {hits, total, crits}`), so an
+encounter remembers totals and nothing else. `timeline` is 2s buckets of
+TOTAL damage — one lane, no attribution.
+
+They keep the individual events, which buys them two things we cannot
+currently build at any price:
+
+- **A fight timeline with one lane per skill**, marking hit / miss / resist
+  along the fight, with scroll-to-zoom, drag-to-pan and a Fit button.
+- **Per-hit drill-down**: click a fight, see every hit, miss and resist that
+  made the total.
+
+Cost is smaller than it sounds: a 4-minute fight at ~2 swings/sec is ~500
+events; cap per encounter and retain only for the encounters already held in
+memory. `PERSISTED_EVENTS` should NOT grow — this is in-memory per fight,
+dropped when the encounter rolls off, exactly like `timeline` today.
+
+Do this first. It is the only item that unblocks others, and "why did that
+fight go badly" is a question our Encounter panel currently cannot answer
+beyond totals.
+
+### 2. Zone-scoped "Overall" aggregate
+
+Theirs aggregates every fight in a zone to answer "is this ability worth
+casting" over a long session. Ours stops at `ability_summary()` — the last 5
+pulls — which is a different and much shorter question.
+
+Cheap for us: encounters already carry `zone` in the payload
+(`_persist_milestone`), so this is a rollup over stored rows, not new
+plumbing.
+
+**Belongs in the WEB panel, not the overlay.** The overlay dropped its
+last-5 aggregate deliberately (see CLAUDE.md, "The overlay meter is the
+CURRENT fight only") and that reasoning holds here — it is a planning
+question, and the overlay is a glance surface.
+
+### 3. Sort quests by closest to completion
+
+Their Plane of Sky tracker sorts class Test quests by nearest-to-done so you
+can see what is actually achievable. Trivial for us — the Quests tab already
+computes `have`/`needed` for rows where the count is known. Sort those
+first, descending by fraction complete, ahead of the rows with no bar.
+
+Smallest good idea on this list. No data work at all.
+
+### 4. Shareable trigger strings
+
+They share alerts as paste-safe strings that PREVIEW before importing, and
+export a whole config bundle that deliberately contains "no file paths, no
+window positions, and no character progress".
+
+We already have the hard half: `data/tracked_rules.json`, and
+`POST /api/tracked-rules` replaces the set whole. What is missing is
+encode/decode plus a preview step.
+
+Worth doing because a guild can standardise on one trigger set. It does NOT
+reopen the TTS decision (CLAUDE.md: voice callouts stay out, point people at
+eql-alerts) — sharing rules and speaking them are separate questions.
+
+Copy the exclusion list verbatim as a principle: a shared bundle must carry
+no paths, no window geometry, no character state.
+
+### 5. Named / raid-target kill history
+
+They track raid boss defeats across difficulty tiers with kill counts and
+dates. We have per-mob `kills/xp/coin_copper/loot_drops` and lifetime totals
+derived from `log_events`, but nothing distinguishes a named from a trash
+mob.
+
+**Do not guess at "named" from the mob's name.** No leading article, title
+case, apostrophes — every heuristic here is the fuzzy-matching trap the zone
+table exists to avoid.
+
+What IS evidence, and is new since 2026-08-12: we now parse the instance
+difficulty tier (`RE_DIFF_TIER`, "Plane of Hate D2"). Recording the tier on
+the kill gives a real axis without inventing one. A curated named list from
+the wiki would be the other honest route.
+
+### 6. Config bundle export
+
+Same shape as 4, one level up: overlay prefs, panel prefs, triggers, and the
+non-secret half of app_config. `secrets.json` must never be in it — that
+separation is the entire reason the file exists (CLAUDE.md, Settings &
+secrets).
+
+### Deliberately NOT adopting
+
+- **Voice packs / TTS.** Standing decision, unchanged.
+- **Recipe consumption in item knowledge.** We model no tradeskills at all,
+  and the data cost is high for a question our Quests tab does not ask.
+- **Telemetry, even off by default.** We collect nothing; that is a feature.
+  Their optional log scrubbing on feedback submission is a good idea IF a
+  "send your log" bug flow ever exists here. It does not.
+
+### Where we are ahead, and should not regress chasing this list
+
+Advisor and gear counsel with deterministic verification gates; the Quests
+tab across every item rather than one raid zone; the whole Atlas (charts,
+mined geometry, textured 3D, routing); buff timers — theirs is documented as
+"early, still rough" while ours does tier scaling, cooldown shaves and
+oracle-line snapping; the group-filtered meter built on the EQL
+shared-damage rule; session persistence across restarts; pet adoption and
+un-mapping; Mac and Linux under Wine against their Windows-only Electron;
+and a 43MB single .exe against an Electron runtime.
