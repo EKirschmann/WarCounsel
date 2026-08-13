@@ -933,8 +933,8 @@ async def generate_spellset(body: dict | None = None):
     One command in game then loads the whole bar: /memspellset <name>."""
     from backend import builds_data
     from backend.spellsets import find_loadout_ini, write_spell_set
-    from backend.agent.advisor import _permanent_buffs, stack_gem_order
-    from backend.game_data import _primary_effect as game_data_primary
+    from backend.agent.advisor import (_is_prebuff, _permanent_buffs,
+                                       stack_gem_order)
     from backend.game_data import supersedes_for_slots
     # Off unless the player switched it on. This is the only file the app
     # writes inside the game folder, so it is their call to make, not the
@@ -963,11 +963,14 @@ async def generate_spellset(body: dict | None = None):
             if tracker.level is not None and s["level"] > tracker.level:
                 continue
             e = builds_data.spell_entry(s["name"])
-            if not e or e.get("targetTypeId") not in (6, 51):
-                continue  # beneficial self/ally only — no charms, no enemy DoTs
-            pe = game_data_primary(e)
-            if pe and pe[0] in (12, 13, 28):
-                continue  # invisibility lines (incl. IVU): situational
+            # ONE definition of "is this a pre-buff", shared with the
+            # advisor. This used to keep its own list and the two disagreed
+            # in both directions: it dropped see-invisibility, which the
+            # advisor kept, and it kept root and charm, which the advisor
+            # drops -- so /memspellset could write Treeform into a pre-buff
+            # bar and plant you in the ground.
+            if not e or not _is_prebuff(e):
+                continue
             t = e.get("durationTicks") or 0
             if t > 0:  # any timed buff — longest first fills toward 14
                 timed.append((t, s["name"]))

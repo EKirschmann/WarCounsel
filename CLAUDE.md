@@ -748,6 +748,21 @@ display**; failing entries are dropped and logged, never shown. The gates
   one test all three paths share (`_long_buffs` for the prompt,
   `_backfill_prebuffs` for the deterministic additions, `_gate_prebuffs` for
   the verifier); before it, each checked a different subset.
+  - **`_is_prebuff()` is shared with the SPELL-SET WRITER** (`main.py`'s
+    `/api/spellsets/generate`), which kept its own list. The two disagreed
+    in BOTH directions: the writer dropped see-invisibility, which the
+    advisor kept, and it kept root and charm, which the advisor drops — so
+    `/memspellset` could write Treeform into a pre-buff bar and plant you in
+    the ground. One definition, both callers.
+  - Levitate (57) and see-invisibility (13) are excluded for the reason
+    invisibility already was: long, self-landing, structurally perfect
+    buffs that you cast to cross a zone or find something hiding, not as
+    part of buffing up. In a list bounded by your gem count they push out
+    something you would actually fight better for.
+  - Charisma (10) too — `_BUFF_NOISE` already declares it noise, so a spell
+    whose LEADING effect is charisma is one we can say nothing about. Spirit
+    of Snake rendered as "long buff" and nothing else, which is filler
+    wearing a recommendation.
   - `_BUFFABLE_TARGETS = {6, 41, 43, 51}` — self, single friendly, and the
     two group forms. Read off spells whose purpose is unambiguous (Stun,
     Fear and Ensnare are 5; Befriend Animal is 9; Feral Spirit is 14) rather

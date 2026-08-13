@@ -374,7 +374,16 @@ _SELF_TARGET = 6
 # every structural test for a pre-buff passed -- and it plants you in the
 # ground. Befriend Animal and Charm Animals last 20 minutes and are cast on
 # something you intend to fight beside, not on yourself.
-_NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67, 12, 28, 99, 22}
+# 57 is levitate and 13 is see-invisibility. Both are long, both land on
+# you, and both pass every structural test for a buff -- but you cast them
+# to cross a zone or to find something hiding, not as part of buffing up,
+# and in a list bounded by your gem count they push out something you would
+# actually fight better for. Same reasoning that already excluded
+# invisibility. 10 is charisma: the dataset marks it NOISE (see _BUFF_NOISE)
+# because zero-magnitude charisma pads almost every record, so a spell whose
+# LEADING effect is charisma is one we can say nothing about -- it rendered
+# as "long buff" and no more, which is filler wearing a recommendation.
+_NOT_A_BUFF_SPAS = _NOT_PERM_SPAS | {67, 12, 28, 99, 22, 57, 13, 10}
 
 # targetTypeId, read off spells whose purpose is unambiguous rather than
 # assumed from the id: 5 is an enemy (Stun, Fear, Lightning Bolt, Ensnare),
