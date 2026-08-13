@@ -4,6 +4,27 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.8.2 — 2026-08-12
+
+**New: a search line on the Quests tab.** You loot something and want to
+know whether it is quest fodder before you vendor it. Type the name. It
+matches item names, quest names, givers, zones, unlocks and rewards — so
+searching a zone answers "what can I finish while I am here" from the same
+box.
+
+Searching looks at every quest, not just the 25 the list shows, and lifts
+the cap while you type. A filter that only saw what was already on screen
+would miss matches silently.
+
+**An empty result now tells you which kind of empty it is.** Searching for
+something you are carrying that no quest wants used to return a blank list,
+which reads exactly like a broken search. It now says so by name: "You are
+carrying Tanned Split Paw Skin, and no quest page references it." Searching
+for something you do not have says that instead.
+
+It deliberately stops short of calling anything safe to sell. The wiki
+failing to tie an item to a quest is not evidence that nothing does.
+
 ## v2.8.1 — 2026-08-12
 
 **Writing spell sets into the game folder is now OFF until you switch it
