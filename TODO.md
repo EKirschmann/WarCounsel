@@ -100,10 +100,25 @@ Windows, `cocoa` (WKWebView) on macOS and `gtk`/`qt` on Linux, and its
 to the pip line — which is worth knowing because that file's own comment
 claims to decide what the exe can do.
 
-**The spike that decides it:** does pywebview's edgechromium backend
-actually honour a transparent, frameless, always-on-top window? The
-parameters existing is not the same as the backend honouring them. Roughly
-20 minutes to answer, and nothing should be planned before it is.
+**The spike is DONE (2026-08-13): edgechromium honours it.** Measured in
+pixels rather than trusted from the API — baseline the desktop, put the
+window over it drawing one opaque box, compare. The desktop pixel under the
+transparent area came back byte-identical (delta 0) while the box rendered
+pure #ff0000, and `WS_EX_TOPMOST` was set. `transparent`, `frameless` and
+`on_top` all work together. Script kept at `scratchpad/spike2.py` shape —
+re-run it after any pywebview upgrade.
+
+Two things the spike also settled:
+
+- **Click-through is NOT provided.** The window came back with neither
+  `WS_EX_LAYERED` nor `WS_EX_TRANSPARENT`, so the Win32 ex-style dance stays
+  exactly as it is today — including the trap that rewriting the ex-style
+  drops the layer attributes and paints the window solid black. Port that
+  code across unchanged rather than rewriting it.
+- **DPI scaling is real and must be handled.** Asking for `x=300, y=300,
+  420x320` produced a window at `(450, 450)` sized `608x424` on a 150%
+  display. `data/overlay_ui.json` persists position and size, so a port that
+  ignores this will drift saved geometry on every launch.
 
 **The renderer is not what blocks Mac.** `backend/overlay.py` is about ten
 Win32 calls deep — `windll.user32` for the layered/transparent ex-styles and
