@@ -50,6 +50,28 @@ const LABEL: Record<string, string> = {
   other: "Other",
 };
 
+/** The part of a row's name the section header already told you.
+ *
+ * Sixteen rows reading "Primary Class Unlock - Bard" under a heading that
+ * says CLASS UNLOCKS spend 23 characters restating the section before the
+ * one word that differentiates them. Taken from the section's own longest
+ * common prefix rather than a hardcoded list, so Keys — whose four names
+ * share nothing — keeps its full labels without a special case.
+ */
+function sharedPrefix(names: string[]): string {
+  if (names.length < 2) return "";
+  let p = names[0];
+  for (const n of names.slice(1)) {
+    let i = 0;
+    while (i < p.length && i < n.length && p[i] === n[i]) i++;
+    p = p.slice(0, i);
+    if (!p) return "";
+  }
+  // Only strip a real label prefix, and never the whole name.
+  const cut = p.replace(/[^ ]*$/, "");
+  return cut.length >= 4 && names.every((n) => n.slice(cut.length).trim()) ? cut : "";
+}
+
 function pct(a: Achievement): number {
   return a.steps > 0 ? a.steps_done / a.steps : a.done ? 1 : 0;
 }
@@ -147,6 +169,7 @@ export function ProgressionPanel() {
           // of what is left to do.
           const rows = [...s.achievements].sort(
             (a, b) => Number(a.done) - Number(b.done) || pct(b) - pct(a));
+          const strip = sharedPrefix(s.achievements.map((a) => a.name));
           return (
             <div key={s.section} className="prog-sec">
               <button
@@ -174,12 +197,15 @@ export function ProgressionPanel() {
                     onClick={() => setOpenRow((o) => ({ ...o, [a.name]: !rowOpen }))}
                   >
                     <span className="prog-caret">{rowOpen ? "▾" : "▸"}</span>
-                    {a.name}
+                    {a.done && <span className="prog-done-mark">✦</span>}
+                    {strip ? a.name.slice(strip.length) : a.name}
                     {a.steps > 0 && (
-                      <span className="prog-frac">{a.steps_done}/{a.steps}</span>
+                      <span className="prog-frac">
+                        {a.done ? "done" : `${a.steps_done}/${a.steps}`}
+                      </span>
                     )}
                   </button>
-                  {a.steps > 0 && (
+                  {a.steps_done > 0 && !a.done && (
                     <div className="prog-track" title={`${a.steps_done} of ${a.steps}`}>
                       <div className="prog-fill" style={{ width: `${pct(a) * 100}%` }} />
                     </div>

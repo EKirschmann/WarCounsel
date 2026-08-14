@@ -2753,7 +2753,19 @@ button.app-version:hover { color: var(--gold-bright); }
 .prog-caret { opacity: .7; }
 .prog-count { margin-left: auto; font-family: var(--font-mono, monospace); opacity: .8; }
 .prog-row { padding: 7px 0 8px; border-bottom: 1px solid rgba(200,170,110,.10); }
-.prog-row[data-done] { opacity: .45; }
+/* A finished achievement is the REWARD, not the leftover. Dimming it to .45
+   made the one thing this character had accomplished the faintest item on
+   screen, quieter than fifteen rows of 0/6 — an inverted hierarchy in a
+   panel whose whole job is showing progress. It reads as done instead:
+   full-strength name, gold mark, and no bar, because "done" says it. */
+.prog-row[data-done] .prog-name { color: var(--gold, #c8aa6e); }
+.prog-row[data-done] .prog-frac {
+  color: var(--gold, #c8aa6e);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: 10px;
+}
+.prog-done-mark { color: var(--gold, #c8aa6e); margin-right: 2px; }
 .prog-name { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
 .prog-frac { margin-left: auto; font-family: var(--font-mono, monospace); font-size: 11px; opacity: .75; }
 .prog-track { height: 3px; margin: 5px 0 6px; background: rgba(255,255,255,.07); }

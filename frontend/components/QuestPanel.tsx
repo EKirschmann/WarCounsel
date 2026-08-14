@@ -138,7 +138,7 @@ export function QuestPanel({ level }: { level?: number | null }) {
   return (
     <section className="panel quest-panel">
       <div className="panel-head">
-        <h2>Quests</h2>
+        <h2 title="From your /outputfile inventory export joined to the wiki. Counts are what you hold; the required amount lives in each quest's walkthrough, so follow the link rather than trusting a number here. Class and level are shown but never used to hide a row — you will change trio and the items keep.">Quests</h2>
         <span className="atlas-zone">
           {scanned != null ? `${scanned} items scanned` : ""}
         </span>
@@ -171,12 +171,11 @@ export function QuestPanel({ level }: { level?: number | null }) {
           )}
         </div>
 
-        <p
-          className="adv-note"
-          title="From your /outputfile inventory export joined to the wiki. Counts are what you hold; the required amount lives in each quest's walkthrough, so follow the link rather than trusting a number here. Class and level are shown but never used to hide a row — you will change trio and the items keep."
-        >
-          Quests that want something you are already carrying.
-        </p>
+        {/* The explanatory note that used to sit here read as a second,
+            disabled input — same width and boxed treatment, directly under
+            the search — and its text repeated the tab name and the
+            placeholder. The rationale lives on the header tooltip, where it
+            is available without occupying the top of the panel. */}
 
         {err && <p className="set-note" data-ok="0">{err}</p>}
         {busy && !rows && <p className="adv-note">Reading item pages…</p>}
