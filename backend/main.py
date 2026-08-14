@@ -8,6 +8,7 @@ FastAPI app that:
 Run: uvicorn backend.main:app --reload
 """
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -606,6 +607,30 @@ async def lifespan(app: FastAPI):
 APP_VERSION = "2.8.2"  # bump together with frontend/lib/version.ts
 GITHUB_REPO = "EKirschmann/WarCounsel"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
+
+
+def _advisor_code_revision() -> str:
+    """Revision of the prompts and deterministic gates used by counsel."""
+    if is_frozen():
+        return APP_VERSION
+    try:
+        from backend.agent import advisor
+        return hashlib.sha256(
+            Path(advisor.__file__).read_bytes()).hexdigest()[:12]
+    except (AttributeError, OSError, TypeError):
+        # Source may be unavailable in an installed or unusual packaged build.
+        return APP_VERSION
+
+
+_ADVISOR_CODE_REV: Optional[str] = None
+
+
+def _advisor_revision() -> str:
+    global _ADVISOR_CODE_REV
+    if _ADVISOR_CODE_REV is None:
+        _ADVISOR_CODE_REV = _advisor_code_revision()
+    return _ADVISOR_CODE_REV
+
 
 app = FastAPI(title="WarCounsel", version=APP_VERSION, lifespan=lifespan)
 
@@ -1623,7 +1648,8 @@ async def get_advisor(refresh: bool = False, cached: bool = False):
            tracker.aa_available, tracker.spell_slots,
            book["updated"] if book else None, tracker._last_aa_seen,
            inv_sig["updated"] if inv_sig else None,
-           miss_sig["updated"] if miss_sig else None)
+           miss_sig["updated"] if miss_sig else None,
+           _advisor_revision())
     sig = _sig_norm(sig)
     if _advice_cache is not None and _advice_sig == sig and not refresh:
         return {**_advice_cache, "stale": False}
@@ -1750,7 +1776,8 @@ async def get_gear(refresh: bool = False, cached: bool = False):
     # that changes which item wins a slot.
     sig = (tracker.class_str, tracker.level, tracker.race, tracker.pet_slots,
            tuple(sorted(tracker.pet_inventory.items())),
-           inv["updated"] if inv else None)
+           inv["updated"] if inv else None,
+           _advisor_revision())
     sig = _sig_norm(sig)
     if _gear_cache is not None and _gear_sig == sig and not refresh:
         return {**_gear_cache, "stale": False}
