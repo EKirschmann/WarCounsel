@@ -459,6 +459,29 @@ source of truth the panel renders from), so there is one pattern to learn.
 - Combat-mode and slim-ledger rules address `.vitals-panel` / `.enc-panel`
   by CLASS. `> .panel:last-child` silently retargeted the ledger the moment
   the encounter panel was switched off.
+- **An item page's "Related quests" is a BACKLINK list, not a requirements
+  list.** It names a quest whether that quest TAKES the item, HANDS IT OUT,
+  or merely mentions it — so read straight it told a player their 78 water
+  flasks were the turn-in for five quests and that two more wanted a
+  Backpack. `_wanted_items()` checks each candidate against the QUEST's own
+  page: an item in the Reward block is what you get (Journeyman's Boots are
+  the reward of the Journeyman's Boots Quest, which the tab reported
+  backwards), prose says the same thing as "You receive a Water Flask", and
+  a page whose walkthrough never names the item is not asking for it.
+  - Ranks come off both sides first or "Ghoulbane +4" never matches the
+    "Ghoulbane" the prose names — that alone was dropping ten real turn-ins
+    in an early cut of this filter.
+  - **A curated turn-in row is never second-guessed**, and shows ONLY the
+    item the table names. Gnoll Bounty listed Water Flask and Ration beside
+    a bar counting GNOLL FANGS, because all three backlink to its page.
+  - The walkthrough half is a HEURISTIC and applies only when a walkthrough
+    exists. A page with none (Coldain Shawl #7, Zombie Flesh) keeps its
+    items — absence of prose is not evidence against, so the residue is
+    over-inclusive on purpose. Measured 2026-08-14: 56 rows to 36, with
+    every real turn-in surviving (Bone Chips, Phosphorous Powder, both halves
+    of the Thex Mallet, Ghoulbane for the Fiery Avenger).
+  - Changing what `_parse_quest` extracts means bumping the page cache key
+    (`"quest3"`), or stored entries come back without the new field.
 - **The Quests search matches over EVERY loaded row and lifts the 25-row
   cap** — a filter that only sees what is already on screen finds nothing
   and reads as broken. It covers item names, quest names, givers, zones,

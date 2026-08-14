@@ -101,6 +101,12 @@ def _parse_quest(wikitext: str) -> dict:
         rewards = [_delink(i) for i in items if _delink(i)]
         if rewards:
             out["rewards"] = rewards[:12]
+    # The walkthrough is the only place a page says what you HAND OVER.
+    # Kept (lowercased, delinked) so _wanted_items can ask whether a page
+    # that has prose ever actually names the item.
+    wk = re.search(r"==\s*Walkthrough\s*==(.*?)(?=\n==|\Z)", wikitext, re.S | re.I)
+    if wk:
+        out["walkthrough"] = _delink(wk.group(1)).lower()
     m = re.match(r"\s*\{\{\s*([^}|]{0,40}?Era)\s*\}\}", wikitext)
     if m:
         out["era"] = m.group(1).strip()
@@ -177,7 +183,7 @@ def _kind(quest: str, page: dict, item_names: list) -> str:
 
 
 async def _quest_page(name: str) -> dict:
-    cached = wiki_page_cache.get("quest2", name.lower())
+    cached = wiki_page_cache.get("quest3", name.lower())
     if cached is not None:
         return cached or {}
     from backend import wiki_http
@@ -188,8 +194,59 @@ async def _quest_page(name: str) -> dict:
     data = _parse_quest(txt) if txt else {}
     # Cached even when empty: a quest page we cannot parse is still a page
     # we should not re-fetch on every consult.
-    wiki_page_cache.set(data, _QUEST_TTL, "quest2", name.lower())
+    wiki_page_cache.set(data, _QUEST_TTL, "quest3", name.lower())
     return data
+
+
+def _wanted_items(item_names: list, page: dict) -> list:
+    """Of the items you hold that this page mentions, which does it WANT?
+
+    The item pages give a section called "Related quests", and related is
+    exactly what it means: it is a backlink list, so an item appears there
+    whether the quest takes it, gives it, or merely names it in passing.
+    Read straight, that told a player their 78 water flasks were the turn-in
+    for five different quests, and that two more wanted a Backpack.
+
+    Two tests, both against the quest's OWN page:
+
+    - **It is in the Reward block.** Then it is what you GET. "Crush the
+      Undead" lists `{{:Water Flask}}` under == Reward ==; Journeyman's Boots
+      are the reward of the Journeyman's Boots Quest, which the tab was
+      reporting the other way round.
+    - **The page has a walkthrough and never names it.** "Quench Lasen's
+      Thirst" says "Bring him a Water Flask" and keeps it; the Backpack
+      quests never mention a backpack anywhere in their prose.
+
+    Ranks come off both sides first, or "Ghoulbane +4" would never match the
+    "Ghoulbane" the prose names.
+
+    The walkthrough half is a HEURISTIC and can be wrong: a page that hands
+    its requirement to a template, or words it unusually, loses the item. It
+    only ever applies when a walkthrough exists, and it costs a row rather
+    than inventing one -- which is the safer direction for a list whose whole
+    claim is "this quest wants something you are carrying".
+    """
+    from backend.game_data import _strip_upgrade
+    rewards = {_strip_upgrade(r).strip().lower()
+               for r in (page.get("rewards") or [])}
+    walk = page.get("walkthrough") or ""
+    out = []
+    for n in item_names:
+        base = _strip_upgrade(n).strip().lower()
+        if not base:
+            continue
+        if base in rewards:
+            continue
+        # Pages state rewards in prose as well as in the Reward block, and
+        # always the same way: "You receive a Water Flask." That sentence is
+        # why Note for Konem claimed a flask it hands OUT.
+        if re.search(r"you receive (?:a |an |the )?" + re.escape(base), walk):
+            continue
+        if walk and base not in walk:
+            continue
+        out.append(n)
+    return out
+
 
 
 async def quests_for_items(items: list, level=None) -> list:
@@ -300,6 +357,22 @@ async def quests_for_items(items: list, level=None) -> list:
         page = pages.get(quest)
         page = page if isinstance(page, dict) else {}
         extra = merged.get(quest)
+        # "Related quests" on an item page is a BACKLINK list, so it names
+        # quests that reward the item as readily as ones that take it. A
+        # curated turn-in row (extra) states its requirement outright and is
+        # never second-guessed; everything else is checked against the quest's
+        # own page.
+        if extra and extra.get("item"):
+            # Our own table names the turn-in outright. Gnoll Bounty was
+            # listing "Water Flask x78" and "Ration x74" beside a bar counting
+            # GNOLL FANGS, because all three are backlinked from its page.
+            only = [n for n in item_names
+                    if n.strip().lower() == extra["item"].strip().lower()]
+            item_names = only or item_names
+        elif not extra:
+            item_names = _wanted_items(item_names, page)
+            if not item_names:
+                continue
         lvl = None
         if page.get("min_level"):
             m = re.search(r"\d+", str(page["min_level"]))
