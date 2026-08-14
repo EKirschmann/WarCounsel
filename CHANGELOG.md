@@ -4,6 +4,61 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.9.0 — 2026-08-13
+
+**New: a Progression tab.** Class unlocks, raid targets, keys, race and
+deity unlocks, factions, exploration, hunter, slayer and tradeskills — read
+straight from the game's own `/outputfile achievements` dump, which carries
+a complete/incomplete mark on every single criterion.
+
+That matters most for **Plane of Sky**. Every other Sky tracker infers your
+progress from an inventory dump, and inference is wrong in two directions:
+an item you already turned in has left your bags while its criterion stays
+complete, and a class confirmed at creation autocompletes without the items
+ever being held. This reads the game's answer instead of guessing at it.
+
+Sorted closest-to-done, with the item list tucked behind a click for
+anything you have not started — sixteen class unlocks at 0/6 is ninety-six
+lines of things you have not done, which buries the ones you have. Type
+`/outputfile achievements` in-game and press check exports; there is a
+reminder in Vitals if you have not.
+
+**Pre-launch progression is withheld rather than labelled.** A beta export
+on a real character claimed a class unlock was finished, with all six Plane
+of Sky items obtained. The current export for the same character attributes
+that unlock to an entirely different class. That is not stale data, it is a
+confident wrong answer to "have I finished this" — so the panel shows the
+warning in place of the data, with a button to look anyway.
+
+**Fixed: counsel could survive its own fix.** Advisor and gear results
+persist between launches, and opening the tab deliberately never starts an
+LLM call — so freshness was judged only from your character and exports,
+never from the code that produced the counsel. Installing a release that
+corrected an advisor gate left the old counsel on screen marked current.
+Thanks to **@soaringswine**, who found this, wrote the regression test
+first, and fixed it (#8). Extended afterwards to cover every module holding
+a gate rather than just the advisor's own.
+
+**Fixed: Ensnare and Treeform were offered as pre-buffs, and four real
+buffs were missing.** Nothing checked who a spell lands on, so a snare — a
+fourteen-minute effect cast on an enemy — passed every test for something
+to cast before a pull. Nothing checked what the effect does, so Treeform
+qualified too: self-target, thirty-six minutes, and it roots you in place.
+Levitate and see-invisibility are gone from the list for the same reason
+invisibility already was. Symbol of Transal, Strength of Earth, Holy Armor
+and Shield of Brambles are back. And the spell-set writer kept its own copy
+of these rules that disagreed with the advisor's in both directions, so
+`/memspellset` could write Treeform into a pre-buff bar.
+
+**Fixed: a solo focus was handed the group version of its buffs.** Skin
+like Steel and Protection of Steel are the same 50 AC and 50 HP for the
+same 36 minutes, so the only difference is who else it lands on — and the
+tie was being settled by list order. It asks your playstyle now.
+
+**Pre-buffs are capped at your spell slots.** You cast them by memorizing
+one, casting it and swapping the gem back, so a seventeen-entry routine
+against a fourteen-slot book describes something nobody can do in one pass.
+
 ## v2.8.2 — 2026-08-12
 
 **New: a search line on the Quests tab.** You loot something and want to
