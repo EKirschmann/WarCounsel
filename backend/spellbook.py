@@ -102,6 +102,18 @@ _HOARD_LOCATION_RE = re.compile(r"hoard [1-9]\d*", re.IGNORECASE)
 _DEPOT_LOCATION_RE = re.compile(r"personal-depot[1-9]\d*", re.IGNORECASE)
 
 
+# Storage you OWN and can go and fetch, as opposed to what is on your body.
+# Lives beside the classifier that produces these values, because the two have
+# to move together: #9 taught the parser to tell Equipment overflow, the
+# Dragon's Hoard and the Personal Depot apart from bags, and three gates in
+# generate_gear_advice were still spelling the answer out as ("bags", "bank").
+# On a real export that silently dropped 21 items -- Ghoulbane +4 and the rest
+# of an Equipment tab -- out of the pet-gear pool, purely because they had
+# stopped being mislabelled. `bank` being on the old list is the giveaway that
+# the rule was never "in your bags", it was "owned, not worn, go and get it".
+RETRIEVABLE = frozenset({"bags", "bank", "stash", "hoard", "depot"})
+
+
 def _inventory_where(location: str) -> str:
     """Classify an exact top-level location label from an inventory export."""
     if location in WORN_SLOTS:
