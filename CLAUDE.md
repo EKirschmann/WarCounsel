@@ -893,6 +893,17 @@ display**; failing entries are dropped and logged, never shown. The gates
   persisted) is compared against the launch boundary; the snapshot carries
   `pet_inventory_stale`, the panel reads "Was holding (BETA)", and the sync
   hint is urgent.
+- **The Progression panel WITHHOLDS pre-launch data rather than labelling
+  it.** Flagging is the rule everywhere else, and this is the documented
+  exception. A beta achievements export on a real character claimed
+  "Primary Class Unlock - Monk — DONE, all six Sky items" while the current
+  export says Monk 0/6 and Paladin 4/4: not stale, a confident wrong answer
+  to "have I finished this", and a banner above the panel does not stop the
+  body of it asserting the claim. The banner carries a "show it anyway"
+  button; a reload re-blocks, because the reveal is per-look and not a
+  setting. Flagging has to be remembered on every surface and fails silently
+  where it was not — the achievements export sat 633 hours old with NO hint
+  at all until 2026-08-13, which is the argument for failing safe here.
 - **Pre-launch exports are flagged, not just aged.** `_pre_launch()` compares
   a file's mtime against `settings.eql_launch_iso` (2026-07-28). An export
   from beta is not merely stale: a character need not survive a launch, so

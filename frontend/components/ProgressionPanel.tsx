@@ -63,6 +63,14 @@ export function ProgressionPanel() {
   const [err, setErr] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [openRow, setOpenRow] = useState<Record<string, boolean>>({});
+  // Pre-launch data is WITHHELD, not merely labelled. A beta export on this
+  // character claimed "Primary Class Unlock - Monk — DONE, all six Sky items"
+  // while the real one says Monk 0/6 and Paladin 4/4. That is not stale, it
+  // is a confident wrong answer to "have I finished this", and a banner above
+  // it does not stop the body of the panel asserting it. Flagging has to be
+  // remembered on every surface and fails silently where it was not;
+  // withholding fails safe.
+  const [showBeta, setShowBeta] = useState(false);
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
@@ -78,6 +86,7 @@ export function ProgressionPanel() {
 
   const load = useCallback(async () => {
     setErr(null);
+    setShowBeta(false);      // a reload re-blocks; the reveal is per-look
     try {
       setData(await apiGet("/api/progression"));
     } catch (e) {
@@ -116,13 +125,22 @@ export function ProgressionPanel() {
             export goes stale on its own schedule — this character's
             spellbook was current while this file was 633 hours old. */}
         {data.pre_launch && (
-          <p className="sync-hint" data-urgent="1" role="status">
-            This is from BEFORE launch — it describes a beta character. Type{" "}
-            <code>/outputfile achievements</code> in-game to refresh it.
-          </p>
+          <div className="sync-hint" data-urgent="1" role="status">
+            <p>
+              This export is from BEFORE launch, so it describes a beta
+              character — including which unlocks it calls finished. Type{" "}
+              <code>/outputfile achievements</code> in-game, then reload.
+            </p>
+            {!showBeta && (
+              <button type="button" className="adv-rescan"
+                      onClick={() => setShowBeta(true)}>
+                show it anyway
+              </button>
+            )}
+          </div>
         )}
 
-        {sections.map((s) => {
+        {!(data.pre_launch && !showBeta) && sections.map((s) => {
           const isOpen = open[s.section] ?? (s.kind === "class" || s.kind === "raid");
           // Closest to done first — the achievable thing is the useful
           // thing. Completed sink to the bottom rather than heading a list
