@@ -1049,6 +1049,70 @@ async def generate_spellset(body: dict | None = None):
                     "before /memspellset (logging out overwrites the file)."}
 
 
+@app.get("/api/progression")
+async def get_progression():
+    """Achievement progress, read from the game's own /outputfile dump.
+
+    AUTHORITATIVE, and that is the point. Everyone else infers Plane of Sky
+    progress from an inventory dump, which is wrong in two directions: an
+    item already turned in has left your bags while its criterion stays
+    complete, and a class confirmed at creation autocompletes without the
+    items ever being held. The game answers per criterion; we read the
+    answer instead of guessing at it.
+
+    Sections come back in the file's own order with a `kind` tag so the UI
+    can lead with the interesting ones. Boilerplate criteria (the four
+    "autocompletes"/"can be bypassed" sentences) are flagged `note` by the
+    parser and excluded from `steps`, so a class unlock reads 6/6 and a
+    closest-to-done sort is not skewed by them.
+    """
+    d = load_export(tracker.name, tracker.server, "Achievements")
+    if not d:
+        return {"available": False, "sections": [],
+                "note": "No achievements export found — type "
+                        "/outputfile achievements in-game, then press "
+                        "check exports."}
+    # The file repeats itself: EverQuest: Keys and General: Keys are
+    # byte-identical. The parser already merges by name; this only decides
+    # what the UI leads with.
+    KIND = {"Untapped Potential: Classes": "class",
+            "Untapped Potential: Races": "race",
+            "Untapped Potential: Deity": "deity",
+            "EverQuest: Raids": "raid",
+            "EverQuest: Keys": "key", "General: Keys": "key",
+            "EverQuest: Progression": "faction",
+            "EverQuest: Exploration": "explore",
+            "EverQuest: Hunter": "hunter"}
+    # Grouped by KIND, not by the file's section names. Nine Tradeskill
+    # sections and four Slayer ones are one thing each to a player, and
+    # EverQuest: Keys / General: Keys are byte-identical duplicates -- so
+    # merging also has to dedupe by achievement name or Keys reads 0/8 when
+    # there are four keys in the game.
+    merged: dict = {}
+    order: list = []
+    for sec in d.get("sections") or []:
+        name = sec["section"]
+        kind = KIND.get(name,
+                        "tradeskill" if name.startswith("Tradeskill")
+                        else "slayer" if name.startswith("Slayer") else "other")
+        if kind not in merged:
+            merged[kind] = {"kind": kind, "section": name, "achievements": []}
+            order.append(kind)
+        seen = {a["name"] for a in merged[kind]["achievements"]}
+        merged[kind]["achievements"] += [a for a in sec["achievements"]
+                                         if a["name"] not in seen]
+    secs = []
+    for kind in order:
+        m = merged[kind]
+        m["total"] = len(m["achievements"])
+        m["done"] = sum(1 for a in m["achievements"] if a["done"])
+        secs.append(m)
+    return {"available": True, "sections": secs,
+            "done": d.get("done", 0), "count": d.get("count", 0),
+            "file": d.get("file"), "age_hours": d.get("age_hours"),
+            "pre_launch": d.get("pre_launch")}
+
+
 @app.get("/api/spellbook")
 async def get_spellbook():
     """Parsed /outputfile spellbook export for the active character."""

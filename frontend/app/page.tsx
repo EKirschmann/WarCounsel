@@ -8,6 +8,7 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { APP_VERSION } from "@/lib/version";
 import { AdvisorPanel } from "@/components/AdvisorPanel";
 import { QuestPanel } from "@/components/QuestPanel";
+import { ProgressionPanel } from "@/components/ProgressionPanel";
 import { AtlasPanel } from "@/components/AtlasPanel";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { EncounterPanel } from "@/components/EncounterPanel";
@@ -70,7 +71,7 @@ export default function Home() {
       .catch(() => {});
   }, []);
   const [rows, setRows] = useState<LedgerRow[]>([]);
-  const [centerTab, setCenterTab] = useState<"atlas" | "advisor" | "quests">("atlas");
+  const [centerTab, setCenterTab] = useState<"atlas" | "advisor" | "quests" | "progression">("atlas");
   const [centerOpen, setCenterOpen] = useState(true);
 
   useEffect(() => {
@@ -126,6 +127,7 @@ export default function Home() {
   const showLedger = show("ledger");
   const showEnc = show("encounter");
   const showQuests = show("quests");
+  const showProgression = show("progression");
   // Only set when something is OFF, so the default layout stays exactly
   // the stylesheet's — including its media queries, which a blanket
   // inline override would have flattened.
@@ -326,6 +328,16 @@ export default function Home() {
                 Quests
               </button>
               )}
+              {showProgression && (
+              <button
+                role="tab"
+                aria-selected={centerTab === "progression"}
+                data-active={centerTab === "progression"}
+                onClick={() => setCenterTab("progression")}
+              >
+                Progression
+              </button>
+              )}
               <button
                 type="button"
                 className="tab-collapse"
@@ -337,6 +349,8 @@ export default function Home() {
             </div>
             {centerTab === "atlas" ? (
               <AtlasPanel zone={snap?.zone ?? null} position={snap?.position ?? null} />
+            ) : centerTab === "progression" && showProgression ? (
+              <ProgressionPanel />
             ) : centerTab === "quests" && showQuests ? (
               <QuestPanel level={snap?.level ?? null} />
             ) : (

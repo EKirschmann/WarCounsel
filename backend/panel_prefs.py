@@ -73,6 +73,23 @@ SECTIONS = {
             "out_of_era": {"label": "Out of era", "hint": "Kunark and later"},
         },
     },
+    "progression": {
+        "label": "Progression",
+        "hint": "what the game says you have done",
+        "fields": {
+            "class": {"label": "Class unlocks", "hint": "Plane of Sky"},
+            "raid": {"label": "Raid targets", "hint": ""},
+            "key": {"label": "Keys", "hint": ""},
+            "race": {"label": "Race unlocks", "hint": ""},
+            "deity": {"label": "Deity", "hint": ""},
+            "faction": {"label": "Factions", "hint": ""},
+            "explore": {"label": "Exploration", "hint": ""},
+            "hunter": {"label": "Hunter", "hint": ""},
+            "slayer": {"label": "Slayer", "hint": ""},
+            "tradeskill": {"label": "Tradeskills", "hint": ""},
+            "other": {"label": "Everything else", "hint": "levels, skills"},
+        },
+    },
     "ledger": {
         "label": "War Ledger",
         "hint": "the live log",

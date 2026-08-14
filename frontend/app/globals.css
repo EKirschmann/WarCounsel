@@ -2739,3 +2739,35 @@ button.app-version:hover { color: var(--gold-bright); }
   cursor: pointer;
 }
 .quest-search button:hover { background: rgba(200, 170, 110, .12); }
+
+/* Progression: sections collapse, rows show a depleting track like timers.
+   Completed rows dim rather than vanish — "done" is information too. */
+.prog-sec { margin-bottom: 10px; }
+.prog-head {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  padding: 5px 0; background: none; border: 0;
+  border-bottom: 1px solid var(--hairline, rgba(200,170,110,.34));
+  color: var(--gold, #c8aa6e); font-family: inherit; font-size: 12px;
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+}
+.prog-caret { opacity: .7; }
+.prog-count { margin-left: auto; font-family: var(--font-mono, monospace); opacity: .8; }
+.prog-row { padding: 7px 0 8px; border-bottom: 1px solid rgba(200,170,110,.10); }
+.prog-row[data-done] { opacity: .45; }
+.prog-name { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
+.prog-frac { margin-left: auto; font-family: var(--font-mono, monospace); font-size: 11px; opacity: .75; }
+.prog-track { height: 3px; margin: 5px 0 6px; background: rgba(255,255,255,.07); }
+.prog-fill { height: 100%; background: var(--gold, #c8aa6e); }
+.prog-crit { list-style: none; margin: 0; padding: 0; }
+.prog-crit li {
+  display: flex; gap: 6px; font-size: 11.5px; line-height: 1.5;
+  color: var(--muted, rgba(226,222,214,.55));
+}
+.prog-crit li[data-done] { color: var(--heal, #1fb38c); }
+.prog-tick { width: 10px; flex: none; }
+
+/* the row header is a button now — strip the chrome, keep the layout */
+.prog-row .prog-name {
+  width: 100%; background: none; border: 0; padding: 0;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}

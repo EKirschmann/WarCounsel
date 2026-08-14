@@ -1736,6 +1736,27 @@ class CharacterTracker:
             hints.append({"command": "/pet leader",
                           "reason": "A summoned pet is unmapped — its damage is "
                                     "counting as an ally's, not yours"})
+        # Achievements gets its OWN hint rather than riding the spellbook's.
+        # They go stale independently -- this character's spellbook was
+        # current while its achievements export was 633 hours old, from
+        # before launch -- and the Progression tab would have presented beta
+        # progress as fact with nothing on screen to say otherwise.
+        try:
+            from backend.spellbook import load_export as _le
+            ach = _le(self.name, self.server, "Achievements")
+        except Exception:
+            ach = None
+        if ach is None:
+            hints.append({"command": "/outputfile achievements",
+                          "reason": "No achievements export — class and race "
+                                    "unlocks, keys and raid progress all come "
+                                    "from it"})
+        elif ach.get("pre_launch"):
+            hints.append({"command": "/outputfile achievements",
+                          "urgent": True,
+                          "reason": "Your achievements export is from BEFORE "
+                                    "launch — the progression it shows belongs "
+                                    "to a beta character"})
         if book is None:
             hints.append({"command": "/outputfile spellbook",
                           "reason": "No spellbook export found; the advisor cannot see owned spells"})

@@ -143,12 +143,99 @@ def _parse_level_rows(text: str):
     return castable, sorted(set(other))
 
 
+def _is_ach_note(text: str) -> bool:
+    """Is this criterion boilerplate rather than something to go and do?
+
+    99 of 1,322 rows in a real export are one of four sentences about
+    autocompleting or being bypassed with an unlock token. They carry a
+    C/I marker like any other criterion, so counting them makes a class
+    unlock look 6/8 when it is 6/6 — and it would skew a "closest to
+    completion" sort, which is the whole point of showing progress.
+
+    Matched on the PREFIX, deliberately: the game ships both "can be
+    bypassed" and "can by bypassed", and a set of exact strings would
+    silently miss the typo.
+    """
+    return text.strip().startswith("This achievement")
+
+
+def _parse_achievements(text: str) -> dict:
+    """The /outputfile achievements dump: a three-level tab outline.
+
+    ```
+    Untapped Potential: Classes          <- section, no tab
+    C	Primary Class Unlock - Monk       <- achievement, one tab
+    C		Obtain Sandals of Alacrity.     <- criterion, two tabs
+    ```
+
+    `C` is complete and `I` is incomplete, and the marker appears on BOTH
+    levels — so this is per-criterion progress straight from the game, not
+    inferred from what is sitting in your bags. That distinction is the
+    whole reason to read this file: an item already turned in has left the
+    inventory but its criterion stays `C`, and a class confirmed at
+    creation autocompletes without the player ever holding the items.
+
+    The file was unparsed until 2026-08-13 — the stub said "structure
+    unknown until a real export exists" while a 1,841-line sample sat in
+    the game folder.
+
+    `EverQuest: Keys` and `General: Keys` are byte-identical duplicates in
+    the real export, so sections are keyed by name and a repeat is merged
+    rather than appended twice.
+    """
+    sections: dict = {}
+    order: list = []
+    cur = None
+    for raw in text.splitlines():
+        if not raw.strip():
+            continue
+        if "	" not in raw:                      # section heading
+            cur = raw.strip()
+            if cur not in sections:
+                sections[cur] = []
+                order.append(cur)
+            continue
+        if cur is None:
+            continue
+        # The marker leads the line and the tabs follow it -- "C	Name" is an
+        # achievement, "C		Criterion" one of its criteria -- so depth is
+        # counted AFTER the marker, not from the start of the line.
+        mark, _, rest = raw.partition("	")
+        done = mark.strip().upper() == "C"
+        depth = 1 + (len(rest) - len(rest.lstrip("	")))
+        text_ = rest.strip()
+        if not text_:
+            continue
+        if depth == 1:                            # achievement
+            entry = {"name": text_, "done": done, "criteria": []}
+            # a duplicated section must not double the rows
+            if not any(a["name"] == text_ for a in sections[cur]):
+                sections[cur].append(entry)
+        elif sections[cur]:                       # criterion
+            crit = {"text": text_, "done": done, "note": _is_ach_note(text_)}
+            last = sections[cur][-1]
+            if not any(c["text"] == text_ for c in last["criteria"]):
+                last["criteria"].append(crit)
+    for name in order:
+        for a in sections[name]:
+            real = [c for c in a["criteria"] if not c["note"]]
+            a["steps"] = len(real)
+            a["steps_done"] = sum(1 for c in real if c["done"])
+    out = [{"section": n,
+            "achievements": sections[n],
+            "done": sum(1 for a in sections[n] if a["done"]),
+            "total": len(sections[n])} for n in order]
+    return {"sections": out,
+            "count": sum(len(s["achievements"]) for s in out),
+            "done": sum(s["done"] for s in out)}
+
+
 def load_export(name: Optional[str], server: Optional[str],
                 kind: str) -> Optional[dict]:
     """Parsed export of the given kind, cached by mtime. None when absent.
     Formats: Spellbook/MissingSpells = 'level<TAB>name' rows; Inventory =
-    TSV with a Location/Name header; Achievements = format pending a first
-    real sample (line count only)."""
+    TSV with a Location/Name header; Achievements = tab-depth outline (see
+    _parse_achievements)."""
     if not name or not server:
         return None
     path = _find_export(name, server, kind)
@@ -280,9 +367,8 @@ def load_export(name: Optional[str], server: Optional[str],
             item_facts.learn(items)
         except Exception:
             logger.debug("item_facts learn skipped", exc_info=True)
-    else:  # Achievements — structure unknown until a real export exists
-        lines = [ln for ln in text.splitlines() if ln.strip()]
-        value["count"] = len(lines)
+    else:  # Achievements
+        value.update(_parse_achievements(text))
     _export_cache[key] = value
     if len(_export_cache) > 64:
         _export_cache.clear()

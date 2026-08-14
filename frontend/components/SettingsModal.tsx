@@ -155,6 +155,7 @@ const PANEL_TABS = [
   { key: "vitals", label: "Vitals & Session" },
   { key: "encounter", label: "Encounter" },
   { key: "quests", label: "Quests" },
+  { key: "progression", label: "Progression" },
   { key: "ledger", label: "War Ledger" },
 ];
 const RAIL = [
