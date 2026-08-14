@@ -164,11 +164,13 @@ export function ProgressionPanel() {
 
         {!(data.pre_launch && !showBeta) && sections.map((s) => {
           const isOpen = open[s.section] ?? (s.kind === "class" || s.kind === "raid");
-          // Closest to done first — the achievable thing is the useful
-          // thing. Completed sink to the bottom rather than heading a list
-          // of what is left to do.
+          // Finished first, then closest to done. They used to sink to the
+          // bottom, which put the one class unlock this character had
+          // completed off-screen under fifteen rows of 0/6 — defensible while
+          // "done" was dim and easy to read as clutter, wrong now that it is
+          // the row wearing the gold.
           const rows = [...s.achievements].sort(
-            (a, b) => Number(a.done) - Number(b.done) || pct(b) - pct(a));
+            (a, b) => Number(b.done) - Number(a.done) || pct(b) - pct(a));
           const strip = sharedPrefix(s.achievements.map((a) => a.name));
           return (
             <div key={s.section} className="prog-sec">

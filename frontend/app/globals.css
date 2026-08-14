@@ -2783,3 +2783,23 @@ button.app-version:hover { color: var(--gold-bright); }
   width: 100%; background: none; border: 0; padding: 0;
   color: inherit; font: inherit; text-align: left; cursor: pointer;
 }
+
+/* The bar and the requirement it measures share a line. */
+.quest-bar-row { display: flex; align-items: center; gap: 10px; }
+.quest-bar-row .quest-progress { flex: 1; min-width: 0; }
+.quest-need {
+  flex: none;
+  font-size: 10px;
+  color: var(--muted, rgba(226, 222, 214, .45));
+  white-space: nowrap;
+}
+/* Where you hand it in: the person, then the place, quieter. */
+.quest-where .quest-zone { opacity: .7; }
+/* Rewards sat unlabelled beside the REQUIRED items and read as more of them. */
+.quest-reward-tag {
+  margin-right: 5px;
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  opacity: .75;
+}
