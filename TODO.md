@@ -77,19 +77,49 @@ Two specific unknowns:
 
 ---
 
-## Overlay on WebView2 instead of tkinter
+## Overlay on a webview instead of tkinter
 
-**Status:** deferred by the user, 2026-07.
+**Status:** deferred by the user, 2026-07. Rationale corrected 2026-08-13 —
+the entry previously argued itself backwards.
 
-Every Win32 mechanism the current overlay leans on has no macOS
-counterpart (click-through, Scroll Lock as the interact toggle, global
-hotkey polling, tray), and macOS will not reliably draw over a fullscreen
-Wine game regardless. A WebView2 overlay would also let it share the web
-UI's components instead of duplicating them in tkinter drawing calls.
+**The reason to do it is the SHARED UI, not Mac.** A webview overlay would
+draw in real HTML/CSS against the frontend's StoneGlass tokens and
+components instead of duplicating them in tkinter drawing calls, which is
+where the effort currently goes every time the overlay gains a section.
 
-Worth revisiting only if the overlay becomes a priority on Mac; the
-section/field switchboard already made the tkinter one considerably more
-useful.
+**The old entry said "worth revisiting only if the overlay becomes a
+priority on Mac", which is exactly backwards for WebView2** — it is
+Windows-only, so choosing it would convert "we do not ship a Mac overlay"
+from a policy into an architectural fact. If Mac ever matters, the target
+is **pywebview**, not WebView2: pywebview picks `edgechromium` (WebView2) on
+Windows, `cocoa` (WKWebView) on macOS and `gtk`/`qt` on Linux, and its
+`create_window` already takes `transparent`, `frameless` and `on_top`.
+
+**We already ship pywebview**, so this adds no runtime. It is not in
+`requirements-lite.txt` — `build_exe.bat` and the release workflow append it
+to the pip line — which is worth knowing because that file's own comment
+claims to decide what the exe can do.
+
+**The spike that decides it:** does pywebview's edgechromium backend
+actually honour a transparent, frameless, always-on-top window? The
+parameters existing is not the same as the backend honouring them. Roughly
+20 minutes to answer, and nothing should be planned before it is.
+
+**The renderer is not what blocks Mac.** `backend/overlay.py` is about ten
+Win32 calls deep — `windll.user32` for the layered/transparent ex-styles and
+`SetLayeredWindowAttributes`, `GetAsyncKeyState` for hotkey polling,
+`GetKeyState(VK_SCROLL)` as the interact toggle, `CreateMutexW` for the
+singleton, `winsound`, and an `eqgame.exe` watch to self-close. A Mac
+overlay is a rewrite of the INTERACTION model whatever draws the pixels, and
+macOS still will not reliably draw over a fullscreen Wine game. Do not let
+"keeps Mac open" be the justification; several other things close it first.
+
+**Whatever is chosen, the process boundary stays.** `main.py` imports only
+`overlay_prefs`, never `overlay`, and the overlay launches through
+`child_command()`. That is why the server runs on Mac and Linux at all, and
+it is the one thing not to trade away for a nicer overlay — see the Electron
+comparison in "Adopting from everquest-companion", where their single
+process owning five overlay windows is precisely what this boundary forbids.
 
 ---
 
