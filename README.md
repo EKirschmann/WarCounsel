@@ -42,6 +42,24 @@ per-class notes for your trio:
 
 ![Exaltation tracking and farming targets](docs/screenshots/exaltations-and-farming.jpg)
 
+**Quests your bags are already partway through** — your inventory export
+joined to the wiki, so a bag of oddments becomes a list of things you can
+finish. Search it for anything you just looted. Race-unlock turn-ins get a
+real progress bar, because those totals are actually stated; wiki quests do
+not, because their counts live in prose and a number scraped from a sentence
+would send you farming the wrong amount:
+
+![Quests matched from your inventory, with turn-in progress](docs/screenshots/quests.jpg)
+
+**Progression** — class unlocks (Plane of Sky), raid targets, keys, race and
+deity unlocks, factions and the rest, read from the game's own achievements
+export. Every other Sky tracker infers this from your bags, which is wrong
+in both directions: an item you already turned in has left your inventory
+while its criterion stays complete, and a class confirmed at creation
+completes without the items ever being held. This reads the game's answer:
+
+![Progression: class unlocks and raid targets from the achievements export](docs/screenshots/progression.jpg)
+
 **The in-game overlay** — a compact always-on-top meter that lives
 over the game: ranked damage bars, draining spell/cooldown timers,
 session rates, drop tracking, and loot/kill alerts with an attention
