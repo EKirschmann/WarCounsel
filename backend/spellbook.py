@@ -97,6 +97,26 @@ WORN_SLOTS = {
     "Legs", "Feet", "Waist", "Ammo", "Held",
 }
 
+_BANK_LOCATION_RE = re.compile(r"(?:bank|sharedbank)[1-9]\d*", re.IGNORECASE)
+_HOARD_LOCATION_RE = re.compile(r"hoard [1-9]\d*", re.IGNORECASE)
+_DEPOT_LOCATION_RE = re.compile(r"personal-depot[1-9]\d*", re.IGNORECASE)
+
+
+def _inventory_where(location: str) -> str:
+    """Classify an exact top-level location label from an inventory export."""
+    if location in WORN_SLOTS:
+        return "worn"
+    if location.casefold() == "equipment":
+        return "stash"
+    if _BANK_LOCATION_RE.fullmatch(location):
+        return "bank"
+    if _HOARD_LOCATION_RE.fullmatch(location):
+        return "hoard"
+    if _DEPOT_LOCATION_RE.fullmatch(location):
+        return "depot"
+    return "bags"
+
+
 _export_cache: dict = {}
 
 
@@ -245,7 +265,7 @@ def load_export(name: Optional[str], server: Optional[str],
         mtime = path.stat().st_mtime
     except OSError:
         return None
-    key = (str(path), mtime, kind, 5)  # bump on parser changes
+    key = (str(path), mtime, kind, 6)  # bump on parser changes
     hit = _export_cache.get(key)
     if hit is not None:
         return hit
@@ -306,7 +326,7 @@ def load_export(name: Optional[str], server: Optional[str],
             if m:
                 parent = m.group(1)
                 slot_n = int(m.group(2))
-                in_bank = parent.lower().startswith("bank")
+                parent_where = _inventory_where(parent)
                 # socket NUMBER encodes socket TYPE: a stone only fits a host
                 # socket of the same number. Record every socket (empty too).
                 if current is not None and current["loc"] == parent:
@@ -319,14 +339,13 @@ def load_export(name: Optional[str], server: Optional[str],
                         "name": item, "socket": slot_n,
                         "host_loc": parent,
                         "host": last_item_at.get(parent),
-                        "where": ("worn" if parent in WORN_SLOTS
-                                  else "bank" if in_bank else "bags"),
+                        "where": parent_where,
                     })
                     continue
-                if parent in WORN_SLOTS:
-                    continue  # non-exalt socket rows on gear: nothing to track
+                if parent_where in ("worn", "hoard"):
+                    continue  # socket metadata is not a separate owned item
                 items.append({"loc": loc,
-                              "where": "bank" if in_bank else "bags",
+                              "where": parent_where,
                               "name": item, "id": item_id, "count": stack})
                 continue
             if empty:
@@ -337,11 +356,7 @@ def load_export(name: Optional[str], server: Optional[str],
                 seen_slots[loc] = seen_slots.get(loc, 0) + 1
                 key = (f"{loc} {seen_slots[loc]}" if loc in paired else loc)
                 worn[key] = item
-                where = "worn"
-            elif loc.lower().startswith("bank"):
-                where = "bank"
-            else:
-                where = "bags"
+            where = _inventory_where(loc)
             entry = {"loc": loc, "where": where, "name": item,
                      "id": item_id, "count": stack, "sockets": {}}
             items.append(entry)

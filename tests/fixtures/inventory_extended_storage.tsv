@@ -1,0 +1,27 @@
+Location	Name	ID	Count	Slots
+Ear	Copper Hoop	1001	1	0
+Ear	Silver Stud	1002	1	0
+Fingers	Empty	0	0	0
+Fingers	Brass Ring	1003	1	0
+Chest	Guardian Tunic	1004	1	0
+Chest-Slot2	Drum Stone (Exaltation)	2001	1	0
+Chest-Slot7	Empty	0	0	0
+Chest-Slot8	Socket Metadata	2002	1	0
+General 1	Traveler's Pack	3001	1	10
+General 1-Slot1	Quest Token	3002	27	0
+General 1-Slot2	Empty	0	0	0
+Bank1	Banker's Satchel	4001	1	8
+Bank1-Slot1	Banked Component	4002	3	0
+SharedBank1	Shared Relic	5001	1	0
+SharedBank1-Slot1	Shared Component	5002	2	0
+Equipment	Stashed Cloak	6001	1	0
+Hoard 1	Archived Spear	7001	1	0
+Hoard 1-Slot7	Hoard Socket Metadata	7002	1	0
+Personal-Depot1	Crafting Powder	8001	42	0
+Bankruptcy1	Travel Ledger	9001	1	0
+SharedBankruptcy1	Guild Ledger	9002	1	0
+Hoarding 1	Keepsake	9003	1	0
+Personal-DepotBackup1	Spare Powder	9004	1	0
+EquipmentBackup	Spare Cloak	9005	1	0
+KeyRing	Name	ID	Count	Slots
+KeyRing1	Empty	0	0	0
