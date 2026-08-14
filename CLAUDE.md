@@ -869,6 +869,23 @@ display**; failing entries are dropped and logged, never shown. The gates
   travel/summon/pet/FD/res SPAs) are listed in the prompt with a
   never-say-"refresh" instruction — Instrument of Nife-class buffs last
   until death.
+- **Cached counsel carries a CODE revision, and adding a gate means adding
+  its module to `_COUNSEL_SOURCES`.** Counsel persists to
+  `advice_cache.json` and the tab loads it with `?cached=1`, so freshness
+  used to be decided purely from character state and export timestamps —
+  nothing about the code that produced it. Installing a release that FIXED
+  an advisor gate therefore left the old counsel showing as current with
+  `stale: false`, and the fix could not correct output already on screen
+  (PR #8, soaringswine). Source builds hash every gate-holding module;
+  frozen builds use `APP_VERSION`, since PyInstaller does not guarantee
+  readable source. Hashing zero files falls back to `APP_VERSION` rather
+  than returning a constant, which would silently restore the bug.
+  - `advisor.py` alone is NOT enough: `scale_item_line`, `weapon_indices`,
+    `proc_rates`, `item_stat_vector` and the location gate live in
+    `game_data.py`, and the curated stacking lines in `spell_lines.py`.
+    `tests/test_counsel_revision_sources.py` parametrizes over the tuple, so
+    a new gate module gets covered the moment it is listed — and stays
+    uncovered, loudly, if it is not.
 - Deterministic extras: a vendor "purchase" list (near-level missing
   spells, buy-ahead marked), nice_to_have backfilled with owned
   non-superseded alternatives when the LLM lists few, and cached counsel

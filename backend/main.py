@@ -609,17 +609,36 @@ GITHUB_REPO = "EKirschmann/WarCounsel"
 RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 
 
+# Every module holding a prompt or a deterministic gate. advisor.py alone was
+# not enough: `scale_item_line`, `weapon_indices`, `proc_rates`,
+# `item_stat_vector` and the location gate live in game_data.py, and the
+# curated stacking lines in spell_lines.py -- so a fix to any of those left
+# the cache looking current, which is the same bug one file over. Packaged
+# builds never had the gap (APP_VERSION moves every release); this is for
+# source installs.
+_COUNSEL_SOURCES = ("backend.agent.advisor", "backend.game_data",
+                    "backend.spell_lines")
+
+
 def _advisor_code_revision() -> str:
     """Revision of the prompts and deterministic gates used by counsel."""
     if is_frozen():
         return APP_VERSION
-    try:
-        from backend.agent import advisor
-        return hashlib.sha256(
-            Path(advisor.__file__).read_bytes()).hexdigest()[:12]
-    except (AttributeError, OSError, TypeError):
-        # Source may be unavailable in an installed or unusual packaged build.
+    import importlib
+    h = hashlib.sha256()
+    seen = 0
+    for mod in _COUNSEL_SOURCES:
+        try:
+            f = importlib.import_module(mod).__file__
+            h.update(Path(f).read_bytes())
+            seen += 1
+        except (AttributeError, OSError, TypeError, ImportError):
+            continue
+    # Hashing NOTHING would hand every build the same constant and silently
+    # restore the bug, so fall back rather than return a hash of emptiness.
+    if not seen:
         return APP_VERSION
+    return h.hexdigest()[:12]
 
 
 _ADVISOR_CODE_REV: Optional[str] = None
