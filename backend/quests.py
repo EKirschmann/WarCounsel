@@ -198,6 +198,28 @@ async def _quest_page(name: str) -> dict:
     return data
 
 
+def _prose_forms(base: str) -> list:
+    """The shapes a page's prose might use for an item name.
+
+    Walkthroughs write in sentences, and sentences pluralise. The Runescale
+    Cloak Quest asks for "the three runes of scale" while the item is a
+    "Rune of Scale", so an exact substring test dropped a real turn-in the
+    player was actively farming.
+
+    English puts the head noun first in "X of Y" and last otherwise, so that
+    is the word pluralised. Deliberately naive -- no stemmer, no irregulars.
+    A missed form costs a row, and the reward test above is what does the
+    real filtering.
+    """
+    forms = [base]
+    words = base.split()
+    if len(words) > 1 and " of " in f" {base} ":
+        forms.append(" ".join([words[0] + "s"] + words[1:]))
+    elif words:
+        forms.append(" ".join(words[:-1] + [words[-1] + "s"]))
+    return [f for f in dict.fromkeys(forms) if f]
+
+
 def _wanted_items(item_names: list, page: dict) -> list:
     """Of the items you hold that this page mentions, which does it WANT?
 
@@ -242,7 +264,7 @@ def _wanted_items(item_names: list, page: dict) -> list:
         # why Note for Konem claimed a flask it hands OUT.
         if re.search(r"you receive (?:a |an |the )?" + re.escape(base), walk):
             continue
-        if walk and base not in walk:
+        if walk and not any(f in walk for f in _prose_forms(base)):
             continue
         out.append(n)
     return out

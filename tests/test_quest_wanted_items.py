@@ -51,3 +51,22 @@ def test_no_walkthrough_means_no_evidence_either_way():
     """Absence of prose is not evidence against — the item is kept."""
     page = {"rewards": [], "walkthrough": ""}
     assert _wanted_items(["Bone Chips"], page) == ["Bone Chips"]
+
+
+def test_prose_pluralises_and_the_match_must_follow():
+    """The Runescale Cloak Quest asks for "the three runes of scale".
+
+    The item is a "Rune of Scale". An exact substring test dropped a real
+    turn-in the player was actively farming — the false-negative mode this
+    filter was shipped knowing it had.
+    """
+    page = {"rewards": ["Runescale Cloak"],
+            "walkthrough": "you will need a lizardscale cloak from the "
+                           "feerrott and the three runes of scale."}
+    assert _wanted_items(["Rune of Scale"], page) == ["Rune of Scale"]
+
+
+def test_plurals_do_not_rescue_a_reward():
+    """Pluralising must not undo the reward test, which is the real filter."""
+    page = {"rewards": ["Water Flask"], "walkthrough": "you receive water flasks."}
+    assert _wanted_items(["Water Flask"], page) == []
