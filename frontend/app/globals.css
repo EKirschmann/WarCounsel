@@ -2779,10 +2779,15 @@ button.app-version:hover { color: var(--gold-bright); }
 .prog-tick { width: 10px; flex: none; }
 
 /* the row header is a button now — strip the chrome, keep the layout */
+/* The collapsible sections make this a <button>; the "worth collecting"
+   band uses a plain <div> because there is nothing to expand. Scoped to the
+   element that actually does something, or the band offers a pointer cursor
+   over a row that ignores the click. */
 .prog-row .prog-name {
   width: 100%; background: none; border: 0; padding: 0;
-  color: inherit; font: inherit; text-align: left; cursor: pointer;
+  color: inherit; font: inherit; text-align: left;
 }
+.prog-row button.prog-name { cursor: pointer; }
 
 /* The bar and the requirement it measures share a line. */
 .quest-bar-row { display: flex; align-items: center; gap: 10px; }
