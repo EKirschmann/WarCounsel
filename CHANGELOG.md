@@ -4,6 +4,50 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.9.1 — 2026-08-14
+
+**Fixed: a consult could disappear when you saved settings.** Run a consult,
+open Settings, change anything at all, and the advisor and gear counsel were
+both discarded — because the settings panel sends the advisor provider on
+every save, and any mention of it was treated as "the model changed". Only a
+real model change clears counsel now.
+
+Worse, the counsel was never actually gone. It is written to disk after
+every consult, and the tab simply was not looking there — so a cleared
+memory cache reported "no counsel" while the file held the whole thing. Both
+tabs now fall back to the file, and a consult superseded by a genuine model
+change stays on screen marked stale instead of vanishing.
+
+**Fixed: weapon procs were being counted as spells you cast.** If a spell is
+BOTH scribed and granted by an exaltation — Ignite, off a Shimmering Ruby
+Stiletto — casting it once made every later proc count as a cast for the
+rest of the session. In one log that was 407 procs filed as casts. Whether
+damage was cast is now decided per hit, in a 12-second window measured from
+18,721 real cast-to-damage pairs.
+
+**Fixed: quests that do not want what you are carrying.** The tab claimed
+five quests wanted a Water Flask and two more wanted a Backpack. An item
+page's "Related quests" list names a quest whether it takes the item, hands
+it out, or just mentions it — so the Journeyman's Boots Quest was listed as
+wanting Journeyman's Boots, which are its reward. Rewards and unmentioned
+items are filtered out; 56 rows became 36 with every real turn-in kept.
+Gnoll Bounty no longer lists water flasks beside a bar counting gnoll fangs.
+
+**Fixed: items in Shared Bank, Equipment, Dragon's Hoard and Personal Depot
+were reported as carried in your bags.** Thanks to **@soaringswine**, who
+found this, wrote the regression fixture first, and fixed it (#9). Follow-up
+here so the gear consult accepts the newly-named storage — one player had 21
+items in an Equipment tab that would otherwise have gone quiet.
+
+**The Quests and Progression tabs got a design pass.** Progression rows no
+longer repeat their own heading sixteen times ("Primary Class Unlock -
+Bard" under CLASS UNLOCKS is now just "Bard"), a finished unlock reads as
+gold and leads its section instead of being dimmed to near-invisible at the
+bottom, and empty progress rails are gone. On Quests, the requirement now
+sits beside the bar that measures it, the giver and zone read as one place,
+and rewards are labelled — they were an unlabelled list of item names next
+to a list of required item names.
+
 ## v2.9.0 — 2026-08-13
 
 **New: a Progression tab.** Class unlocks, raid targets, keys, race and
