@@ -212,6 +212,27 @@ All styling is CSS custom properties in `app/globals.css` — **no Tailwind**.
   by Spirit Tap") — encounter heal rows key "Spell — Healer". Incoming
   avoidance parses per defense verb (block/dodge/parry/riposte/miss) into
   the per-fight defense line. Loot-and-auto-sell lines tag "(sold)".
+- **Whether damage was cast is decided PER EVENT, in a 12s window** —
+  `_cast_less()`, not "did the session ever see a cast". A name you both
+  cast AND proc collapses onto whichever came first under a set: Ignite,
+  granted by an owned Shimmering Ruby Stiletto and also scribed, was
+  hand-cast 532 times and fired cast-less 407 more in one log, and all 939
+  were reported as casts.
+  - 12s is MEASURED, not borrowed from the tool that suggested it: across
+    18,721 cast/damage pairs the gap is 2.0s median, 6.0s at p99, 99.8%
+    inside 12s, and the curve is FLAT to 30s — so a wider window buys
+    nothing and only risks calling a proc a cast.
+  - The old rule also demanded `spell_file.is_proc()`, which is False for
+    both Ignite and Burn: item-granted procs are not in the client spell
+    file at all (the known limit, one section down). The static answer said
+    "not a proc" while the log said otherwise 407 times.
+  - **Cast-less is NOT a general "this is a proc" test and must not become
+    one.** Smite is the counter-example: the Paladin ABILITY is a melee verb
+    whose rider `Smiting Strike` lands 6,608 times and is never cast, while
+    the Smite SPELL is cast 1,209 times. Cast-less says no cast caused it;
+    it says nothing about what did. Source claims stay with owned-stone
+    evidence — per jmoyers/everquest-companion's own note, "a proc line
+    never names its source", and every attribution there is co-occurrence.
 - Exaltation procs share the spell-damage line shape; effects granted by
   owned stones (wiki-mined into tracker.exalt_effects at startup/export
   refresh/character switch) label ability rows "(exaltation)" — MINUS any

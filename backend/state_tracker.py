@@ -19,6 +19,10 @@ from backend.log_system.parser import CLASS_ABBREV, spell_tier, strip_tier
 
 logger = logging.getLogger(__name__)
 
+# How long after our own cast that spell's damage may still be arriving.
+# See CharacterTracker._cast_less for the measurement behind it.
+PROC_CAST_WINDOW_S = 12.0
+
 DPS_WINDOW_SECONDS = 60
 COMBAT_TIMEOUT_SECONDS = 8
 
@@ -230,6 +234,11 @@ class CharacterTracker:
         self.exalt_ambiguous: set = set()
         # spells this character has been SEEN casting (log evidence)
         self.spell_casts: set = set()
+        # WHEN each spell was last cast, not merely whether it ever was.
+        # A name you both cast and proc -- Ignite, off an owned stone, 532
+        # casts and 407 proc hits in one log -- collapses to whichever the
+        # session saw first if all you keep is a set.
+        self.spell_cast_at: dict = {}
         self.crits = 0
         self.coin_copper = 0  # session coin total, all sources (in copper)
         self.rune_absorbed = 0  # damage eaten by rune buffs this session
@@ -492,21 +501,57 @@ class CharacterTracker:
                     self._mob(self._last_kill[0])[key] += pend[1]
                 setattr(self, attr, None)
 
-    def _fx_label(self, spell: str) -> str:
+    def _fx_label(self, spell: str, ts=None) -> str:
         """Exaltation procs share the spell-damage line shape — the effect
-        name gives them away. Names that are ALSO scribed label only when
-        the client spell file marks them proc-granted AND this session
-        never saw a cast (log evidence beats static data)."""
+        name gives them away. Names that are ALSO scribed are decided PER
+        EVENT: damage with no cast of that spell behind it was not cast.
+
+        This used to ask "did the session ever see a cast", which collapses
+        a name you both cast and proc onto whichever came first. Ignite is
+        exactly that — granted by an owned Shimmering Ruby Stiletto and also
+        scribed — and in one 138MB log it was hand-cast 532 times and fired
+        cast-less 407 more. All 407 were reported as casts.
+
+        The old rule also required spell_file.is_proc(), which is False for
+        Ignite and Burn: item-granted procs are not marked in the client
+        spell file at all. So the static answer was "not a proc" while the
+        log said otherwise 407 times. Log evidence beats static data — the
+        comment always said so; now the code does.
+        """
         low = (spell or "").lower()
         base = strip_tier(low)
         if low in self.exalt_effects or base in self.exalt_effects:
             return f"{spell} (exaltation)"
         if ((low in self.exalt_ambiguous or base in self.exalt_ambiguous)
-                and low not in self.spell_casts
-                and base not in self.spell_casts
-                and spell_file.is_proc(low)):
+                and self._cast_less(low, base, ts)):
             return f"{spell} (exaltation)"
         return spell
+
+    def _cast_less(self, low: str, base: str, ts) -> bool:
+        """Did this damage arrive without one of OUR casts behind it?
+
+        12 seconds, measured rather than borrowed: across 18,721 cast/damage
+        pairs in a real log the gap is 2.0s at the median, 6.0s at p99, and
+        99.8% land inside 12s — with the curve flat from there to 30s, so a
+        wider window buys nothing and only risks calling a proc a cast.
+
+        NOT a general "is this a proc" test, and deliberately not used as
+        one. Smite proves why: the Paladin ABILITY is a melee verb whose
+        rider, Smiting Strike, lands 6,608 times and is never cast, while
+        the Smite SPELL is cast 1,209 times. Cast-less says a cast did not
+        cause it; it says nothing about what did. Source claims stay with
+        the owned-stone evidence.
+        """
+        if ts is None:
+            return False
+        seen = [t for t in (self.spell_cast_at.get(low),
+                            self.spell_cast_at.get(base)) if t is not None]
+        if not seen:
+            return True
+        try:
+            return (ts - max(seen)).total_seconds() > PROC_CAST_WINDOW_S
+        except TypeError:
+            return False
 
     def _encounter_heal(self, ts: datetime, label: str, amount: int,
                         crit: bool = False) -> None:
@@ -631,6 +676,8 @@ class CharacterTracker:
             if e.spell:  # log evidence for proc-vs-cast disambiguation
                 self.spell_casts.add(e.spell.lower())
                 self.spell_casts.add(strip_tier(e.spell).lower())
+                self.spell_cast_at[e.spell.lower()] = e.ts
+                self.spell_cast_at[strip_tier(e.spell).lower()] = e.ts
                 self._infer_class(e.spell, e.ts)
                 if live:
                     base = strip_tier(e.spell).lower()
@@ -751,11 +798,11 @@ class CharacterTracker:
                                             e.damage, e.target, crit=e.crit,
                                             mods=e.mods)
                 elif isinstance(e, ev.SpellDamageOut):
-                    self._encounter_ability(e.ts, self._fx_label(e.spell),
+                    self._encounter_ability(e.ts, self._fx_label(e.spell, e.ts),
                                             "spell", e.damage, e.target,
                                             crit=e.crit, mods=e.mods)
                 else:  # DotDamage
-                    self._encounter_ability(e.ts, self._fx_label(e.spell),
+                    self._encounter_ability(e.ts, self._fx_label(e.spell, e.ts),
                                             "dot", e.damage, e.target,
                                             crit=e.crit)
                     # first tick names the victim — bind the running timer
