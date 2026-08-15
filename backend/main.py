@@ -2169,9 +2169,16 @@ async def get_loot_filter():
 @app.get("/api/item-acquisition")
 async def get_item_acquisition(name: str):
     """Where an item comes from (drops/vendors/quests/crafting) — feeds
-    the gear-tab hover cards. Wiki-mined, cached."""
-    from backend.game_data import item_acquisition
-    return await item_acquisition(name)
+    the gear-tab hover cards. Wiki-mined, cached.
+
+    Carries the BASE stat line too. "Is this reward worth farming for" is
+    the question a hover card is opened to answer, and acquisition alone
+    cannot answer it. Base (+0) values deliberately: the card is most often
+    opened on something not owned yet, and there is no rank to scale to.
+    """
+    from backend.game_data import item_acquisition, item_line
+    acq, line = await asyncio.gather(item_acquisition(name), item_line(name))
+    return {**(acq or {}), "stats": line or None}
 
 
 @app.get("/api/map")

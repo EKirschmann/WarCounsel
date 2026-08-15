@@ -66,9 +66,15 @@ async def worth_collecting(zone: Optional[str], quest_rows: list,
     here = _canonical(zone) or zone
 
     why: dict = {}
+    rewards: dict = {}
     for row in quest_rows or []:
         for it in row.get("items") or []:
             why.setdefault(it["name"], []).append(row["quest"])
+            # What the quest PAYS. "Should I bother picking this up" is
+            # answered by the reward, not by the quest's name -- and the two
+            # only coincide for equipment quests.
+            for r in (row.get("rewards") or [])[:4]:
+                rewards.setdefault(it["name"], []).append(r)
     for rec in race_unlocks.all_items():
         why.setdefault(rec["item"], []).append(
             f"{rec['race']} unlock — {rec['npc']}")
@@ -84,6 +90,7 @@ async def worth_collecting(zone: Optional[str], quest_rows: list,
         items.append({
             "name": name,
             "for": sorted(set(why[name]))[:3],
+            "rewards": sorted(set(rewards.get(name) or []))[:4],
             "held": (held or {}).get(name, 0),
             # A turn-in with a stated total is the one case where "keep
             # farming" has a number behind it.

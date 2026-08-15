@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { usePanelPrefs } from "@/lib/panelPrefs";
+import { ItemHover } from "./ItemHover";
 
 /* What the game says you have and have not done.
  *
@@ -31,6 +32,7 @@ interface ZoneItem {
   held: number;
   needed: number | null;
   also_drops: string[];
+  rewards: string[];
 }
 interface Section {
   section: string;
@@ -202,11 +204,34 @@ export function ProgressionPanel() {
                 <ul className="prog-crit">
                   <li>
                     <span className="prog-tick">→</span>
-                    {z.for.join(" · ")}
+                    {/* Hover the quest, not just the reward: most quest
+                        pages here parse to nothing, so their `rewards` come
+                        back empty — but an equipment quest is NAMED for
+                        what it pays, and the item page has the stats. */}
+                    {z.for.map((q, i) => (
+                      <span key={q}>
+                        {i > 0 && " · "}
+                        <ItemHover name={q} />
+                      </span>
+                    ))}
                     {z.also_drops.length > 0 && (
                       <span className="prog-also"> · also {z.also_drops.join(", ")}</span>
                     )}
                   </li>
+                  {/* The REWARD is what decides whether this is worth the
+                      bag slot, and the quest's name only coincides with it
+                      for equipment quests. Hover for the base stats. */}
+                  {z.rewards.length > 0 && (
+                    <li className="prog-rewards">
+                      <span className="prog-tick">★</span>
+                      {z.rewards.map((r, i) => (
+                        <span key={r}>
+                          {i > 0 && ", "}
+                          <ItemHover name={r} />
+                        </span>
+                      ))}
+                    </li>
+                  )}
                 </ul>
               </div>
             ))}

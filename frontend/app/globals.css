@@ -2814,3 +2814,18 @@ button.app-version:hover { color: var(--gold-bright); }
    it does not collapse. */
 .prog-here .prog-head { cursor: default; }
 .prog-also { opacity: .6; }
+
+/* Base stats lead the hover card, laid out as discrete facts rather than a
+   semicolon run-on. */
+.item-hover-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin-bottom: 7px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(200, 170, 110, .18);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--gold, #c8aa6e);
+}
+.prog-rewards .prog-tick { color: var(--gold, #c8aa6e); }

@@ -9,6 +9,7 @@ interface AcqLine {
   kind: "zone" | "entry" | "note";
 }
 interface Acquisition {
+  stats?: string | null;
   item: string;
   sections: { label: string; lines: AcqLine[] }[];
   available: boolean;
@@ -118,16 +119,28 @@ export function ItemHover({ name, children }: { name: string; children?: React.R
           ) : !acq.available ? (
             <span className="item-hover-note">no acquisition data on the wiki</span>
           ) : (
-            acq.sections.map((s) => (
-              <span key={s.label} className="item-hover-sec">
-                <span className="item-hover-label">{s.label}</span>
-                {s.lines.map((l, i) => (
-                  <span key={i} className="item-hover-line" data-kind={l.kind}>
-                    {l.text}
-                  </span>
-                ))}
-              </span>
-            ))
+            <>
+              {/* Base (+0) stats first: "is this worth farming for" is the
+                  question the card is opened to answer, and where it drops
+                  cannot answer it. */}
+              {acq.stats && (
+                <span className="item-hover-stats">
+                  {acq.stats.split(";").map((part, i) => (
+                    <span key={i}>{part.trim()}</span>
+                  ))}
+                </span>
+              )}
+              {acq.sections.map((s) => (
+                <span key={s.label} className="item-hover-sec">
+                  <span className="item-hover-label">{s.label}</span>
+                  {s.lines.map((l, i) => (
+                    <span key={i} className="item-hover-line" data-kind={l.kind}>
+                      {l.text}
+                    </span>
+                  ))}
+                </span>
+              ))}
+            </>
           )}
         </span>,
         document.body,

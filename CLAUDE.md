@@ -508,6 +508,18 @@ source of truth the panel renders from), so there is one pattern to learn.
   and reads as broken. It covers item names, quest names, givers, zones,
   unlocks and rewards, so the not-found message says exactly that rather
   than claiming it only searched your bags.
+- **`/api/item-acquisition` carries the BASE stat line as well.** "Is this
+  worth farming for" is the question a hover card is opened to answer, and
+  where an item drops cannot answer it — a Darkforge Vambrace reading
+  `Class: SHD` tells a Paladin/Monk/Shaman not to bother, which no
+  acquisition section would. Base (+0) deliberately: the card is usually
+  opened on something not owned, so there is no rank to scale to, and
+  `scale_item_line` must not be applied here.
+  - In the zone band the hover hangs off the QUEST name, not only the
+    reward. Most quest pages there parse to nothing so their `rewards` come
+    back empty, but an equipment quest is NAMED for what it pays and the
+    item page has the stats. `item_line("Weeping Wand Quest")` even
+    fuzzy-resolves to the wand.
 - **`GET /api/zone-items` reverses the quest lookup**: not "which quests want
   this item I hold" but "which of the things I want drop HERE", so a zone
   line turns into a short list of things not to vendor. Its OWN endpoint,
