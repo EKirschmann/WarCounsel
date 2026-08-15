@@ -445,3 +445,79 @@ oracle-line snapping; the group-filtered meter built on the EQL
 shared-damage rule; session persistence across restarts; pet adoption and
 un-mapping; Mac and Linux under Wine against their Windows-only Electron;
 and a 43MB single .exe against an Electron runtime.
+
+---
+
+## More from everquest-companion, measured against a real log (2026-08-14)
+
+Follow-up to the adoption list above. Each item below was TESTED against
+1,755,201 lines of this project owner's logs rather than judged from their
+docs, so the numbers are what we would actually get, not what they get.
+
+Their proc analytics were the first thing taken from this survey and are
+already done (see the per-event cast window in state_tracker).
+
+### 1. Attack rounds — the one genuinely new measurement
+
+Their `attack-round-stats.md` groups swings per (second, target) and reads
+double/triple attack out of the round size. Our timestamps are second-
+granular, so this drops straight in. Measured:
+
+```
+rounds (second+target+verb)  86,808
+multi-swing rounds           13,140   15.1%
+swings per round             1:73,668  2:12,066  3:916  4:137  5:17  6:3
+```
+
+**Their caveat is the important part**: "same-second 2x on a WEAPON verb may
+be two hands, not a double". So the headline 15.1% conflates dual wield with
+double attack. The way through is to read it off verbs that cannot be dual
+wielded:
+
+```
+verb      rounds   multi%    dual-wieldable?
+kick      14,687    14.1%    no  <- clean double-attack read
+bash       4,132     7.3%    no  <- clean
+slash     22,096    16.6%    yes (contaminated)
+crush     15,644    22.4%    yes (contaminated)
+```
+
+Kick and bash are the honest signal. That is a real skill/AA effect a player
+would want to watch improve, and nothing in the app measures it today.
+
+### 2. Special-attack RATES, which we have the counts for but not the denominator
+
+We already parse and keep the stacked mods. Over the same logs: Riposte 557,
+Slay Undead 477, Finishing Blow 424, plus stacked forms (Riposte Critical
+40, Riposte Slay Undead 3). What we show is raw counts per ability; their
+doc normalises "flurry rate over primary attack rounds". Rounds from item 1
+ARE that denominator, so this comes almost free once rounds exist.
+
+### 3. Incoming attack profile
+
+What is actually hitting you, by the attacker's verb, over the same logs:
+punch 24,662 · hit 20,691 · bash 18,374 · kick 16,231 · slash 12,597 ·
+cleave 8,500 · pierce 7,548 · crush 4,040. We keep `damage_taken` and a
+last-5-pulls incoming profile; a session/lifetime breakdown of what is
+landing on you does not exist and needs no new parsing.
+
+### 4. Buff uptime — feasible, but NOT as simple as pairing cast to fade
+
+67 distinct spells faded across the logs. The trap is that fades mix three
+different things: our self-buffs, our debuffs on mobs, and mob debuffs on
+us. `tangling weeds` shows 62 fades against 0 casts by us, which is proof
+the set is not ours alone. Buff-fade lines carry a target (the mez/charm
+break signal), so the split is available — but it has to be done, not
+assumed, and the naive version would report uptime for spells the player
+never cast.
+
+### Not worth taking
+
+- **Proc SOURCE attribution** (`ProcLink`, concentration ratios,
+  `MIN_INACTIVE_SWINGS = 200`). Good work, and their instinct matches ours —
+  they refuse to call Instrument of Nife "exclusive" on 1,084 active hits vs
+  12 across 289 inactive swings because the control group is too small. But
+  it is a feature rather than a fix, and it claims a source the log never
+  names. Revisit only with a clear appetite for correlation-grade answers.
+- Anything requiring lockout state: the log carries none, see the raid
+  section above.
