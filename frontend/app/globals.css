@@ -2803,3 +2803,9 @@ button.app-version:hover { color: var(--gold-bright); }
   text-transform: uppercase;
   opacity: .75;
 }
+
+/* "Worth collecting here" leads the panel — the one section that expires
+   when you zone. Marked with the gold diamond rather than a caret, since
+   it does not collapse. */
+.prog-here .prog-head { cursor: default; }
+.prog-also { opacity: .6; }

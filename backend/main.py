@@ -1068,6 +1068,36 @@ async def generate_spellset(body: dict | None = None):
                     "before /memspellset (logging out overwrites the file)."}
 
 
+@app.get("/api/zone-items")
+async def get_zone_items():
+    """Wanted items that drop in the zone you are standing in.
+
+    Its own endpoint rather than part of /api/progression: the first call
+    mines an item page per candidate, and the Progression tab reads a local
+    file and should not wait on the wiki to render.
+    """
+    from backend import zone_items as zi
+    from backend import quests as quests_mod
+    inv = load_export(tracker.name, tracker.server, "Inventory")
+    items = (inv or {}).get("items") or []
+    held: dict = {}
+    for it in items:
+        n = (it.get("name") or "").strip()
+        if n:
+            held[n] = held.get(n, 0) + int(it.get("count") or 1)
+    rows = []
+    if items:
+        try:
+            rows = await quests_mod.quests_for_items(items, level=tracker.level)
+        except Exception:
+            logger.debug("zone-items: quest scan failed", exc_info=True)
+    try:
+        return await zi.worth_collecting(tracker.zone, rows, held)
+    except Exception as exc:
+        logger.exception("zone-items failed")
+        raise HTTPException(500, f"zone lookup failed: {str(exc)[:120]}")
+
+
 @app.get("/api/progression")
 async def get_progression():
     """Achievement progress, read from the game's own /outputfile dump.

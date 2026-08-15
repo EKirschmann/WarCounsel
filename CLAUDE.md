@@ -508,6 +508,27 @@ source of truth the panel renders from), so there is one pattern to learn.
   and reads as broken. It covers item names, quest names, givers, zones,
   unlocks and rewards, so the not-found message says exactly that rather
   than claiming it only searched your bags.
+- **`GET /api/zone-items` reverses the quest lookup**: not "which quests want
+  this item I hold" but "which of the things I want drop HERE", so a zone
+  line turns into a short list of things not to vendor. Its OWN endpoint,
+  because the first call mines an item page per candidate and the
+  Progression tab reads a local file — blocking one on the other makes a
+  fast tab wait on the wiki.
+  - "Drops From" lines interleave zones and mob names with nothing marking
+    which is which ("Blackburrow, a burly gnoll, a gnoll brewer"). A name
+    that resolves through `_canonical()` IS a zone; everything else is a
+    mob. Same two-namespace bridge `zem_entry_for` exists for.
+  - **Plane of Sky items cannot be placed this way** — measured 2026-08-14,
+    0 of 20 sampled class-unlock criteria have a "Drops From" section at
+    all. Those come off named island bosses and the wiki records it
+    elsewhere. eqlposky/EQProgression DO carry it ("Island 5: The Spiroc
+    Lord") but state no licence, so nothing is vendored from them. Sky is
+    absent from this band on purpose.
+  - We can only want what we can already see: quest rows come from items you
+    HOLD, so a quest needing something you have none of is invisible. Race
+    unlocks are the exception — that table is curated, so all seven turn-ins
+    count regardless. 36 of 41 candidates resolved to a zone on a real
+    character.
 - **`GET /api/quests` returns the scanned item NAMES, not just the count**,
   because an empty search result has two very different causes: you are
   carrying the thing and no quest page wants it, or it is not in your bags.
