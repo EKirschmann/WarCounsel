@@ -930,6 +930,21 @@ display**; failing entries are dropped and logged, never shown. The gates
     `tests/test_counsel_revision_sources.py` parametrizes over the tuple, so
     a new gate module gets covered the moment it is listed — and stays
     uncovered, loudly, if it is not.
+- **A consult is discarded only when the MODEL BEHIND IT changed, and a
+  cleared memory cache is not a lost consult.** Two bugs, one report ("I did
+  a consult, clicked another tab, and it was gone"):
+  - `api_settings_set` cleared both caches whenever `llm_provider` appeared
+    in the body — and SettingsModal sends it on EVERY save. So saving a game
+    folder, or ticking a checkbox with nothing to do with the advisor, threw
+    away counsel the user had waited a minute for. It compares `active()`
+    before and after now.
+  - `?cached=1` fell straight to `{"cached": false}` when memory was empty,
+    while `data/advice_cache.json` still held the answer. That defeats the
+    whole persistence design — and PR #8's stale path, which exists so a
+    superseded consult stays VISIBLE rather than vanishing. Both consult
+    endpoints re-read the file before giving up.
+  - The disk copy is written per consult and survives reloads; verified by
+    forcing a reload and watching 17 advisor keys and 14 gear keys come back.
 - Deterministic extras: a vendor "purchase" list (near-level missing
   spells, buy-ahead marked), nice_to_have backfilled with owned
   non-superseded alternatives when the LLM lists few, and cached counsel

@@ -1689,10 +1689,20 @@ async def api_settings_set(body: dict):
         per_provider = {"openai": "openai_model", "custom": "custom_model",
                         "local": "ollama_model", "anthropic": "anthropic_model",
                         "lmstudio": "model"}
+        was = active()
         set_active(prov, config_in.get(per_provider.get(prov, "")))
-        global _advice_cache, _gear_cache
-        _advice_cache = None
-        _gear_cache = None
+        now = active()
+        # Counsel is thrown away only when the model BEHIND it changed.
+        # SettingsModal sends llm_provider on every save, so "the key is
+        # present" meant saving a game folder -- or ticking a checkbox that
+        # has nothing to do with the advisor -- silently discarded a consult
+        # the user had waited a minute for.
+        if was != now:
+            global _advice_cache, _gear_cache
+            _advice_cache = None
+            _gear_cache = None
+            logger.info("Advisor model changed (%s -> %s) — consults cleared",
+                        was, now)
 
     restarted = False
     if game_changed:
@@ -1740,6 +1750,12 @@ async def get_advisor(refresh: bool = False, cached: bool = False):
     if _advice_cache is not None and _advice_sig == sig and not refresh:
         return {**_advice_cache, "stale": False}
     if cached:
+        # Memory can be cleared while the persisted copy is intact (a
+        # provider switch, a reload). Falling straight to {"cached": false}
+        # reported the consult as gone when it was on disk the whole time,
+        # which is what a player sees as "I did a consult and lost it".
+        if _advice_cache is None:
+            _load_advice_cache()
         # serve the last counsel even when the context moved on (zone/level/
         # exports) — marked stale so the tab can offer a reconsult instead
         # of forcing one
@@ -1868,6 +1884,9 @@ async def get_gear(refresh: bool = False, cached: bool = False):
     if _gear_cache is not None and _gear_sig == sig and not refresh:
         return {**_gear_cache, "stale": False}
     if cached:
+        if _gear_cache is None:
+            _load_advice_cache()   # one file holds both
+
         if _gear_cache is not None:
             return {**_gear_cache, "stale": True}
         return {"cached": False}
