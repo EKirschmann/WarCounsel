@@ -4,6 +4,22 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.10.1 — 2026-08-16
+
+**Fixed: the app could be using a max HP many levels out of date.** It was
+stored only when you typed one in — the stats-panel reading updated the live
+value but never wrote it back, while startup loaded the stored one. So every
+restart began with whatever you last typed and stayed there until you next
+opened the inventory window. On one character the stored value was 1948
+against an actual 3379.
+
+That was harmless until v2.10.0 started recording how far your health dropped
+in each fight. Measured against a stale maximum, a fight costing 1,900 damage
+reads as 2.5% health remaining instead of 44% — a comfortable fight logged as
+a near-death, in exactly the data meant to weigh survivability. The stored
+value now keeps up with what the app reads, and a value you type by hand still
+wins.
+
 ## v2.10.0 — 2026-08-16
 
 **Fixed: gear advice could not see item effects at all.** A swap was offered
