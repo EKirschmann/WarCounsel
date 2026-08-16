@@ -130,6 +130,13 @@ class CharacterTracker:
         self.pet_slots: Optional[int] = None     # pet equipment slots (user-set)
         self.pet_classes: Optional[str] = None   # pet's equip class(es), user-set
         self.max_hp: Optional[int] = None        # user-reported (log has no max HP)
+        # /con results, keyed by mob name. EQL prints the mob's LEVEL
+        # outright, which is the only objective per-mob difficulty the
+        # log carries -- colour and verdict prose are not comparable
+        # across levels. Kept across encounters so a mob considered
+        # once stays classified for every later fight with it.
+        self.considered: dict = {}
+        self.oom_count = 0
         self.max_mana: Optional[int] = None      # user-reported
         self.zone: Optional[str] = None
         # Session counters (live events only)
@@ -292,7 +299,17 @@ class CharacterTracker:
                               # is often the last thing before a zone line,
                               # so tracker.zone has already moved on by the
                               # time pending_encounters drains
-                              "zone": self.zone, "level": self.level}
+                              "zone": self.zone, "level": self.level,
+                              # survivability signal, richer than a death:
+                              # hp_floor tracks the deepest point reached by
+                              # walking damage/heals against max_hp, and oom
+                              # counts a loss condition that leaves no other
+                              # trace. Both are None/0 when unknowable.
+                              "hp": self.max_hp, "hp_floor": self.max_hp,
+                              "oom": 0,
+                              # stamped from /con at creation, so a later
+                              # re-con cannot rewrite a finished fight
+                              "mob_level": None, "mob_rare": False}
         else:
             self.encounter["last"] = ts
             # ...and OUR clock, which is what bounds how long a groupmate
@@ -593,6 +610,47 @@ class CharacterTracker:
         if target:
             enc["target"] = target
             self._encounter_foe(target, dealt=damage)
+            # /con almost always precedes the pull, so the level is usually
+            # already known by the time the first hit names the target
+            if enc.get("mob_level") is None:
+                seen = self.considered.get(target.lower())
+                if seen:
+                    enc["mob_level"] = seen.get("level")
+                    enc["mob_rare"] = bool(seen.get("rare"))
+
+    def _is_self(self, who: Optional[str]) -> bool:
+        """Does this name refer to the tracked character?
+
+        EQL writes the PLAYER as the literal word "you" in lines addressed to
+        them -- measured on a real log, all 161 heals landing on the player
+        read "healed you" and NONE used the character name. A bare
+        name-equality test therefore matched nothing, and healing_received
+        silently counted zero of 17,954 hp of incoming heals.
+        """
+        w = (who or "").strip().lower()
+        return bool(w) and (w in ("you", "yourself")
+                            or w == (self.name or "").lower())
+
+    def _hp_walk(self, delta: int) -> None:
+        """Track the deepest HP reached inside a fight.
+
+        A DEATH is the tail of a distribution we can measure all of: on one
+        character 2.6% of fights ended in death while 5.3% cost over half of
+        max HP, so waiting for a death discards every near-miss -- which are
+        exactly the fights more mitigation would have changed.
+
+        Reconstructed from the log's own damage and heal events rather than
+        OCR: the stats panel only reads while the inventory window is open,
+        which is not when you are being hit. Regen ticks are NOT logged, so
+        this drifts pessimistic over a long fight; it is a floor, not a
+        gauge, and it is None whenever max HP is unknown.
+        """
+        enc = self.encounter
+        if enc is None or enc.get("hp") is None:
+            return
+        enc["hp"] = max(0, min(self.max_hp or enc["hp"], enc["hp"] + delta))
+        if enc["hp_floor"] is None or enc["hp"] < enc["hp_floor"]:
+            enc["hp_floor"] = enc["hp"]
 
     def _encounter_foe(self, name: str, dealt: int = 0, taken: int = 0,
                        slain: bool = False) -> None:
@@ -955,6 +1013,7 @@ class CharacterTracker:
                 self.encounter["total_in"] += e.damage
                 self.encounter["in_hits"] = self.encounter.get("in_hits", 0) + 1
                 self._encounter_foe(e.attacker, taken=e.damage)
+                self._hp_walk(-e.damage)
             elif isinstance(e, ev.MissIn):
                 # tanking view: which defense ate each incoming swing
                 enc = self.encounter
@@ -975,8 +1034,9 @@ class CharacterTracker:
                 self._encounter_heal(e.ts, f"{e.spell or 'Direct heal'} — You",
                                      e.amount, crit=e.crit)
             elif isinstance(e, ev.OtherHeal):
-                if e.target.lower() == (self.name or "").lower():
+                if self._is_self(e.target):
                     self.healing_received += e.amount
+                    self._hp_walk(e.amount)
                 healer = self.pet_owners.get(e.healer, e.healer)
                 self._encounter_heal(e.ts,
                                      f"{e.spell or 'Direct heal'} — {healer}",
@@ -1118,6 +1178,23 @@ class CharacterTracker:
                 # a purchase.
                 if e.cost and self.aa_available is not None:
                     self.aa_available = max(0, self.aa_available - e.cost)
+            elif isinstance(e, ev.Consider):
+                # remembered across fights: a mob considered once stays
+                # classified, and /con usually happens BEFORE the pull
+                self.considered[e.name.lower()] = {
+                    "level": e.level, "rare": e.rare, "ts": e.ts}
+                enc = self.encounter
+                if enc is not None and enc.get("mob_level") is None:
+                    tgt = (enc.get("target") or "").lower()
+                    if tgt and tgt == e.name.lower():
+                        enc["mob_level"] = e.level
+                        enc["mob_rare"] = e.rare
+            elif isinstance(e, ev.OutOfMana):
+                self.oom_count += 1
+                enc = self.encounter
+                if (enc is not None and (e.ts - enc["last"]).total_seconds()
+                        <= COMBAT_TIMEOUT_SECONDS):
+                    enc["oom"] = enc.get("oom", 0) + 1
             elif isinstance(e, ev.SkillUp):
                 self.skill_ups += 1
             elif isinstance(e, ev.Loot):
@@ -1507,6 +1584,21 @@ class CharacterTracker:
             "trio": enc.get("trio"),
             "zone": enc.get("zone"),
             "level": enc.get("level"),
+            # difficulty: the mob's OWN level from /con, and the gap to ours.
+            # A mob far below the player is a gimme and should carry no
+            # weight when judging gear -- but that is a decision for the
+            # consumer, so the raw numbers are published rather than a verdict.
+            "mob_level": enc.get("mob_level"),
+            "mob_rare": bool(enc.get("mob_rare")),
+            "level_delta": ((enc["mob_level"] - enc["level"])
+                            if enc.get("mob_level") is not None
+                            and enc.get("level") is not None else None),
+            # survivability: how deep the fight went, and whether mana ran out
+            "hp_floor": enc.get("hp_floor"),
+            "hp_floor_pct": (round(100.0 * enc["hp_floor"] / self.max_hp, 1)
+                             if enc.get("hp_floor") is not None and self.max_hp
+                             else None),
+            "oom": enc.get("oom", 0),
             # one lumped row, with how many sources it covers -- enough to
             # tell "the filter is hiding something" from "nobody helped"
             "unattributed": ({"damage": sum((enc.get("unattributed") or {}).values()),

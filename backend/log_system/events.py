@@ -258,6 +258,26 @@ class AASpend(LogEvent):
     cost: int
 
 
+class Consider(LogEvent):
+    """A /con result. EQL prints the mob's LEVEL outright — "(Lvl: 27)" —
+    which is objective where the verdict prose and the con colour are not,
+    and it is the only per-mob difficulty signal the log carries.
+
+    `rare` marks the "- a rare creature -" tag."""
+    type: str = "consider"
+    name: str
+    level: Optional[int] = None
+    rare: bool = False
+    verdict: Optional[str] = None
+
+
+class OutOfMana(LogEvent):
+    """"Insufficient Mana to cast this spell!" — a loss condition that leaves
+    no other trace. Running dry mid-fight is nearly as bad as dying and is
+    invisible to a death counter."""
+    type: str = "oom"
+
+
 class SkillUp(LogEvent):
     type: str = "skill"
     skill: str

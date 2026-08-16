@@ -101,6 +101,15 @@ RE_AA = re.compile(
 RE_AA_SPEND = re.compile(
     r'^You have (?:gained the ability "(.+?)"|improved (.+?))'
     r" at a cost of (\d+) ability points?\.$")
+# /con. Verified against 977 real lines (960 matched, 96 rare-tagged): the
+# name may carry a " - a rare creature -" infix, the verdict prose varies
+# widely ("looks like quite a gamble", "what would you like your tombstone to
+# say?"), and the LEVEL is the part worth having.
+RE_CONSIDER = re.compile(
+    r"^(.+?)(?: - (a rare creature) -)? (?:scowls at you|regards you|glares at you"
+    r"|looks upon you|considers you|judges you|ponders you|glowers at you)(.*?)"
+    r"\(Lvl: (\d+)\)")
+RE_OOM = re.compile(r"^Insufficient Mana to cast this spell!")
 RE_SKILL = re.compile(r"^You have become better at (.+?)! \((\d+)\)")
 # kept-in-inventory loot; the corpse name gives exact per-mob attribution
 RE_LOOT = re.compile(r"^--You have looted (?:(\d+) |an? |the )?(.+?)(?: from (.+))?\.--")
@@ -485,6 +494,12 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
     if sp := RE_AA_SPEND.match(body):
         return ev.AASpend(name=(sp.group(1) or sp.group(2)).strip(),
                           cost=int(sp.group(3)), **base)
+    if cn := RE_CONSIDER.match(body):
+        return ev.Consider(name=cn.group(1).strip(), rare=bool(cn.group(2)),
+                           verdict=(cn.group(3) or "").strip(" -.") or None,
+                           level=int(cn.group(4)), **base)
+    if RE_OOM.match(body):
+        return ev.OutOfMana(**base)
     if sk := RE_SKILL.match(body):
         return ev.SkillUp(skill=sk.group(1), value=int(sk.group(2)), **base)
     if lo := RE_LOOT.match(body):
