@@ -951,7 +951,8 @@ async def generate_spellset(body: dict | None = None):
     """Write the advisor's Memorize-now list as an in-game spell set.
     One command in game then loads the whole bar: /memspellset <name>."""
     from backend import builds_data
-    from backend.spellsets import find_loadout_ini, write_spell_set
+    from backend.spellsets import (find_loadout_ini, write_spell_set,
+                                   GameRunning)
     from backend.agent.advisor import (_is_prebuff, _permanent_buffs,
                                        stack_gem_order)
     from backend.game_data import supersedes_for_slots
@@ -1059,13 +1060,19 @@ async def generate_spellset(body: dict | None = None):
                                  "(eqlbuilds snapshot missing?)")
     try:
         result = await asyncio.to_thread(write_spell_set, path, name, ids)
+    except GameRunning as e:
+        # 409, not 500: nothing is broken, the timing is simply wrong. This
+        # used to be a NOTE in the response telling the player that logging
+        # out overwrites the file -- advice they had to read and act on,
+        # which is not a guard. Sets saved in game were being lost until the
+        # player switched the whole feature off to stop it.
+        raise HTTPException(409, str(e))
     except ValueError as e:
         raise HTTPException(500, str(e))
     return {**result, "written": written, "skipped": skipped,
             "memspellset": f"/memspellset {name}",
-            "note": "The game reads this file at login — if the character "
-                    "is logged in, camp to character select and back "
-                    "before /memspellset (logging out overwrites the file)."}
+            "note": "Written while the game was closed, so it will be there "
+                    f"at login. In game: /memspellset {name}"}
 
 
 @app.get("/api/zone-items")

@@ -72,9 +72,40 @@ def read_spell_sets(path: Path) -> list:
     return out
 
 
-def write_spell_set(path: Path, set_name: str, spell_ids: list) -> dict:
+class GameRunning(RuntimeError):
+    """The client owns this file right now; writing it would lose data."""
+
+
+def write_spell_set(path: Path, set_name: str, spell_ids: list,
+                    allow_while_running: bool = False) -> dict:
     """Create/overwrite the named set with up to 14 spell ids, first free
-    slot if the name is new. Only that set's lines are touched."""
+    slot if the name is new. Only that set's lines are touched.
+
+    REFUSES while the game is running. Our write is surgical against the
+    file, but the client holds the whole [SpellLoadouts] section in MEMORY
+    and rewrites it wholesale when it flushes -- so a write during a session
+    loses data in both directions:
+
+      * the set we just wrote is erased by the client's next flush, and
+      * a set the player saved in game, still only in memory, is not in the
+        file we read, so it is absent from the copy we write back.
+
+    Reported live: spell sets saved in game kept vanishing, and switching
+    this feature off fixed it. Camping to desktop first makes the write
+    safe, because the client has flushed and will not write again.
+    """
+    from backend.eqclient import game_running
+    if not allow_while_running:
+        try:
+            running = game_running()
+        except Exception:      # never block on a failed process probe
+            running = False
+        if running:
+            raise GameRunning(
+                "EverQuest Legends is running. It keeps saved spell sets in "
+                "memory and rewrites them when it exits, so writing now "
+                "would either be undone or would drop sets you saved in "
+                "game. Camp to desktop, then write the set.")
     raw = path.read_bytes()
     nl = "\r\n" if b"\r\n" in raw else "\n"
     text = raw.decode("utf-8", errors="replace")
