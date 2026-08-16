@@ -694,7 +694,15 @@ async def item_line(name: str) -> Optional[str]:
             alt = await _resolve_item_title(base)
         except Exception:
             alt = None
-        if alt and alt.lower() != base.lower():
+        # Compare EXACTLY, not case-folded. MediaWiki titles are
+        # case-sensitive past the first letter, so "Skull-Shaped Barbute"
+        # (the game's Title Case) and "Skull-shaped Barbute" (the wiki's
+        # sentence case) are different pages -- but a case-folded guard
+        # calls them identical and skips the retry, so the item resolves to
+        # nothing and silently becomes STATS UNKNOWN. Reported live: a
+        # Skull-shaped Barbute +3 was never offered for the Head slot even
+        # though the page exists with AC 13, HP +35, SV MAGIC +10.
+        if alt and alt != base:
             page = await get_mcp_client().wiki_page(alt, max_characters=4000)
     if page is None:
         # no page OR wiki down — indistinguishable here. Serve the last
