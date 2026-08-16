@@ -99,9 +99,39 @@ def _get_engine():
                 "dependencies (needs the onnxruntime package)") from e
     return _engine
 
-RE_X = re.compile(r"X\s*[:;.,]?\s*(-?\d+)", re.IGNORECASE)
-RE_Y = re.compile(r"Y\s*[:;.,]?\s*(-?\d+)", re.IGNORECASE)
-RE_Z = re.compile(r"Z\s*[:;.,]?\s*(-?\d+)", re.IGNORECASE)
+# A coordinate may arrive SPLIT across OCR boxes. The engine returns one box
+# per detected text run and _capture_and_ocr joins them with newlines, so a
+# four-digit reading can land as "X: 1" + "540" -- and `(-?\d+)` then captures
+# just the 1. Reported live: an X of 1540 intermittently read as 1.
+#
+# So allow the number to continue over whitespace, but only in 1-3 digit
+# groups and only up to a plausible coordinate magnitude (checked in
+# _coord below). EQ's loc region contains nothing but the three labelled
+# numbers, so there is no stray digit run for this to swallow.
+_NUM = r"(-?\d[\d,]*(?:\s+\d{1,3})*)"
+RE_X = re.compile(r"X\s*[:;.,]?\s*" + _NUM, re.IGNORECASE)
+RE_Y = re.compile(r"Y\s*[:;.,]?\s*" + _NUM, re.IGNORECASE)
+RE_Z = re.compile(r"Z\s*[:;.,]?\s*" + _NUM, re.IGNORECASE)
+
+# EQ zones run to roughly +/-5000; anything past this is a bad join, not a
+# position. Falling back to the first fragment loses precision but keeps the
+# reading in the right place, which a 15400 would not.
+_COORD_LIMIT = 20000
+
+
+def _coord(raw: str) -> Optional[float]:
+    """A possibly-split coordinate string -> float, or None if implausible."""
+    joined = re.sub(r"[^\d-]", "", raw or "")
+    if joined in ("", "-"):
+        return None
+    val = float(joined)
+    if abs(val) <= _COORD_LIMIT:
+        return val
+    first = re.match(r"-?\d+", (raw or "").strip())
+    if not first:
+        return None
+    val = float(first.group(0))
+    return val if abs(val) <= _COORD_LIMIT else None
 
 
 def load_config() -> dict:
@@ -142,13 +172,14 @@ def parse_loc_text(text: str) -> Optional[dict]:
     mx, my, mz = RE_X.search(text), RE_Y.search(text), RE_Z.search(text)
     if not (mx and my and mz):
         return None
+    x, y, z = (_coord(mx.group(1)), _coord(my.group(1)), _coord(mz.group(1)))
+    if x is None or y is None or z is None:
+        return None
     remainder = RE_Z.sub("", RE_Y.sub("", RE_X.sub("", text)))
     zone_words = [w for w in re.findall(r"[A-Za-z'][A-Za-z']+", remainder)
                   if w.lower() not in ("x", "y", "z")]
     return {
-        "x": float(mx.group(1)),
-        "y": float(my.group(1)),
-        "z": float(mz.group(1)),
+        "x": x, "y": y, "z": z,
         "zone_text": " ".join(zone_words) or None,
     }
 
