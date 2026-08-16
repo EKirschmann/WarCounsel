@@ -1106,11 +1106,18 @@ class CharacterTracker:
                     # seconds old.)
                     self._pending_xp = (e.ts, e.percent)
             elif isinstance(e, ev.AAPoint):
-                self.aa_points += 1
+                self.aa_points += e.count
                 if e.total is not None:
                     self.aa_available = e.total  # the log's own running total
                 elif self.aa_available is not None:
-                    self.aa_available += 1
+                    self.aa_available += e.count
+            elif isinstance(e, ev.AASpend):
+                # Spend lines carry no running total. Keep an unknown starting
+                # value unknown, and do not let a missed gain drive a known
+                # value below zero. Cost-zero messages are toggle state, not
+                # a purchase.
+                if e.cost and self.aa_available is not None:
+                    self.aa_available = max(0, self.aa_available - e.cost)
             elif isinstance(e, ev.SkillUp):
                 self.skill_ups += 1
             elif isinstance(e, ev.Loot):

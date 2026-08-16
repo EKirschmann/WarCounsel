@@ -241,9 +241,21 @@ class LevelUp(LogEvent):
 
 class AAPoint(LogEvent):
     """Optionally carries the log's own running total ("You now have N
-    ability points.") — authoritative for the unspent-points counter."""
+    ability points.") — authoritative for the unspent-points counter.
+
+    `count` is how many points this line granted. EQL can award a batch in
+    one message, so assuming one makes both the session and unspent counters
+    drift."""
     type: str = "aa"
+    count: int = 1
     total: Optional[int] = None
+
+
+class AASpend(LogEvent):
+    """An ability purchase or rank improvement and its point cost."""
+    type: str = "aa_spend"
+    name: str
+    cost: int
 
 
 class SkillUp(LogEvent):
