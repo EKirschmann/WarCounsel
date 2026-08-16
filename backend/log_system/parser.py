@@ -94,8 +94,13 @@ RE_MY_DEATH = re.compile(r"^You have been slain by (.+?)!")
 RE_OTHER_DEATH = re.compile(r"^(.+?) has been slain by (.+?)!")
 RE_EXP = re.compile(r"^You gain (party )?experience!*(?:\s*\((\d+(?:\.\d+)?)%\))?")
 RE_LEVEL = re.compile(r"^You have gained a level! Welcome to level (\d+)!")
-RE_AA = re.compile(r"^You have gained an ability point!"
-                   r"(?:\s+You now have (\d+) ability points?\.)?")
+RE_AA = re.compile(
+    r"^You have gained (?:an ability point|"
+    r"(\d+) ability point(?:s|\(s\))?)!"
+    r"(?:\s+You now have (\d+) ability point(?:s|\(s\))?\.)?$")
+RE_AA_SPEND = re.compile(
+    r'^You have (?:gained the ability "(.+?)"|improved (.+?))'
+    r" at a cost of (\d+) ability points?\.$")
 RE_SKILL = re.compile(r"^You have become better at (.+?)! \((\d+)\)")
 # kept-in-inventory loot; the corpse name gives exact per-mob attribution
 RE_LOOT = re.compile(r"^--You have looted (?:(\d+) |an? |the )?(.+?)(?: from (.+))?\.--")
@@ -475,7 +480,11 @@ def parse_line(line: str, character_name: Optional[str] = None) -> Optional[ev.L
     if lv := RE_LEVEL.match(body):
         return ev.LevelUp(level=int(lv.group(1)), **base)
     if a := RE_AA.match(body):
-        return ev.AAPoint(total=int(a.group(1)) if a.group(1) else None, **base)
+        return ev.AAPoint(count=int(a.group(1)) if a.group(1) else 1,
+                          total=int(a.group(2)) if a.group(2) else None, **base)
+    if sp := RE_AA_SPEND.match(body):
+        return ev.AASpend(name=(sp.group(1) or sp.group(2)).strip(),
+                          cost=int(sp.group(3)), **base)
     if sk := RE_SKILL.match(body):
         return ev.SkillUp(skill=sk.group(1), value=int(sk.group(2)), **base)
     if lo := RE_LOOT.match(body):
