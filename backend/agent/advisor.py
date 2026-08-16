@@ -172,10 +172,24 @@ def _build_prompt(ctx: dict, wiki: str) -> str:
                   if level is None or s["level"] <= level]
         future = [s for s in book["castable"]
                   if level is not None and s["level"] > level]
+        # Prefer the pre-gated list: travel rituals, solo-dead resurrection
+        # lines and spells superseded by another owned spell are removed
+        # BEFORE prompting, so a loadout slot cannot be spent on one. Falls
+        # back to the full list if the pre-pass could not run.
+        viable = ctx.get("_viable") or None
+        if viable:
+            keep = {n.lower() for n in viable}
+            usable = [s for s in usable if s["name"].lower() in keep]
         owned = "; ".join(f"{s['name']} (L{s['level']})" for s in usable)
+        pre = ""
+        if viable and ctx.get("_pregated"):
+            pre = (f" [{len(ctx['_pregated'])} owned spells already removed "
+                   "for you: travel rituals, resurrection lines when solo, and "
+                   "any spell superseded by another you own — every spell below "
+                   "is a real option, so you never need to check for those]")
         lines.append(f"- Spellbook USABLE NOW (owned AND at or below their "
                      f"level; from /outputfile spellbook, {book['age_hours']}h "
-                     f"old): {owned}")
+                     f"old){pre}: {owned}")
         if future:
             lines.append("- Owned but ABOVE their level (scribed for later — "
                          "cannot be memorized yet, NEVER put in the loadout): "
@@ -975,19 +989,18 @@ async def _builtin_gear(ctx: dict) -> dict:
         # are therefore decidable without a model. RANGE keeps its skip:
         # bows and thrown have mechanics the index does not model.
         base_slot = re.sub(r"\s+\d+$", "", slot.lower())
-        if base_slot == "range":
-            if cur:
-                # SAY it was not compared. The backfill otherwise writes
-                # "no better owned option flagged", which reads as "I
-                # checked and nothing won" when nothing was checked.
-                recs.append({"slot": slot, "current": cur, "recommend": cur,
-                             "why": "not compared — ranged weapons are not "
-                                    "covered by the white-DPS index; pick a "
-                                    "model in the Counsel selector to have "
-                                    "them reviewed",
-                             "where": "worn"})
-            continue
-        hand = {"primary": "mh", "secondary": "oh"}.get(base_slot)
+        # RANGE used to skip the comparison ENTIRELY and report "not
+        # compared". That was too broad: only a ranged weapon's DAMAGE needs
+        # the white-DPS index (which does not model bows or thrown), while its
+        # STATS compare like any other item -- a Dagger of Marnek carries
+        # INT 9 and SV VOID 6, and saying nothing about them hides a real
+        # comparison behind a disclaimer aimed at a different question.
+        # So: compare on stats with the index switched off, drop DMG/DELAY
+        # from the vectors (judging those without the index is exactly the
+        # error the index exists to prevent), and disclaim only the damage.
+        stats_only = base_slot == "range"
+        hand = (None if stats_only
+                else {"primary": "mh", "secondary": "oh"}.get(base_slot))
         if base_slot == "secondary" and _dual_wields(classes) is False:
             # No Dual Wield: an off-hand WEAPON never swings, so its
             # white-DPS index describes damage that will not be dealt. A
@@ -1024,6 +1037,11 @@ async def _builtin_gear(ctx: dict) -> dict:
                 continue  # STATS UNKNOWN worn item is never replaced
             cur_scaled = scale_item_line(cur_line, cr)
             cur_vec = item_stat_vector(cur_scaled)
+            if stats_only and cur_vec:
+                # damage is not decidable here; comparing it anyway is worse
+                # than not comparing it
+                cur_vec = {k: v for k, v in cur_vec.items()
+                           if k not in ("DMG", "DELAY")}
             if not cur_vec:
                 continue
             cur_wi = _wpn_index(cur_scaled, lvl) if hand else None
@@ -1074,6 +1092,9 @@ async def _builtin_gear(ctx: dict) -> dict:
                 continue
             scaled = scale_item_line(line, _item_rank(nm))
             vec = item_stat_vector(scaled)
+            if stats_only and vec:
+                vec = {k: v for k, v in vec.items()
+                       if k not in ("DMG", "DELAY")}
             if not vec:
                 # The wiki page EXISTS and names the slot, but carries no
                 # numbers -- common on EQL for plain jewellery. Refusing it
@@ -1166,7 +1187,22 @@ async def _builtin_gear(ctx: dict) -> dict:
                                 f"{fmt(up)} but costs {fmt(down)}. Not "
                                 f"recommended automatically because judging "
                                 f"those against each other needs weights we "
-                                f"do not have; your call"})
+                                f"do not have; your call"
+                                + (". Ranged DAMAGE is not part of this "
+                                   "comparison" if stats_only else "")})
+            continue
+        if (stats_only and champ is None and trade is None
+                and fallback is None and cur):
+            # Distinguish the two halves. Before, this slot claimed nothing
+            # had been compared at all, which was wrong about the stats.
+            recs.append({"slot": slot, "current": cur, "recommend": cur,
+                         "where": "worn",
+                         "why": "no owned ranged item beats it on STATS. Its "
+                                "damage was not compared — the white-DPS "
+                                "index does not model bows or thrown, so a "
+                                "higher-damage ranged weapon could still "
+                                "exist; pick a model in the Counsel selector "
+                                "to have that judged"})
             continue
         if champ is None and fallback is not None:
             fb, fb_why = fallback
@@ -1194,6 +1230,10 @@ async def _builtin_gear(ctx: dict) -> dict:
                 why = ("strictly better at its owned +N — every "
                        "listed stat equal or higher (wiki "
                        "item-level scaling applied to both)")
+            if stats_only:
+                why += (". STATS only — ranged damage is not modelled by the "
+                        "white-DPS index, so check the damage yourself before "
+                        "swapping")
             recs.append({"slot": slot, "current": cur,
                          "recommend": it["name"], "why": why,
                          "where": it["where"]})
@@ -1213,8 +1253,68 @@ async def _builtin_gear(ctx: dict) -> dict:
                 "2H and farming targets need a model from the "
                 "Counsel selector.",
         "slots": _full_slot_table(recs, worn),
-        "farm": [], "exaltations": exalts, "unknown": [], "pet_gear": [],
+        "farm": [], "exaltations": exalts, "unknown": [],
+        # The deterministic pet pass runs here too. This returned [] before,
+        # so with LLM_PROVIDER=none the panel said "nothing better in your
+        # bags/bank for the pet" unconditionally -- a verdict with no
+        # comparison anywhere behind it. Only CLEAR upgrades are emitted:
+        # a trade-off is a judgement call and there is no model here to make
+        # it, so silence is the honest answer for those.
+        "pet_gear": await _builtin_pet_gear(ctx),
     }
+
+
+async def _builtin_pet_gear(ctx: dict) -> list:
+    """Clear pet upgrades, no model required. Mirrors the LLM path's gates."""
+    from backend.game_data import _trio_usable, item_line as _il
+    from backend.spellbook import RETRIEVABLE
+    pet_inv = ctx.get("pet_inventory") or {}
+    pet_slots = (ctx.get("pet_slots") or 0) or len(pet_inv)
+    if not pet_slots:
+        return []
+    classes = [c.strip() for c in (ctx.get("class_str") or "").split("/") if c.strip()]
+    pet_classes = ["Warrior", ctx.get("pet_second_class") or "Shadow Knight"] + classes
+    worn_now = {v.lower() for v in pet_inv.values()}
+    exalt_hosts = {(x.get("host") or "").lower() for x in (ctx.get("exaltations") or [])}
+    pool = []
+    for it in (ctx.get("inventory_items") or []):
+        nm = it.get("name") or ""
+        if it.get("where") not in RETRIEVABLE or nm.lower() in worn_now:
+            continue
+        if nm.lower() in exalt_hosts:
+            continue
+        try:
+            line = await _il(nm)
+        except Exception:
+            line = None
+        if not line or _trio_usable(line, pet_classes) is False:
+            continue
+        if not re.search(r"AC: *[0-9]|DMG: *[0-9]|Skill:", line):
+            continue
+        if re.search(r"No Drop|NO DROP|NODROP", line):
+            continue
+        pool.append((nm, line))
+    try:
+        shortlist = await _pet_shortlist(pool, pet_inv, pet_slots)
+    except Exception:
+        logger.exception("builtin pet shortlist failed")
+        return []
+    out, claimed = [], set()
+    for e in shortlist:
+        if e["verdict"] != "clear upgrade" or len(out) >= pet_slots:
+            continue
+        cat = e["cat"]
+        if cat in claimed:
+            continue
+        if cat:
+            claimed.add(cat)
+        gains = ", ".join(f"{k} {v:+g}" for k, v in
+                          sorted(e["gain"].items(), key=lambda kv: -abs(kv[1])))
+        out.append({"item": e["cand"], "slot": "",
+                    "why": (f"beats held {e['vs']} on every stat a pet uses "
+                            f"({gains}) and loses nothing" if e["vs"] else
+                            f"fills a free pet slot ({gains})")})
+    return out
 
 
 def _aa_meta(classes: List[str]) -> dict:
@@ -1368,6 +1468,143 @@ def _gate_aas(items: List[dict], owned: dict, meta: dict) -> List[dict]:
     return out
 
 
+_VIABLE_MEMO: dict = {}
+WIKI_CAP = 20000
+
+
+def _trim_wiki(wiki: str, pregated: dict) -> str:
+    """Drop wiki rows for spells the pre-gate already removed.
+
+    The wiki block lists every class spell in a level window WITH its effect
+    text, which is why it is worth ~5k tokens: that prose is how the model
+    explains a pick. But a spell that cannot be chosen -- superseded, a travel
+    ritual, a solo-dead resurrection -- is paying for prose nobody will read.
+
+    Rows for spells the character OWNS AND CAN STILL PICK are kept: the
+    spellbook section carries only name and level, so removing these would
+    blind the model to what its own spells do.
+    """
+    if not wiki or not pregated:
+        return wiki
+    dead = {n.lower() for n in pregated}
+    out, cut = [], 0
+    for line in wiki.splitlines():
+        m = re.match(r"^L\d+ ([^\[]+)\[", line)
+        if m and m.group(1).strip().lower() in dead:
+            cut += len(line) + 1
+            continue
+        out.append(line)
+    if cut:
+        logger.info("Trimmed %d chars of wiki prose for %d pre-gated spells",
+                    cut, len(dead))
+    return "\n".join(out)
+
+
+def _fit_wiki(wiki: str, budget: int) -> str:
+    """Fit the wiki context to `budget` WITHOUT starving whole sections.
+
+    build_wiki_context truncates its tail, and the tail is the AA list. At the
+    real 12,000-char budget that sent 0 of 73 AA entries while the prompt still
+    asked for aa_now/aa_save "using the per-rank costs in the data" -- advice
+    with no data behind it. Two skill-cap sections vanished the same way.
+
+    So share the budget across sections instead of cutting the end off: every
+    section keeps a floor, the remainder is split in proportion to what each
+    asked for, and anything actually dropped is named in the text so the model
+    knows the list is partial rather than complete.
+    """
+    if not wiki or len(wiki) <= budget:
+        return wiki
+    parts = re.split(r"\n(?=##+ )", wiki)
+    if len(parts) < 2:
+        return wiki[:budget]
+    FLOOR = 700
+    MARK = ("... (%d more entries not shown — this list is PARTIAL, do not "
+            "treat it as complete)")
+    marker_cost = len(MARK % 0) + 4        # the note itself costs budget too
+    total = sum(len(p) for p in parts)
+    spare = max(0, budget - (FLOOR + marker_cost) * len(parts))
+    out, trimmed = [], []
+    for p in parts:
+        share = FLOOR + int(spare * len(p) / total)
+        if len(p) <= share:
+            out.append(p)
+            continue
+        head, body = (p.split("\n", 1) + [""])[:2]
+        keep, used = [head], len(head)
+        for line in body.splitlines():
+            if used + len(line) + 1 > share:
+                break
+            keep.append(line)
+            used += len(line) + 1
+        dropped_n = len(body.splitlines()) - (len(keep) - 1)
+        keep.append(MARK % dropped_n)
+        trimmed.append(f"{head.strip('# ').split(':')[0][:40]}: {dropped_n}")
+        out.append("\n".join(keep))
+    res = "\n".join(out)
+    if len(res) > budget:                  # belt and braces; never overshoot
+        res = res[:budget]
+        logger.info("Wiki context hard-clamped to %d chars", budget)
+    logger.info("Wiki context fitted to %d chars; partial sections: %s",
+                budget, "; ".join(trimmed) or "none")
+    return res
+
+
+async def _viable_candidates(names: List[str], solo: bool) -> tuple:
+    """Owned+castable spells that could actually SURVIVE the output gates.
+
+    `_gate_picks` already drops travel rituals, solo-dead resurrection lines
+    and anything superseded by another owned spell -- but it runs AFTER the
+    model has spent loadout slots on them, so those slots silently vanish
+    from the answer. Measured on a real book: 33 of 91 usable spells (36%)
+    were dead on arrival.
+
+    Running the same tests BEFORE the prompt means the model only ever sees
+    real options. `_gate_picks` stays as the backstop; it should now be quiet.
+
+    Cost is one O(n^2) supersession sweep, 0.56s cold and 0.05s warm because
+    the spell records are cached -- paid once, against a multi-second LLM call.
+    Returns (live, dropped) where dropped maps name -> why, so nothing is
+    filtered silently.
+    """
+    key = (tuple(sorted(names)), solo)
+    if key in _VIABLE_MEMO:
+        return _VIABLE_MEMO[key]
+    dropped: dict = {}
+    for n in names:
+        try:
+            if await is_travel_ritual(n):
+                dropped[n] = "travel ritual (cast from the RITUALS system)"
+                continue
+        except Exception:
+            pass
+        if solo:
+            try:
+                if await is_resurrection(n):
+                    dropped[n] = "resurrection line (dead slot when solo)"
+                    continue
+            except Exception:
+                pass
+    live_pool = [n for n in names if n not in dropped]
+    for a in live_pool:
+        for b in live_pool:
+            if a == b or a in dropped:
+                continue
+            try:
+                if await supersedes_for_slots(a, b):
+                    dropped[a] = f"superseded by owned {b}"
+                    break
+            except Exception:
+                continue
+    live = [n for n in names if n not in dropped]
+    if dropped:
+        logger.info("Pre-gated %d of %d owned spells before prompting: %s",
+                    len(dropped), len(names),
+                    "; ".join(f"{k} ({v})" for k, v in list(dropped.items())[:12]))
+    _VIABLE_MEMO[key] = (live, dropped)
+    return live, dropped
+
+
 async def generate_advice(ctx: dict) -> dict:
     classes = [c.strip() for c in (ctx.get("class_str") or "").split("/") if c.strip()]
     book = ctx.get("spellbook")
@@ -1395,13 +1632,31 @@ async def generate_advice(ctx: dict) -> dict:
         ctx["_long_buffs"] = _long_buffs(ctx)
         ctx["_no_pet"] = not _summons_a_pet(classes)
         ctx["_measured"] = _measured_damage(ctx)
+        # Deterministic pre-pass: only offer the model spells that can survive
+        # its own output gates, so a loadout slot is never spent on a pick
+        # that gets dropped afterwards.
+        ctx["_viable"], ctx["_pregated"] = [], {}
+        if book and ctx.get("level") is not None:
+            try:
+                _names = [s["name"] for s in book["castable"]
+                          if s["level"] <= ctx["level"]]
+                ctx["_viable"], ctx["_pregated"] = await _viable_candidates(
+                    _names, (ctx.get("playstyle") or "").startswith("solo"))
+            except Exception:
+                logger.exception("pre-gate failed; prompting with the full book")
+                ctx["_viable"], ctx["_pregated"] = [], {}
         if llm_active()["provider"] == "none":
             body = await _builtin_counsel(ctx)
             base["grounding"] = body.pop("grounding", "memory")
             return {**base, **body}
-        wiki = await build_wiki_context(
-            classes, ctx.get("level"),
-            max_chars=12_000 if ctx.get("spellbook") else 20_000)
+        # Fetch UNTRUNCATED, drop what the pre-gate made unpickable, then fit
+        # to budget across sections. Asking build_wiki_context to truncate
+        # cuts its tail, and the tail is the AA list -- so aa_now/aa_save were
+        # being answered from 0 of 73 AA entries.
+        _budget = 12_000 if ctx.get("spellbook") else 20_000
+        wiki = await build_wiki_context(classes, ctx.get("level"),
+                                        max_chars=100_000)
+        wiki = _fit_wiki(_trim_wiki(wiki, ctx.get("_pregated") or {}), _budget)
     except Exception:
         logger.exception("Wiki context failed; advising ungrounded")
     base["grounding"] = "wiki" if wiki else "memory"
@@ -1650,7 +1905,7 @@ __CONTEXT__
 OWNED EQUIPMENT (from /outputfile inventory; [worn/bags/bank] shows where each lives; stats and drop sources are from the game's wiki):
 __GEAR__
 
-EXALTATIONS (socketable effect-stones extracted from items — for CONTEXT only; the app reports them separately, do NOT recommend moving them). Stones move between owned items at NO cost (within class/slot legality), so when comparing two OWNED items for a slot, IGNORE any socketed stone that could legally move to the challenger — the stone follows the winner. Count a stone toward its host's value only when it could NOT legally move. PROC stones may only fire from the PRIMARY slot (confirmed for several stones): never count a proc as value on an item you recommend for Secondary or Range, and when a swap strands a proc stone off-primary, say so in the why (e.g. "move its stone into your primary first"). A stone adds value ONLY while usable by the trio AND its level requirement is met; DORMANT/unusable stones are zero. Item Effect lines follow the same rule — "at Level N" effects below the character's level are worth nothing yet.
+EXALTATIONS (socketable effect-stones extracted from items — for CONTEXT only; the app reports them separately, do NOT recommend moving them). Stones move between owned items at NO cost (within class/slot legality), so when comparing two OWNED items for a slot, IGNORE any socketed stone that could legally move to the challenger — the stone follows the winner. Count a stone toward its host's value only when it could NOT legally move. LEGALITY IS NARROW, and it is NOT "any item with a free socket": a FOCUS, WORN or CLICKY stone may only move to an item that shares an equipment SLOT with the stone's own base item — a Robe stone fits CHEST items and nothing else — while a PROC stone needs a weapon. The app computes the legal destinations for every socketed stone and states them on its host's GEAR LINE as "may ONLY move to: ..." (or "CANNOT be moved"). NEVER claim a stone can be moved without naming a destination from that line, and never write vague permission like "move it into any other open-focus item" — if the gear line lists no destination, the stone stays where it is and its value stays with its host. When you recommend replacing an item whose stone CANNOT move to the replacement, the 'why' must say what is being given up, by name — a swap that strands a focus is NEVER "no loss of other stats", and phrasing it that way is the single worst error you can make here, because the stats are the part the player can already see. PROC stones may only fire from the PRIMARY slot (confirmed for several stones): never count a proc as value on an item you recommend for Secondary or Range, and when a swap strands a proc stone off-primary, say so in the why (e.g. "move its stone into your primary first"). A stone adds value ONLY while usable by the trio AND its level requirement is met; DORMANT/unusable stones are zero. Item Effect lines follow the same rule — "at Level N" effects below the character's level are worth nothing yet. HOW AN ITEM'S EFFECT WORKS: the "Effect:"/"Focus Effect:" line on a gear line is that item's OWN effect and applies on its own — a robe listing "Focus Effect: Spell Haste II" really is giving 15% cast time. That effect is delivered by an exaltation built into the item, and the SOCKET holding it is only exposed once the item has been LEVELLED: an item at +0 has no focus socket at all, so its effect cannot be extracted or moved anywhere. A socketed stone OVERRIDES the item's own effect, so when a gear line also says "HOSTS EXALTATION: ... granting X", X is what that item actually does and its printed Effect line does not apply; the app flags that case for you. REPLACING an item costs you whatever it grants — its own effect, or the stone's if one overrides — so a swap away from an item with an effect is never free, and the 'why' must name what is lost. If the item being replaced is +0, say that the focus cannot be moved at all and that merging the item first is what would preserve it. The replacement's effect, if it has one, is what you get instead; if it has none, say so.
 __EXALTS__
 
 __PET_BLOCK__
@@ -2359,6 +2614,141 @@ def _is_2h(line: str) -> bool:
     return bool(re.search(r"Skill: 2H", line or ""))
 
 
+# A pet keeps its OWN attack delay, so DELAY carries no information for it --
+# comparing on it would make a slower, harder-hitting weapon look worse. This
+# is the pet-side analogue of the player path excluding DMG/DELAY from its
+# Pareto check, and for the same reason: judging a component apart from the
+# thing that gives it meaning produces a confident wrong answer.
+def _pet_vec(line: Optional[str], rank: int) -> dict:
+    from backend.game_data import item_stat_vector, scale_item_line
+    if not line:
+        return {}
+    v = dict(item_stat_vector(scale_item_line(line, rank)) or {})
+    v.pop("DELAY", None)
+    return v
+
+
+def _pet_primary(cat: Optional[str], vec: dict) -> float:
+    """The one number that decides a pet item's job: damage for a weapon,
+    armour class for everything else (the documented AC-over-HP priority)."""
+    return vec.get("DMG", 0.0) if cat == "WEAPON" else vec.get("AC", 0.0)
+
+
+async def _pet_shortlist(pool: list, pet_inv: dict, pet_slots: int) -> list:
+    """Deterministic FIRST pass: which owned items could improve the pet, and
+    by exactly what.
+
+    The pet path used to be LLM-proposes / gates-dispose, so "nothing better
+    for the pet" was asserted whenever the model happened to propose nothing
+    -- a verdict on a comparison that never ran, and unconditionally true with
+    no LLM configured. This runs the comparison, and the model's job becomes
+    the qualitative half: whether +6 damage is worth -10 STR.
+
+    `pool` is [(name, wiki line)]. Returns entries with the deltas already
+    computed, best first. Strictly-dominated candidates are dropped; genuine
+    trade-offs are KEPT and labelled, because those are exactly the calls a
+    deterministic rule cannot make.
+    """
+    from backend.game_data import item_line, item_rank
+    held, unreadable = [], 0
+    for hnm in (pet_inv or {}).values():
+        try:
+            hl = await item_line(hnm)
+        except Exception:
+            logger.exception("pet shortlist: no wiki line for held %s", hnm)
+            hl = None
+        if not hl:
+            unreadable += 1
+        held.append((hnm, hl, _pet_category(hl), _pet_vec(hl, item_rank(hnm)),
+                     bool(re.search(r"Effect:[^;|]*\bCombat\b", hl or ""))))
+    free = max(0, int(pet_slots or 0) - len(held))
+    # An unreadable held item has an UNKNOWN kind, so a candidate of that kind
+    # would look like it fills an empty slot when it would really displace
+    # something. Suppress fills rather than guess -- the swap comparisons below
+    # are unaffected, since those need a readable rival anyway.
+    if unreadable:
+        logger.info("pet shortlist: %d held item(s) unreadable — suppressing "
+                    "free-slot suggestions", unreadable)
+        free = 0
+    held_2h = any(_is_2h(hl) for _, hl, c, _, _ in held if c == "WEAPON")
+    weapons_held = sum(1 for _, _, c, _, _ in held if c == "WEAPON")
+
+    out = []
+    for nm, line in pool:
+        cat = _pet_category(line)
+        cv = _pet_vec(line, item_rank(nm))
+        if not cv:
+            continue
+        proc = bool(re.search(r"Effect:[^;|]*\bCombat\b", line or ""))
+        rivals = [h for h in held if h[2] == cat and cat]
+        # NOTE the proc exemption below: a strictly-worse stat line does NOT
+        # disqualify a proccing weapon. A pet's damage counts only when it
+        # beats its innate hit, while a proc lands either way -- so a
+        # low-damage proc is a top pick, not a poor one. Judging it on the
+        # stat vector alone drops exactly the item the rule exists to promote.
+        if not rivals:
+            # nothing of this kind held -- only interesting if there is room,
+            # and a weapon still has to obey the two-weapon / 2H rules
+            if free <= 0:
+                continue
+            if cat == "WEAPON" and (held_2h or weapons_held >= 2
+                                    or (_is_2h(line) and weapons_held)):
+                continue
+            out.append({"cand": nm, "vs": None, "verdict": "fills a free slot",
+                        "gain": cv, "loss": {}, "proc": proc, "cat": cat,
+                        "score": _pet_primary(cat, cv)})
+            continue
+        for hnm, hl, _hc, hv, hproc in rivals:
+            if not hv:
+                continue          # STATS UNKNOWN -- never displace it
+            if _pareto_beats(hv, cv) and not (proc and not hproc):
+                continue          # held strictly better AND brings a proc too
+            gain = {k: round(cv.get(k, 0.0) - hv.get(k, 0.0), 1)
+                    for k in set(cv) | set(hv)
+                    if cv.get(k, 0.0) > hv.get(k, 0.0)}
+            loss = {k: round(hv.get(k, 0.0) - cv.get(k, 0.0), 1)
+                    for k in set(cv) | set(hv)
+                    if hv.get(k, 0.0) > cv.get(k, 0.0)}
+            if not gain and not proc:
+                continue          # nothing to offer
+            out.append({
+                "cand": nm, "vs": hnm, "cat": cat, "proc": proc,
+                "gain": gain, "loss": loss,
+                "verdict": ("clear upgrade" if _pareto_beats(cv, hv)
+                            else "trade-off"),
+                "score": _pet_primary(cat, cv) - _pet_primary(cat, hv),
+            })
+    out.sort(key=lambda e: (e["verdict"] != "clear upgrade", -e["score"]))
+    return out
+
+
+def _pet_shortlist_text(sl: list) -> str:
+    """Render the shortlist for the prompt -- deltas, not adjectives."""
+    if not sl:
+        return ""
+    fmt = lambda d: ", ".join(f"{k} {v:+g}" for k, v in
+                              sorted(d.items(), key=lambda kv: -abs(kv[1])))
+    rows = []
+    for e in sl[:12]:
+        bits = [f"  - {e['cand']}"]
+        bits.append(f"vs held {e['vs']}" if e["vs"] else "for a FREE slot")
+        bits.append(f"— {e['verdict'].upper()}")
+        if e["gain"]:
+            bits.append(f"— gains {fmt(e['gain'])}")
+        if e["loss"]:
+            bits.append(f"— loses {fmt({k: -v for k, v in e['loss'].items()})}")
+        if e["proc"]:
+            bits.append("— HAS A COMBAT PROC")
+        rows.append(" ".join(bits))
+    return ("\nA deterministic pass already compared every eligible owned item "
+            "against what the pet holds (delay excluded: pets keep their own). "
+            "Strictly-worse items are gone; what remains is real:\n"
+            + "\n".join(rows)
+            + "\nDecide the TRADE-OFFS from this list — that judgement is why "
+              "you are here. A 'clear upgrade' needs no defence; for a "
+              "'trade-off' say plainly what is given up.\n")
+
+
 async def _tradeoffs(ctx: dict) -> list:
     """Owned items that beat a worn one on SOME stats and lose on others.
 
@@ -2692,6 +3082,13 @@ async def generate_gear_advice(ctx: dict) -> dict:
         else:
             status = "active"
         elig = []
+        # "no legal target" and "we never looked" are DIFFERENT answers, and
+        # only the first may be reported as a restriction. Stat stones and
+        # trio-unusable stones skip the lookup entirely, so an empty list
+        # there proves nothing -- same rule as the RANGE row in the weapon
+        # comparison, which says it was not compared rather than claiming
+        # nothing better exists.
+        targets_checked = False
         if usable is not False and status != "stat stone":
             try:
                 cur_host = _item_base(x.get("host") or "").lower()
@@ -2699,12 +3096,26 @@ async def generate_gear_advice(ctx: dict) -> dict:
                             x["name"], styp, exalt_targets,
                             ctx.get("item_sockets"))
                         if _item_base(t).lower() != cur_host]
+                targets_checked = True
             except Exception:
                 elig = []
+                targets_checked = False
         move = ", ".join(sorted({t for t in elig})[:6])
         exalt_info.append({
             "name": re.sub(r"\s*[(]Exaltation[)]$", "", x["name"]).strip(),
             "move_to": move,
+            # carry the type that was resolved ABOVE from the export socket
+            # number or the full Effect line. It used to be re-derived from
+            # the `why` text, which has "Focus Effect:"/"Combat Effect:"
+            # stripped off -- the exact words the classifier keys on -- so
+            # every stone came back "unknown" and the proc warning below
+            # never fired.
+            "type": styp,
+            "targets_checked": targets_checked,
+            # what this stone ACTUALLY grants, kept raw. An item's own wiki
+            # "Effect:" line describes the stone it DROPS with, not the item
+            # as worn -- effects in EQL come only from the socketed stone.
+            "effect": eff_txt,
             "where": ("in " + x["host"] if x.get("host")
                       else f"loose in {x['where']}"),
             "why": (eff_txt + (f" — {status}" if status else "")).strip(" —")
@@ -2718,20 +3129,67 @@ async def generate_gear_advice(ctx: dict) -> dict:
         if not x.get("host"):
             continue
         snm = re.sub(r"\s*[(]Exaltation[)]$", "", x["name"]).strip()
-        styp2 = None
-        for info in exalt_info:
-            if info["name"].lower() == snm.lower():
-                styp2 = _exalt_socket_type(info.get("why"))
-                break
-        tagtxt = (f"{snm} (proc — may only fire from PRIMARY)"
-                  if styp2 == "proc" else snm)
+        rec = next((i for i in exalt_info
+                    if i["name"].lower() == snm.lower()), None) or {}
+        styp2 = rec.get("type")
+        moves = rec.get("move_to") or ""
+        # Where a stone may legally GO belongs on the gear line, not only in
+        # the separate exaltations block: this line is the decision point, and
+        # the prompt asks the model to write "move its stone first" prose. Told
+        # only the stone's name, it invented targets -- a Robe focus stone was
+        # described as movable into "any other open-focus item" when
+        # _exalt_targets restricts focus/worn/clicky to items sharing an
+        # equipment SLOT with the stone's base item (Robe -> Chest only).
+        grants = (rec.get("effect") or "").strip()
+        head = f"{snm}" + (f" granting {grants}" if grants else "")
+        if styp2 == "proc":
+            tagtxt = f"{head} (proc — may only fire from PRIMARY)"
+        elif moves:
+            tagtxt = f"{head} ({styp2} stone — may ONLY move to: {moves})"
+        elif rec.get("targets_checked"):
+            tagtxt = (f"{head} ({styp2} stone — CANNOT be moved: no other owned "
+                      f"item has a free {styp2} socket in a slot it fits)")
+        else:
+            tagtxt = head          # not checked — assert nothing
         host_notes.setdefault(_item_base(x["host"]).lower(), []).append(tagtxt)
+    # An item's wiki "Effect:" line describes the stone it DROPS with, NOT the
+    # item as worn -- in EQL the effect comes only from the socketed stone. So
+    # the line is wrong in BOTH directions once stones are moved: a Gossamer
+    # Robe hosting a Smoldering Robe stone reads "Summoning Efficiency I" while
+    # actually granting "Minor Improved Damage I", and four other worn items
+    # showed no Effect at all while carrying real transplanted ones. Correct
+    # the claim wherever the socket contradicts it, so the model is not
+    # reasoning from an effect the player does not have.
     if host_notes:
         for i, ln in enumerate(gear["lines"]):
             nm = ln.split(" [", 1)[0]
             notes = host_notes.get(_item_base(nm).lower())
-            if notes:
-                gear["lines"][i] = ln + " | HOSTS EXALTATION: " + "; ".join(notes)
+            if not notes:
+                continue
+            own = re.search(r"(?:Focus )?Effect: [^;|]+", ln)
+            granted = "; ".join(n for n in notes)
+            correction = ""
+            if own:
+                claimed_eff = re.sub(r"^(?:Focus )?Effect:\s*", "",
+                                     own.group(0)).strip().lower()
+                if claimed_eff and claimed_eff not in granted.lower():
+                    correction = (f" | NOTE: this item's listed \"{own.group(0)}\" "
+                                  "is the effect of its OWN stone, which is NOT "
+                                  "socketed here — ignore it; the item grants "
+                                  "only what is listed under HOSTS EXALTATION")
+            gear["lines"][i] = (ln + " | HOSTS EXALTATION: " + granted
+                                + correction)
+    # An item's Effect line is its NATIVE effect and applies on its own; a
+    # socketed focus stone OVERRIDES it. Both observations fit that and only
+    # that: a Gossamer Robe (native Summoning Efficiency I) wearing a
+    # Smoldering Robe stone reports Minor Improved Damage I, while Shining
+    # Metallic Robes reports its native Spell Haste II with an EMPTY socket.
+    #
+    # An earlier version of this block asserted the opposite -- that an item
+    # with no stone grants nothing -- which would have told the model a robe
+    # the player is actively using for 15% cast time does nothing at all.
+    # Nothing is annotated here now: the unmodified Effect line is correct
+    # whenever no stone overrides it, and the override case is handled above.
     base["context"]["with_stats"] = len(gear["lines"])
     base["context"]["unknown"] = len(gear["unknown"])
 
@@ -2785,6 +3243,9 @@ async def generate_gear_advice(ctx: dict) -> dict:
     auto_slots = (4 + sum(PET_SLOT_MOD.get(c, 0) for c in player_classes)
                   ) if has_pet else 0
     pet_slots = (ctx.get("pet_slots") or 0) or auto_slots or len(pet_inv)
+    # deterministic pass output; stays empty when there is no pet, so the
+    # backfill below can tell "compared, found nothing" from "never ran"
+    pet_shortlist: list = []
     if pet_slots > 0:
         # deterministic pool: owned bags/bank gear the PET's class can equip
         # (not the player's), with stats, not the player's worn gear, not
@@ -2807,8 +3268,49 @@ async def generate_gear_advice(ctx: dict) -> dict:
                 continue  # only real gear (armor/weapons)
             if re.search(r"No Drop|NO DROP|NODROP", line):
                 continue  # pets accept Attunable items only, not No-Drop
-            pool.append(nm)
-        pool_txt = "; ".join(sorted(set(pool))[:40]) or "none"
+            pool.append((nm, line))
+        # Rank by what a pet actually cares about before capping. This was
+        # sorted ALPHABETICALLY and cut at 40, so on a real inventory the
+        # model never saw anything past "S" -- 20 items including three
+        # weapons (Short Sword of the Ykesha, Stiletto of the Bloodclaw,
+        # Verishe Mal Greataxe) were dropped in silence, and the panel still
+        # said "nothing better". Same shape as the missing_spells cap that
+        # kept the 25 LOWEST levels.
+        from backend.game_data import (item_rank as _irk0,
+                                       scale_item_line as _scl0,
+                                       item_stat_vector as _vec0)
+
+        def _pet_worth(nm_line):
+            nm, ln = nm_line
+            try:
+                v = _vec0(_scl0(ln, _irk0(nm))) or {}
+            except Exception:
+                v = {}
+            # AC for armour, DMG for weapons -- the two things the pet uses.
+            # Everything else breaks ties so a stat-rich item outranks a bare
+            # one of equal AC.
+            return (-(v.get("AC", 0.0) + 2.0 * v.get("DMG", 0.0)),
+                    -len(v), nm.lower())
+
+        uniq = {nm: ln for nm, ln in pool}
+        ranked = sorted(uniq.items(), key=_pet_worth)
+        POOL_CAP = 40
+        shown, dropped = ranked[:POOL_CAP], ranked[POOL_CAP:]
+        pool_txt = "; ".join(n for n, _ in shown) or "none"
+        if dropped:
+            # never truncate in silence -- say so in the prompt AND the log
+            logger.info("Pet-gear pool truncated: %d of %d candidates shown "
+                        "(dropped: %s)", len(shown), len(ranked),
+                        ", ".join(n for n, _ in dropped))
+            pool_txt += (f" — (list capped at {POOL_CAP}; {len(dropped)} "
+                         "lower-AC/DMG candidates omitted)")
+        # Deterministic FIRST pass over the WHOLE ranked pool, not just the
+        # 40 shown -- the comparison is cheap and must not inherit the cap.
+        try:
+            pet_shortlist = await _pet_shortlist(ranked, pet_inv, pet_slots)
+        except Exception:
+            logger.exception("pet shortlist failed")
+            pet_shortlist = []
         if pet_inv:
             # held items live on the PET, not in the inventory export - mine
             # their stat lines here (scaled to each +N) or the model would
@@ -2859,6 +3361,7 @@ async def generate_gear_advice(ctx: dict) -> dict:
             "category (duplicates don't stack), and note total gear stats "
             "cap at 510. OWNED items the PET CAN EQUIP (bags/bank, already "
             "class-checked): " + pool_txt +
+            _pet_shortlist_text(pet_shortlist) +
             ". From THIS LIST ONLY, list in 'pet_gear' each recommended item "
             "as {item, why} (no slot needed), best first, at most "
             f"{pet_slots} items. Pet gear PERSISTS through death/re-summon. "
@@ -2978,6 +3481,79 @@ async def generate_gear_advice(ctx: dict) -> dict:
                 logger.info("Dropped %s rec — %s not usable by the trio",
                             s.get("slot"), rec)
                 continue
+        # A swap can STRAND a stone, and the stat vector cannot see it.
+        # Reported live: replacing a Gossamer Robe (AC 12) with a Ringmail
+        # Coat (AC 19) was offered as "+7 AC and no loss of other stats" --
+        # true of stats, silent about the Minor Improved Damage I focus that
+        # goes with it. The stone is a caster-robe stone and the coat is
+        # plate, so they share no class and it CANNOT follow; its only legal
+        # homes were two robes the player would no longer be wearing.
+        #
+        # Not dropped -- 7 AC may still be the better trade. But the cost is
+        # stated, because "no loss" was the part that was wrong.
+        if rec and cur_base and rec_base != cur_base:
+            stranded = []
+            for _x in exalts:
+                if _item_base(_x.get("host") or "").lower() != cur_base:
+                    continue
+                _snm = re.sub(r"\s*[(]Exaltation[)]$", "", _x["name"]).strip()
+                _rec_i = next((i for i in exalt_info
+                               if i["name"].lower() == _snm.lower()), None) or {}
+                if not _rec_i.get("targets_checked"):
+                    continue          # never compared — assert nothing
+                _dests = {d.strip().lower()
+                          for d in (_rec_i.get("move_to") or "").split(",")
+                          if d.strip()}
+                if not any(_item_base(d) == rec_base or d == rec
+                           for d in _dests):
+                    stranded.append((_snm, _rec_i.get("effect") or "",
+                                     _rec_i.get("move_to") or ""))
+            bits = []
+            for _snm, _eff, _dest in stranded:
+                bits.append(
+                    f"loses {_eff or _snm}: the {_snm} stone CANNOT move to "
+                    f"{s.get('recommend')}"
+                    + (f" (its only legal homes are {_dest})" if _dest
+                       else " (no owned item can take it)"))
+            # A stone is not the only way to lose an effect. An item's NATIVE
+            # Effect line goes with the item, and no stone has to be involved:
+            # Shining Metallic Robes grants Spell Haste II (15% cast time) from
+            # an EMPTY socket, and a swap to a studded tunic was described as
+            # costing only INT and two saves. The stat vector cannot see an
+            # effect, so this has to be checked explicitly.
+            if not stranded:
+                try:
+                    _cur_ln = await _item_line(str(s.get("current") or ""))
+                    _rec_ln = await _item_line(str(s.get("recommend") or ""))
+                except Exception:
+                    _cur_ln = _rec_ln = None
+                _eff_of = lambda l: (m.group(0) if l and
+                                     (m := re.search(r"(?:Focus )?Effect: [^;|]+", l))
+                                     else None)
+                _cur_eff, _rec_eff = _eff_of(_cur_ln), _eff_of(_rec_ln)
+                # only when we could READ both -- an unreadable line is not
+                # evidence that an effect is absent
+                if _cur_ln and _rec_ln and _cur_eff and _cur_eff != _rec_eff:
+                    # A focus SOCKET is exposed by levelling the item: across
+                    # 23 worn items, all 20 at +1 or more had one and none of
+                    # the 3 at +0 did. So a +0 item's focus cannot be
+                    # extracted at all -- replacing it loses the effect
+                    # permanently, and the fix is to merge the item first,
+                    # which is advice worth giving rather than a warning.
+                    _stuck = _item_rank(str(s.get("current") or "")) == 0
+                    bits.append(
+                        f"loses the worn item's {_cur_eff}"
+                        + (" — it is +0, so that focus has no socket yet and "
+                           "CANNOT be moved; merge the item first if you want "
+                           "to keep the effect" if _stuck else "")
+                        + (f", replaced by {_rec_eff}" if _rec_eff
+                           else "" if _stuck
+                           else " — the replacement has no effect of its own"))
+            if bits:
+                s["why"] = (str(s.get("why") or "").rstrip(". ")
+                            + ". COST — " + "; ".join(bits) + ".")
+                logger.info("Slot rec %s costs an effect: %s",
+                            s.get("slot"), "; ".join(bits)[:160])
         if rec and (rec in owned or rec_base in owned_base):
             wset = where_by_base.get(rec_base, set())
             # Nearest to hand first, then the rest of the storage the parser
@@ -3103,6 +3679,41 @@ async def generate_gear_advice(ctx: dict) -> dict:
             claimed.add(cat)
         ph["where"] = where
         pet_gear.append(ph)
+    # Deterministic BACKFILL. A clear upgrade -- one that wins on every stat
+    # the pet cares about and loses on none -- needs no judgement, so it is
+    # not allowed to depend on the model having mentioned it. Trade-offs are
+    # deliberately NOT backfilled: choosing between +6 damage and -10 STR is
+    # the qualitative call, and silence is a better answer than a coin flip.
+    already = {p["item"].lower() for p in pet_gear} | pet_worn
+    for e in pet_shortlist:
+        if len(pet_gear) >= pet_slots:
+            break
+        if e["verdict"] != "clear upgrade" or e["cand"].lower() in already:
+            continue
+        where = owned_locs.get(e["cand"].lower())
+        if where not in RETRIEVABLE or e["cand"].lower() in exalt_hosts:
+            continue
+        cat = e["cat"]
+        if cat == "WEAPON":
+            if held_2h or held_weapons >= 2:
+                continue
+            claimed.add("WEAPON")
+            held_weapons += 1
+        elif cat:
+            if cat in claimed:
+                continue
+            claimed.add(cat)
+        gains = ", ".join(f"{k} {v:+g}" for k, v in
+                          sorted(e["gain"].items(), key=lambda kv: -abs(kv[1])))
+        pet_gear.append({
+            "item": e["cand"], "slot": "", "where": where,
+            "why": (f"beats held {e['vs']} on every stat that matters to a pet "
+                    f"({gains}) and loses nothing" if e["vs"] else
+                    f"fills a free pet slot ({gains})"),
+        })
+        already.add(e["cand"].lower())
+        logger.info("Pet-gear backfill: %s (clear upgrade over %s)",
+                    e["cand"], e["vs"] or "an empty slot")
     table = _full_slot_table(slots, ctx.get("worn"))
     prim = next((r for r in table if r["slot"] == "Primary"
                  and r.get("recommend")), None)
