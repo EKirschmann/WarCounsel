@@ -383,6 +383,14 @@ async def on_log_event(event: ev.LogEvent, live: bool) -> None:
                 "zone": tracker.zone, "level": tracker.level,
                 "class_str": tracker.class_str,
                 "aa_available": tracker.aa_available,
+                # A max_hp learned from the stats panel lived only in
+                # memory: the row was written when the player TYPED a
+                # value and never again, so a restart reloaded the typed
+                # number and ran on it until the panel was next read.
+                # Harmless while nothing depended on it -- hp_floor_pct
+                # now does, and a floor measured against a stale max
+                # reports a comfortable fight as a near-death.
+                "max_hp": tracker.max_hp, "max_mana": tracker.max_mana,
             })
         except asyncio.QueueFull:
             logger.warning("DB queue full — dropping %s milestone", event.type)
@@ -418,6 +426,12 @@ def _persist_milestone(item: dict) -> None:
                 row.aa_available = item["aa_available"]
             if item["class_str"]:
                 row.class_str = item["class_str"]
+            # a typed value still wins in the TRACKER, so this can
+            # never overwrite a deliberate statement with a reading
+            for f in ("max_hp", "max_mana"):
+                v = item.get(f)
+                if v and v > 0 and getattr(row, f, None) != v:
+                    setattr(row, f, v)
         db.commit()
     finally:
         db.close()
@@ -488,6 +502,8 @@ def _drain_finished_sessions() -> None:
                 "zone": view.get("zone"), "level": view.get("level"),
                 "class_str": view.get("class_str"),
                 "aa_available": tracker.aa_available,
+                "max_hp": tracker.max_hp,
+                "max_mana": tracker.max_mana,
             })
         except asyncio.QueueFull:
             logger.warning("DB queue full — dropping session record")
@@ -509,6 +525,14 @@ def _drain_finished_encounters() -> None:
                 "zone": tracker.zone, "level": tracker.level,
                 "class_str": tracker.class_str,
                 "aa_available": tracker.aa_available,
+                # A max_hp learned from the stats panel lived only in
+                # memory: the row was written when the player TYPED a
+                # value and never again, so a restart reloaded the typed
+                # number and ran on it until the panel was next read.
+                # Harmless while nothing depended on it -- hp_floor_pct
+                # now does, and a floor measured against a stale max
+                # reports a comfortable fight as a near-death.
+                "max_hp": tracker.max_hp, "max_mana": tracker.max_mana,
             })
         except asyncio.QueueFull:
             logger.warning("DB queue full — dropping encounter record")
