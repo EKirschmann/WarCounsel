@@ -154,7 +154,11 @@ class Settings(BaseSettings):
                          r"\Installed Games\EverQuest Legends")
     eql_log_dir: str = ""                     # default: <game dir>\Logs
     eql_maps_dir: str = ""                    # default: <game dir>\maps
-    eql_maps_custom_dir: str = ""             # default: <maps>\Dark Brewall (Brewall pack; optional)
+    # default: <maps>\Dark Brewall (Brewall pack; optional). Accepts several
+    # packs separated by ";", highest priority first; a bare folder name
+    # means a pack inside <maps>, so the list survives the game folder
+    # moving -- see map_system._maps_dirs and main._repoint_packs
+    eql_maps_custom_dir: str = ""
     eql_log_path: str | None = None           # full path override (wins over dir scan)
     eql_character_name: str | None = None     # prefer this character's log file
 

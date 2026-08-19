@@ -366,7 +366,16 @@ def _canonical(name: str) -> Optional[str]:
 
 
 def _maps_dirs() -> list[Path]:
-    """Search order: custom pack (e.g. Brewall), stock maps, then ours.
+    """Search order: custom packs (first wins), stock maps, then ours.
+
+    eql_maps_custom_dir takes SEVERAL packs separated by ";" (the Windows
+    path-list convention -- a drive letter's ":" never collides with it),
+    searched left to right. That is what lets a pack sit ON TOP of Brewall
+    while Brewall still answers for zones the top pack does not cover; a
+    single path behaves exactly as it always did.
+
+    An entry that is not an absolute path names a pack INSIDE the maps
+    folder, so the list keeps working when the game folder moves.
 
     The bundled folder is LAST on purpose — it only fills gaps the game
     leaves, and anything the user installs themselves must win. It exists
@@ -375,9 +384,19 @@ def _maps_dirs() -> list[Path]:
     with nothing to tell the user why.
     """
     dirs = []
-    for d in (settings.eql_maps_custom_dir, settings.eql_maps_dir):
+    maps_dir = Path(str(settings.eql_maps_dir or ""))
+    custom = str(settings.eql_maps_custom_dir or "").split(";")
+    for d in [*custom, settings.eql_maps_dir]:
+        d = str(d).strip()
+        if not d:
+            continue
         p = Path(d)
-        if p.is_dir():
+        # a bare folder name is a pack in the maps folder; absolute
+        # entries still work, for a pack kept somewhere else
+        if not p.is_absolute():
+            p = maps_dir / p
+        # dedupe: the same pack named twice must not shadow the one after it
+        if p.is_dir() and p not in dirs:
             dirs.append(p)
     bundled = bundle_path("maps")
     if bundled.is_dir():

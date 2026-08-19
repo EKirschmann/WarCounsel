@@ -1648,6 +1648,29 @@ def _describe_game_dir(path: str) -> dict:
             "reason": f"{len(found)} character log(s) found"}
 
 
+def _repoint_packs(current: str, maps: Path) -> str:
+    """Carry the installed map packs across a game-folder change.
+
+    Picking a new install used to assign Dark Brewall and nothing else,
+    so a multi-pack list was silently emptied -- the packs stayed on
+    disk and merely stopped being searched, which reads as maps going
+    missing rather than as a setting being reset. Packs that lived in
+    the OLD maps folder follow the move by name; one kept deliberately
+    somewhere else is left where the user put it.
+    """
+    kept = []
+    for raw in str(current or "").split(";"):
+        entry = raw.strip()
+        if not entry:
+            continue
+        p = Path(entry)
+        if p.is_absolute() and p.parent.name.lower() == "maps":
+            kept.append(p.name)
+        else:
+            kept.append(entry)
+    return ";".join(kept or ["Dark Brewall"])
+
+
 def _context_info() -> dict:
     """context_limit() plus the guide budget it produces, for the panel."""
     try:
@@ -1757,8 +1780,10 @@ async def api_settings_set(body: dict):
         if game_changed:
             game = Path(settings.eql_game_dir)
             settings.eql_log_dir = str(game / "Logs")
-            settings.eql_maps_dir = str(game / "maps")
-            settings.eql_maps_custom_dir = str(game / "maps" / "Dark Brewall")
+            maps = game / "maps"
+            settings.eql_maps_dir = str(maps)
+            settings.eql_maps_custom_dir = _repoint_packs(
+                settings.eql_maps_custom_dir, maps)
             clear_find_cache()
 
     if "llm_provider" in config_in:
