@@ -80,6 +80,22 @@ on a button press, after backing it up).
   This applies to ALL of it, not only the `[eqlbuilds]` rows in
   `backend/alert_data.py`: `builds_data.py` feeds spell levels, AA ladders
   and skills into the advisor throughout.
+- **`backend/picker_capabilities.json`** is a trimmed snapshot of eqltools.com's
+  own build artifact (`/picker/data.js`), refreshed by `scripts/refresh_picker.py`.
+  Their robots.txt asks one thing of anyone building on it — *"Building on this
+  data? Cite eqltools.com"* — so the citation ships inside the file and on every
+  line the advisor emits from it. Vendored rather than fetched live: the
+  artifact's own header says do not hand-edit and the format can change, it
+  would be their bandwidth on every consult, and the packaged .exe has to work
+  offline.
+  - Each capability carries their `seal` — `client-mined`, `model`, `wiki` or
+    `chat`. The three `chat`-sealed entries (class tier grades) are dropped:
+    they are community opinion carrying letter grades, and this app gates model
+    output against fact rather than feeding it consensus. The one `wiki`-sealed
+    entry (`atkAA`) is kept and is therefore **CC BY-SA 4.0**, like everything
+    else here mined from the wiki; the rest is client-mined or model-computed
+    and is not wiki-derived. `meta.generatedFrom` records the wiki revision and
+    spell patch each snapshot was built against.
 - [eqltools.com](https://eqltools.com) is linked from the Atlas and its
   published sourcing discipline is the model for this file.
 

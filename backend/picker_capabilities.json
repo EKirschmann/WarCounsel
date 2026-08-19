@@ -1,0 +1,905 @@
+{
+ "attribution": "Data from eqltools.com \u2014 cite eqltools.com",
+ "capabilities": {
+  "archery": {
+   "byClass": {
+    "PAL": {
+     "level": 1
+    },
+    "RNG": {
+     "level": 1
+    },
+    "ROG": {
+     "level": 1
+    },
+    "SHD": {
+     "level": 1
+    },
+    "WAR": {
+     "level": 1
+    }
+   },
+   "seal": "client-mined"
+  },
+  "atk": {
+   "byClass": {
+    "BER": {
+     "best": 20,
+     "level": 30
+    },
+    "BRD": {
+     "best": 14,
+     "level": 45
+    },
+    "BST": {
+     "best": 10,
+     "level": 42
+    },
+    "DRU": {
+     "best": 40,
+     "level": 6
+    },
+    "ENC": {
+     "best": 30,
+     "level": 38
+    },
+    "NEC": {
+     "best": 10,
+     "level": 3
+    },
+    "RNG": {
+     "best": 30,
+     "level": 17
+    },
+    "SHD": {
+     "best": 25,
+     "level": 16
+    },
+    "SHM": {
+     "best": 15,
+     "level": 36
+    }
+   },
+   "note": "ATK feeds the same offense sum as weapon skill (docs/encyclopedia/damage.md). Several ATK buffs share a slot and don't stack \u2014 best single applies in practice.",
+   "seal": "client-mined"
+  },
+  "atkAA": {
+   "byClass": {
+    "RNG": {}
+   },
+   "seal": "wiki"
+  },
+  "backstab": {
+   "byClass": {
+    "ROG": {
+     "level": 1
+    }
+   },
+   "seal": "client-mined"
+  },
+  "cc": {
+   "byClass": {
+    "BER": {
+     "level": 16
+    },
+    "BRD": {
+     "level": 15
+    },
+    "BST": {
+     "level": 12
+    },
+    "CLR": {
+     "level": 1
+    },
+    "DRU": {
+     "level": 1
+    },
+    "ENC": {
+     "level": 2
+    },
+    "NEC": {
+     "level": 2
+    },
+    "PAL": {
+     "level": 7
+    },
+    "RNG": {
+     "level": 16
+    },
+    "SHD": {
+     "level": 12
+    },
+    "SHM": {
+     "level": 25
+    },
+    "WIZ": {
+     "level": 16
+    }
+   },
+   "seal": "client-mined"
+  },
+  "damageShield": {
+   "byClass": {
+    "BRD": {
+     "best": 9,
+     "level": 25,
+     "target": "group"
+    },
+    "DRU": {
+     "best": 24,
+     "level": 47,
+     "target": "single"
+    },
+    "ENC": {
+     "best": 11,
+     "level": 25,
+     "target": "single"
+    },
+    "MAG": {
+     "best": 25,
+     "level": 45,
+     "target": "single"
+    },
+    "NEC": {
+     "best": 12,
+     "level": 15,
+     "target": "self"
+    },
+    "RNG": {
+     "best": 12,
+     "level": 43,
+     "target": "single"
+    },
+    "WIZ": {
+     "best": 5,
+     "level": 25,
+     "target": "self"
+    }
+   },
+   "seal": "client-mined"
+  },
+  "dot": {
+   "byClass": {
+    "BRD": {
+     "best": 52,
+     "level": 38,
+     "target": "single"
+    },
+    "BST": {
+     "best": 876,
+     "level": 40,
+     "target": "single"
+    },
+    "CLR": {
+     "best": 600,
+     "level": 37,
+     "target": "undead"
+    },
+    "DRU": {
+     "best": 1755,
+     "level": 40,
+     "target": "single"
+    },
+    "ENC": {
+     "best": 712,
+     "level": 47,
+     "target": "single"
+    },
+    "MAG": {
+     "best": 345,
+     "level": 43,
+     "target": "single"
+    },
+    "NEC": {
+     "best": 2070,
+     "level": 50,
+     "target": "single"
+    },
+    "RNG": {
+     "best": 560,
+     "level": 40,
+     "target": "single"
+    },
+    "SHD": {
+     "best": 390,
+     "level": 41,
+     "target": "single"
+    },
+    "SHM": {
+     "best": 2070,
+     "level": 49,
+     "target": "single"
+    }
+   },
+   "seal": "client-mined"
+  },
+  "fd": {
+   "byClass": {
+    "MNK": {
+     "level": 17
+    },
+    "NEC": {
+     "level": 16
+    },
+    "SHD": {
+     "level": 24
+    }
+   },
+   "seal": "client-mined"
+  },
+  "gate": {
+   "byClass": {
+    "CLR": {
+     "level": 5
+    },
+    "DRU": {
+     "level": 5
+    },
+    "ENC": {
+     "level": 4
+    },
+    "MAG": {
+     "level": 4
+    },
+    "NEC": {
+     "level": 4
+    },
+    "SHM": {
+     "level": 5
+    },
+    "WIZ": {
+     "level": 4
+    }
+   },
+   "seal": "client-mined"
+  },
+  "haste": {
+   "byClass": {
+    "BRD": {
+     "best": 50,
+     "level": 7
+    },
+    "ENC": {
+     "best": 60,
+     "level": 15
+    },
+    "PAL": {
+     "best": 25,
+     "level": 44
+    },
+    "SHM": {
+     "best": 40,
+     "level": 26
+    }
+   },
+   "note": "The haste cap is ~50% below L30 and ~75% at 50, and item haste alone reaches it \u2014 class haste is a leveling tool, not an endgame axis. Hastes don't stack with themselves (best wins); Bard overhaste is the cap exception.",
+   "seal": "client-mined"
+  },
+  "heals": {
+   "byClass": {
+    "BRD": {
+     "level": 6
+    },
+    "BST": {
+     "level": 1
+    },
+    "CLR": {
+     "level": 1
+    },
+    "DRU": {
+     "level": 1
+    },
+    "MAG": {
+     "level": 13
+    },
+    "NEC": {
+     "level": 6
+    },
+    "PAL": {
+     "level": 1
+    },
+    "RNG": {
+     "level": 1
+    },
+    "SHD": {
+     "level": 21
+    },
+    "SHM": {
+     "level": 1
+    }
+   },
+   "note": "gated to the client's Heals and Regen categories, so HP-riders on disciplines/buffs/illusions and pet-only heals are excluded",
+   "seal": "client-mined"
+  },
+  "invis": {
+   "byClass": {
+    "BRD": {
+     "level": 19
+    },
+    "BST": {
+     "level": 43
+    },
+    "DRU": {
+     "level": 4
+    },
+    "ENC": {
+     "level": 4
+    },
+    "MAG": {
+     "level": 8
+    },
+    "NEC": {
+     "level": 7
+    },
+    "RNG": {
+     "level": 14
+    },
+    "SHD": {
+     "level": 30
+    },
+    "SHM": {
+     "level": 27
+    },
+    "WIZ": {
+     "level": 16
+    }
+   },
+   "note": "regular invisibility only \u2014 undead see through it. Invis versus undead and versus animals are their own rows.",
+   "seal": "client-mined"
+  },
+  "iva": {
+   "byClass": {
+    "DRU": {
+     "level": 8
+    },
+    "SHM": {
+     "level": 10
+    }
+   },
+   "seal": "client-mined"
+  },
+  "ivu": {
+   "byClass": {
+    "CLR": {
+     "level": 11
+    },
+    "ENC": {
+     "level": 14
+    },
+    "NEC": {
+     "level": 1
+    },
+    "PAL": {
+     "level": 17
+    },
+    "SHD": {
+     "level": 4
+    },
+    "WIZ": {
+     "level": 39
+    }
+   },
+   "note": "a separate spell family from regular invis \u2014 the Shadow Knight gets IVU at 4 and regular invis only at 30.",
+   "seal": "client-mined"
+  },
+  "lev": {
+   "byClass": {
+    "BRD": {
+     "level": 31
+    },
+    "BST": {
+     "level": 32
+    },
+    "DRU": {
+     "level": 14
+    },
+    "ENC": {
+     "level": 15
+    },
+    "NEC": {
+     "level": 41
+    },
+    "RNG": {
+     "level": 35
+    },
+    "SHM": {
+     "level": 10
+    },
+    "WIZ": {
+     "level": 22
+    }
+   },
+   "seal": "client-mined"
+  },
+  "lifetap": {
+   "byClass": {
+    "NEC": {
+     "best": 400,
+     "level": 48,
+     "target": "lifetap"
+    },
+    "SHD": {
+     "best": 314,
+     "level": 49,
+     "target": "lifetap"
+    }
+   },
+   "seal": "client-mined"
+  },
+  "manaActive": {
+   "byClass": {
+    "NEC": {
+     "best": 100,
+     "level": 43,
+     "target": "single"
+    },
+    "SHM": {
+     "best": 33,
+     "level": 38,
+     "target": "self"
+    },
+    "WIZ": {
+     "best": 251,
+     "level": 32,
+     "target": "self"
+    }
+   },
+   "note": "mana back on demand rather than over time \u2014 Cannibalize trades HP for it, Harvest refills on a cooldown, Covetous Subversion drains it from the target. Different tools; they don't substitute for each other.",
+   "seal": "client-mined"
+  },
+  "manaRegen": {
+   "byClass": {
+    "BRD": {
+     "best": 7,
+     "level": 32,
+     "target": "group"
+    },
+    "BST": {
+     "best": 3,
+     "level": 41,
+     "target": "group"
+    },
+    "DRU": {
+     "best": 2,
+     "level": 36,
+     "target": "self"
+    },
+    "ENC": {
+     "best": 9,
+     "level": 26,
+     "target": "single"
+    },
+    "NEC": {
+     "best": 20,
+     "level": 48,
+     "target": "self"
+    }
+   },
+   "note": "mana per tick from a running buff. The Necromancer's Lich line pays hit points for it every tick.",
+   "seal": "client-mined"
+  },
+  "meleeDoubleAttack": {
+   "byClass": {
+    "BER": {
+     "level": 15
+    },
+    "MNK": {
+     "level": 15
+    },
+    "PAL": {
+     "level": 20
+    },
+    "RNG": {
+     "level": 20
+    },
+    "ROG": {
+     "level": 16
+    },
+    "SHD": {
+     "level": 20
+    },
+    "WAR": {
+     "level": 15
+    }
+   },
+   "seal": "client-mined"
+  },
+  "meleeTripleAttack": {
+   "byClass": {
+    "BER": {
+     "level": 46
+    },
+    "MNK": {
+     "level": 46
+    },
+    "RNG": {
+     "level": 46
+    },
+    "ROG": {
+     "level": 46
+    },
+    "WAR": {
+     "level": 46
+    }
+   },
+   "seal": "client-mined"
+  },
+  "nuke": {
+   "byClass": {
+    "BRD": {
+     "best": 635,
+     "level": 43,
+     "target": "targeted ae"
+    },
+    "BST": {
+     "best": 281,
+     "level": 47,
+     "target": "single"
+    },
+    "CLR": {
+     "best": 468,
+     "level": 43,
+     "target": "undead"
+    },
+    "DRU": {
+     "best": 638,
+     "level": 48,
+     "target": "pb ae"
+    },
+    "ENC": {
+     "best": 387,
+     "level": 43,
+     "target": "single"
+    },
+    "MAG": {
+     "best": 817,
+     "level": 47,
+     "target": "line of sight"
+    },
+    "NEC": {
+     "best": 500,
+     "level": 42,
+     "target": "single"
+    },
+    "PAL": {
+     "best": 390,
+     "level": 49,
+     "target": "single"
+    },
+    "RNG": {
+     "best": 300,
+     "level": 49,
+     "target": "single"
+    },
+    "SHD": {
+     "best": 346,
+     "level": 47,
+     "target": "undead"
+    },
+    "SHM": {
+     "best": 500,
+     "level": 47,
+     "target": "single"
+    },
+    "WIZ": {
+     "best": 900,
+     "level": 43,
+     "target": "single"
+    }
+   },
+   "seal": "client-mined"
+  },
+  "pacify": {
+   "byClass": {
+    "BRD": {
+     "level": 8
+    },
+    "CLR": {
+     "level": 1
+    },
+    "DRU": {
+     "level": 1
+    },
+    "ENC": {
+     "level": 1
+    },
+    "MNK": {
+     "level": 35
+    },
+    "NEC": {
+     "level": 2
+    },
+    "PAL": {
+     "level": 10
+    },
+    "RNG": {
+     "level": 4
+    },
+    "SHD": {
+     "level": 9
+    }
+   },
+   "seal": "client-mined"
+  },
+  "petHaste": {
+   "byClass": {
+    "BST": {
+     "best": 60,
+     "level": 37
+    },
+    "DRU": {
+     "best": 70,
+     "level": 18
+    },
+    "MAG": {
+     "best": 60,
+     "level": 11
+    },
+    "NEC": {
+     "best": 55,
+     "level": 11
+    },
+    "SHD": {
+     "best": 20,
+     "level": 29
+    },
+    "SHM": {
+     "best": 20,
+     "level": 50
+    }
+   },
+   "note": "pet-target only; pet hastes from different classes don't stack (best wins)",
+   "seal": "client-mined"
+  },
+  "pets": {
+   "byClass": {
+    "BST": {
+     "level": 1
+    },
+    "ENC": {
+     "level": 1
+    },
+    "MAG": {
+     "level": 2
+    },
+    "NEC": {
+     "level": 1
+    },
+    "SHD": {
+     "level": 7
+    },
+    "SHM": {
+     "level": 32
+    }
+   },
+   "note": "count includes swarm and temporary pet summons (SPA 106), not only the permanent pet line, so it overstates distinct standing pets. A trio fields ONE pet regardless of how many pet classes it stacks.",
+   "seal": "client-mined"
+  },
+  "ports": {
+   "byClass": {
+    "DRU": {
+     "level": 15
+    },
+    "WIZ": {
+     "level": 17
+    }
+   },
+   "seal": "client-mined"
+  },
+  "root": {
+   "byClass": {
+    "CLR": {
+     "level": 7
+    },
+    "DRU": {
+     "level": 2
+    },
+    "ENC": {
+     "level": 6
+    },
+    "NEC": {
+     "level": 16
+    },
+    "PAL": {
+     "level": 19
+    },
+    "RNG": {
+     "level": 15
+    },
+    "SHM": {
+     "level": 12
+    },
+    "WIZ": {
+     "level": 3
+    }
+   },
+   "note": "root-rot works on regular mobs; raid bosses can't be rooted or snared",
+   "seal": "client-mined"
+  },
+  "rune": {
+   "byClass": {
+    "BRD": {
+     "best": 20,
+     "level": 49,
+     "target": "group"
+    },
+    "ENC": {
+     "best": 394,
+     "level": 40,
+     "target": "single"
+    },
+    "NEC": {
+     "best": 394,
+     "level": 43,
+     "target": "self"
+    },
+    "SHD": {
+     "best": 55,
+     "level": 31,
+     "target": "self"
+    },
+    "WIZ": {
+     "best": 394,
+     "level": 40,
+     "target": "self"
+    }
+   },
+   "note": "a one-shot absorb \u2014 soaks that much damage, then drops.",
+   "seal": "client-mined"
+  },
+  "slow": {
+   "byClass": {
+    "BRD": {
+     "best": 40,
+     "level": 20
+    },
+    "BST": {
+     "best": 40,
+     "level": 20
+    },
+    "ENC": {
+     "best": 65,
+     "level": 9
+    },
+    "NEC": {
+     "best": 70,
+     "level": 17
+    },
+    "SHM": {
+     "best": 70,
+     "level": 5
+    }
+   },
+   "note": "Slows don't stack \u2014 only the best one applies, with one exception: the Rogue's slow poison is coded separately and stacks on top of a real slow (magnitude contested, ~15% as felt by players). The Bard also carries the game's only AE slow (35% point-blank, level 20). EQL slow is a flat attack-speed subtraction, full value at D0, relatively weaker at higher difficulty.",
+   "seal": "client-mined"
+  },
+  "snare": {
+   "byClass": {
+    "BER": {
+     "level": 8
+    },
+    "BRD": {
+     "level": 23
+    },
+    "DRU": {
+     "level": 1
+    },
+    "NEC": {
+     "level": 4
+    },
+    "RNG": {
+     "level": 5
+    },
+    "SHD": {
+     "level": 11
+    },
+    "WIZ": {
+     "level": 27
+    }
+   },
+   "seal": "client-mined"
+  },
+  "sow": {
+   "byClass": {
+    "BRD": {
+     "best": 65,
+     "level": 5
+    },
+    "BST": {
+     "best": 55,
+     "level": 24
+    },
+    "DRU": {
+     "best": 115,
+     "level": 10
+    },
+    "MAG": {
+     "best": 20,
+     "level": 27
+    },
+    "RNG": {
+     "best": 55,
+     "level": 28
+    },
+    "SHM": {
+     "best": 115,
+     "level": 9
+    }
+   },
+   "note": "movement is hard-capped (~76 velocity) well below the big buffs \u2014 run speed is travel convenience, not a build axis",
+   "seal": "client-mined"
+  },
+  "strBuff": {
+   "byClass": {
+    "BRD": {
+     "best": 30,
+     "level": 7,
+     "target": "self"
+    },
+    "BST": {
+     "best": 27,
+     "level": 47,
+     "target": "self"
+    },
+    "CLR": {
+     "best": 40,
+     "level": 31,
+     "target": "single"
+    },
+    "DRU": {
+     "best": 35,
+     "level": 44,
+     "target": "single"
+    },
+    "ENC": {
+     "best": 40,
+     "level": 47,
+     "target": "single"
+    },
+    "NEC": {
+     "best": 10,
+     "level": 8,
+     "target": "single"
+    },
+    "PAL": {
+     "best": 20,
+     "level": 18,
+     "target": "single"
+    },
+    "RNG": {
+     "best": 15,
+     "level": 26,
+     "target": "single"
+    },
+    "SHM": {
+     "best": 67,
+     "level": 46,
+     "target": "single"
+    }
+   },
+   "seal": "client-mined"
+  },
+  "track": {
+   "byClass": {
+    "BRD": {},
+    "DRU": {},
+    "RNG": {}
+   },
+   "note": "Tracking classes (Ranger best, then Druid, then Bard). EQL Discord-confirmed; a character has Track if any of its three classes tracks.",
+   "seal": "model"
+  }
+ },
+ "meta": {
+  "generatedFrom": {
+   "attributes/data.js": "ce85b1feeeb7",
+   "charcreate": "379a3c0cf4b0",
+   "combat/data.js": "5f028cf0ea74",
+   "spellmaster/meta.json": "0ae4ca7ba3bf",
+   "spells.json": "8965f0e4c22a",
+   "wiki-mirror": "revid-158977"
+  },
+  "notes": "capabilities.* are a client-mined SPA scan of the EQL player spells (147 Illusion:Special leakage rows + 3 mistagged Item Benefit click-item rows excluded), with magnitudes computed at the level cap (50) via the shared EQEmu-formula port (flat-formula values are client-verbatim, level-scaled ones are model-computed), plus combat-skillCaps melee proxies and weapon/AC cap maxima. classes/races stat data is client-mined. races' primary classes, the per-combo deities, and starting cities are client-observed (what the character-creation screen shows). racials, vision and archetypes are wiki; atkAA is wiki (AA rank magnitudes). plate, track and manaPool are model-sealed. Mechanics doctrine: docs/encyclopedia/.",
+  "spellPatch": "eql-1447p-73960r"
+ },
+ "source": "https://eqltools.com/picker/data.js"
+}
