@@ -2156,6 +2156,23 @@ button.app-version:hover { color: var(--gold-bright); }
 }
 .trg-hint { display: block; padding: 0 0 3px 21px; }
 .trg-foot { align-items: center; margin-top: 8px; }
+/* the starter catalogue: offered rules, visually apart from yours */
+.trg-starter { margin-top: 10px; }
+.trg-starter-group h4 {
+  margin: 10px 0 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b8577;
+}
+.trg-starter .trg-row { align-items: center; gap: 8px; }
+.trg-starter .trg-row strong { font-size: 0.8rem; }
+.trg-starter .trg-row code {
+  margin-left: auto;
+  color: #8b8577;
+  font-family: var(--font-mono, "IBM Plex Mono"), monospace;
+  font-size: 0.7rem;
+}
 .trg-foot .set-note { margin: 0; }
 .ov-item[data-on="0"] .trg-hint { opacity: 0.5; }
 

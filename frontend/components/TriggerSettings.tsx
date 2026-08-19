@@ -27,13 +27,20 @@ type Rule = {
   sound: boolean;
 };
 type KindDef = { kind: string; matches: string };
-type Payload = { file: string; rules: Rule[]; kinds: KindDef[] };
+type Starter = Rule & { group: string; label: string; why: string };
+type Payload = {
+  file: string;
+  rules: Rule[];
+  kinds: KindDef[];
+  starter: Starter[];
+};
 
 export function TriggerSettings() {
   const [data, setData] = useState<Payload | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -80,6 +87,19 @@ export function TriggerSettings() {
     { kind: "loot", pattern: "", enabled: true, sound: true },
   ]);
 
+  // Copied in DISABLED, exactly as it ships: a starter rule is a suggestion
+  // to look at, never something that starts firing because the panel was
+  // opened. Switching it on is the deliberate act.
+  const addStarter = (st: Starter) =>
+    setRules((prev) => {
+      const next = [
+        ...prev,
+        { kind: st.kind, pattern: st.pattern, enabled: false, sound: st.sound },
+      ];
+      void push(next);
+      return next;
+    });
+
   const remove = (i: number) => {
     setRules((prev) => {
       const next = prev.filter((_, n) => n !== i);
@@ -93,6 +113,15 @@ export function TriggerSettings() {
 
   const helpFor = (kind: string) =>
     data.kinds.find((k) => k.kind === kind)?.matches ?? "";
+
+  // Grouped in the order the backend lists them, so the catalogue reads
+  // the way it was written rather than alphabetically.
+  const groups: [string, Starter[]][] = [];
+  for (const st of data.starter ?? []) {
+    const row = groups.find(([g]) => g === st.group);
+    if (row) row[1].push(st);
+    else groups.push([st.group, [st]]);
+  }
 
   return (
     <>
@@ -160,11 +189,56 @@ export function TriggerSettings() {
 
       <div className="set-row trg-foot">
         <button type="button" onClick={add}>+ Add trigger</button>
+        <button type="button" onClick={() => setBrowsing((b) => !b)}>
+          {browsing ? "Hide starter set" : "Starter set…"}
+        </button>
         <span className="set-note" data-ok={saved ? "1" : undefined}>
           {saved ? "Saved ✓" : ""}
         </span>
       </div>
 
+      {browsing && (
+        <div className="trg-starter">
+          <p className="set-note">
+            Common watches, added switched <strong>off</strong> so nothing
+            starts firing on its own. Edit the pattern afterwards to narrow
+            it — every one of these is a starting point, not a setting.
+          </p>
+          {groups.map(([group, rows]) => (
+            <div key={group} className="trg-starter-group">
+              <h4>{group}</h4>
+              <ul className="ov-list">
+                {rows.map((st) => {
+                  const already = rules.some(
+                    (r) => r.kind === st.kind && r.pattern === st.pattern,
+                  );
+                  return (
+                    <li key={st.kind + st.pattern} className="ov-item trg-item">
+                      <div className="trg-row">
+                        <button
+                          type="button"
+                          onClick={() => addStarter(st)}
+                          disabled={already}
+                          title={
+                            already ? "Already in your list" : `Add ${st.kind} ${st.pattern}`
+                          }
+                        >
+                          {already ? "Added" : "Add"}
+                        </button>
+                        <strong>{st.label}</strong>
+                        <code>
+                          {st.kind} {st.pattern}
+                        </code>
+                      </div>
+                      <span className="ov-hint trg-hint">{st.why}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
       {error && <p className="set-note" data-ok="0">{error}</p>}
       <p className="set-note">
         Matches are plain text, not patterns — no escaping, and{" "}

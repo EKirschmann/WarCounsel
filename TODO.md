@@ -276,6 +276,11 @@ can be finished.
   maps `{1 store, 2 loot, 3 merge, 4 sell}`; 1 vs 2 was never confirmed
   against the game's own UI. Everything downstream is read-only, so a
   wrong label is cosmetic — but it is wrong in the merge notices if so.
+- **Three dead rows in `MECHANICS`.** The table holds 16 rows for 13 distinct
+  mechanics: Dragon Roar, Feared (Dragon Roar landed) and Frost Breath each
+  appear twice, byte-identical. Inert — the parser loop `return`s on the
+  first match — so this is tidying, not a fix. Noticed 2026-08-19 while
+  counting mechanics for the trigger starter set.
 - **The leveling Gantt caps at 8 rows** (`.slice(0, 8)`). Fine for
   readability; raise it if anyone wants every candidate for their level.
 - **Item wiki coverage is partial.** 53 of 79 owned items resolved a wiki

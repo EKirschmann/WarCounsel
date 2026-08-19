@@ -6,7 +6,8 @@ list of {"kind": k, "pattern": "text", "enabled": true, "sound": true}
 where k is loot|kill|death|zone|tell|fade — pattern "*" matches
 everything — plus the special kind "bighit" whose pattern is a NUMBER
 (alert when a single hit taken meets it). The file is created with
-disabled examples on first load and re-read automatically when edited
+a few disabled STARTER rules on first load (the rest are offered in
+the panel, never written unasked) and re-read automatically when edited
 (mtime). Built-in alerts (summon, name mentioned in group/guild/raid
 chat) fire without rules. Matches surface as overlay banners (+ chime
 when sound is true) with a 5s per-rule cooldown; the seed replay never
@@ -48,15 +49,68 @@ KIND_HELP = {
     "mez": "the mob that just got mesmerized",
 }
 
-_EXAMPLE = [
-    {"kind": "loot", "pattern": "Kitchen Toolbelt",
-     "enabled": False, "sound": True},
-    {"kind": "tell", "pattern": "*", "enabled": False, "sound": True},
-    {"kind": "fade", "pattern": "Mesmerize", "enabled": False, "sound": True},
-    {"kind": "fade", "pattern": "Charm", "enabled": False, "sound": True},
-    {"kind": "interrupt", "pattern": "*", "enabled": False, "sound": True},
-    {"kind": "bighit", "pattern": "800", "enabled": False, "sound": True},
+# ------------------------------------------------------------- starter set
+# A catalogue of rules worth having, NOT a second copy of the user's file.
+# It is offered in the Triggers panel and copied in one row at a time on
+# request, because the seed below only ever writes on a FRESH install: a
+# bigger seed would reach nobody who already has the app, and merging into
+# an existing file would resurrect rules somebody deleted on purpose.
+#
+# Every `fade` pattern here was checked against the client spell table
+# (spells_us.txt, 73,971 names) rather than written from memory, because a
+# pattern that matches nothing looks exactly like a quiet night. Two of
+# them are why this matters: "Mesmerize" matches 3 spell names and misses
+# all 60 "Mesmerization" spells, and "Levitate" misses "Levitation"
+# entirely. The truncated stems match both families.
+STARTER = [
+    # kind, pattern, group, label, why
+    ("bighit", "800", "Survival", "One hit takes 800+",
+     "The number is the threshold; lower it as your health pool grows."),
+    ("death", "*", "Survival", "You die",
+     "Marks the moment in the log for the post-mortem."),
+    ("fade", "Invis", "Survival", "Invisibility drops",
+     "Matches all 40 invis spells. The one that gets people killed in "
+     "Kithicor."),
+    ("fade", "Levitat", "Survival", "Levitation drops",
+     "Matches Levitate and Levitation both -- the stem is deliberate."),
+    ("fade", "Mesmeriz", "Group", "A mez breaks",
+     "Covers Mesmerize and Mesmerization. Breaking a mez is the classic "
+     "group mistake."),
+    ("fade", "Charm", "Group", "A charm breaks",
+     "Your pet is about to be someone else's problem."),
+    ("mez", "*", "Group", "Something gets mezzed",
+     "The apply half: know what not to hit."),
+    ("mechanic", "*", "Group", "A raid mechanic fires",
+     "Any of the 13 vendored boss triggers -- breaths, roars, death "
+     "touches."),
+    ("interrupt", "*", "Casting", "Your cast is interrupted",
+     "Names the spell you lost."),
+    ("fizzle", "*", "Casting", "Your cast fizzles",
+     "Noisy at low skill, which is exactly when it is worth watching."),
+    ("tell", "*", "Attention", "Anyone sends you a tell",
+     "Pattern a name instead of * to watch for one person."),
+    ("zone", "*", "Attention", "You change zone",
+     "Pattern a zone name to be told when you reach it."),
+    ("loot", "*", "Attention", "You loot anything",
+     "Narrow the pattern to an item name once you know what you are "
+     "hunting."),
 ]
+
+
+def starter_set() -> list:
+    """The catalogue, as rows the panel can render and add."""
+    return [{"kind": k, "pattern": p, "group": g, "label": lbl, "why": why,
+             "enabled": False, "sound": True}
+            for k, p, g, lbl, why in STARTER]
+
+
+# Seeded on a fresh install: a handful of the above, so the two cannot
+# drift apart. Everything else is one click away in the panel.
+_SEEDED = ("bighit:800", "tell:*", "fade:Mesmeriz", "fade:Charm",
+           "interrupt:*", "death:*")
+_EXAMPLE = [{k: r[k] for k in ("kind", "pattern", "enabled", "sound")}
+            for r in starter_set()
+            if r["kind"] + ":" + r["pattern"] in _SEEDED]
 
 _cache = {"mtime": None, "rules": [], "all": []}
 

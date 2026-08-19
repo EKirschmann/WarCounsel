@@ -2211,11 +2211,17 @@ async def get_tracked_rules():
     Returns DISABLED rules too — they are exactly what an editor exists to
     switch back on, and the seeded examples all ship disabled, so the
     enabled-only view reported an empty list on every fresh install.
+
+    "starter" is a CATALOGUE, not the user's rules: rows the panel can
+    offer to add. It is never written to the file by itself.
     """
     from backend import alerts
     return {"file": str(alerts.RULES_FILE), "rules": alerts.all_rules(),
             "kinds": [{"kind": k, "matches": alerts.KIND_HELP.get(k, "")}
-                      for k in alerts.KINDS]}
+                      for k in alerts.KINDS],
+            # Offered, never applied: the panel copies a row in on
+            # request. Seeding more would reach fresh installs only.
+            "starter": alerts.starter_set()}
 
 
 @app.post("/api/tracked-rules")
