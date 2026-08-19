@@ -4,6 +4,46 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.11.0 — 2026-08-19
+
+**Fixed: a correct game folder could be refused, and there was no way round
+it.** Saving the install path required a character log to already exist in it
+— but that file only appears after you type `/log on`, which you cannot get
+to through an app that will not accept where the game is. A fresh install has
+no `Logs` folder at all, so the right answer was rejected with advice you
+could not act on. Reported from Linux, where there is no registry key to find
+the folder for you (#12); on Windows that key had been quietly covering for
+this for ten releases. The folder is now accepted as soon as it looks like an
+install, and "nothing to read yet" is said as a warning instead of a refusal.
+
+**Fixed: changing your game folder emptied your map pack list.** It reset to
+Dark Brewall and nothing else, so anyone running several packs lost the rest
+— the folders were still on disk and had simply stopped being searched, which
+looks like maps going missing rather than a setting being reset. Packs now
+follow the move, and one you keep somewhere else on purpose stays where you
+put it. `EQL_MAPS_CUSTOM_DIR` also takes plain folder names now (`Spiken's
+Maps;Dark Brewall`), so the list survives the game moving; full paths still
+work exactly as before.
+
+**New: a starter set of triggers.** The Triggers panel has a catalogue of 13
+watches worth having — a mez or charm breaking, invisibility dropping, a cast
+interrupted, one hit taking 800+, a raid mechanic firing — grouped by what
+they are for. Everything is added **switched off** for you to look at first,
+and nothing is ever written to your rules without you clicking Add, so a
+trigger you deleted stays deleted.
+
+Two of the patterns were wrong in a way that only shows up under checking:
+watching for `Mesmerize` matches three spells in the client's own table and
+misses all sixty `Mesmerization` spells, and `Levitate` misses `Levitation`.
+Both are now stems that catch the whole family — including the mez rule the
+app has been seeding since triggers shipped.
+
+**Screen reading now says when it will break.** OCR regions are fixed screen
+positions, so changing **Options ▸ Interface ▸ UI Scaling** — or your Windows
+display scaling — moves the game underneath them and the reads come back
+wrong with no error at all. The 8/18 patch widened UI scaling to eleven steps
+in 0.25 increments, so this is now easy to trip over; the OCR panel says so.
+
 ## v2.10.1 — 2026-08-16
 
 **Fixed: the app could be using a max HP many levels out of date.** It was
