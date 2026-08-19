@@ -72,6 +72,7 @@ Reply with ONLY a JSON object (no markdown fences, no prose) shaped exactly like
 
 Rules:
 - The loadout is tiered and must USE ALL __SLOTS_NOTE__ slots. Choose ONLY from the "Spellbook USABLE NOW" list (owned AND at or below the character's level). Name the job each pick does. Never pick a spell superseded by another owned spell.
+  Spellbook entries may include a deterministic role tag derived from effect data. Treat it as authoritative: never describe a non-damage spell as a DoT, nuke, or other damage source.
   - must_have: the core spells that should always be memorized, in priority order (typically 5-7).
   - should_have: fills the REMAINING slots, in priority order — must_have + should_have together must total EXACTLY __SLOTS_NOTE__ picks.
   - nice_to_have: 10-14 EXTRA alternatives beyond the slot count, in priority order, so the player can swap by situation (different zone, tougher pulls, low mana).
@@ -124,6 +125,27 @@ def _capability_line(ctx: dict) -> Optional[str]:
             "every trip is on foot). A capability listed without a level is "
             "one they have NOW — the source records no level for it, "
             "which is NOT the same as not having it:\n" + line)
+
+
+def _spell_damage_role(name: str) -> str:
+    """Compact damage role from structured spell effects for prompt grounding.
+
+    Names and long durations are not evidence of periodic damage: Insidious
+    Malady, for example, has disease-counter and disease-resistance effects
+    but no HP-loss effect.  An empty result means the local snapshot is not
+    available, so callers preserve the prior name-and-level format.
+    """
+    entry = builds_data.spell_entry(name)
+    if not entry:
+        return ""
+    damages_hp = any(
+        effect.get("effectId") in (0, 100)
+        and (effect.get("baseValue") or 0) < 0
+        for effect in (entry.get("effects") or [])
+    )
+    if not damages_hp:
+        return "non-damage"
+    return "DoT" if (entry.get("durationTicks") or 0) > 0 else "direct damage"
 
 
 def _build_prompt(ctx: dict, wiki: str) -> str:
@@ -211,7 +233,12 @@ def _build_prompt(ctx: dict, wiki: str) -> str:
         if viable:
             keep = {n.lower() for n in viable}
             usable = [s for s in usable if s["name"].lower() in keep]
-        owned = "; ".join(f"{s['name']} (L{s['level']})" for s in usable)
+        def spell_label(spell: dict) -> str:
+            role = _spell_damage_role(spell["name"])
+            detail = f"L{spell['level']}" + (f"; {role}" if role else "")
+            return f"{spell['name']} ({detail})"
+
+        owned = "; ".join(spell_label(s) for s in usable)
         pre = ""
         if viable and ctx.get("_pregated"):
             pre = (f" [{len(ctx['_pregated'])} owned spells already removed "
