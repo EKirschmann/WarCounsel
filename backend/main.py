@@ -641,7 +641,14 @@ RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 # builds never had the gap (APP_VERSION moves every release); this is for
 # source installs.
 _COUNSEL_SOURCES = ("backend.agent.advisor", "backend.game_data",
-                    "backend.spell_lines")
+                    "backend.spell_lines", "backend.capabilities")
+
+# ...and every DATA file a prompt is built from. Hashing only modules
+# leaves the same gap again one layer down: refreshing the vendored
+# capability snapshot changes what the advisor is told without changing
+# a single line of code, and the cache would go on reporting stale:
+# false. Missing files are skipped, not fatal.
+_COUNSEL_DATA = (bundle_path("backend", "picker_capabilities.json"),)
 
 
 def _advisor_code_revision() -> str:
@@ -657,6 +664,12 @@ def _advisor_code_revision() -> str:
             h.update(Path(f).read_bytes())
             seen += 1
         except (AttributeError, OSError, TypeError, ImportError):
+            continue
+    for path in _COUNSEL_DATA:
+        try:
+            h.update(Path(path).read_bytes())
+            seen += 1
+        except OSError:
             continue
     # Hashing NOTHING would hand every build the same constant and silently
     # restore the bug, so fall back rather than return a hash of emptiness.

@@ -39,7 +39,21 @@ def test_frozen_builds_use_the_release_version(monkeypatch):
 
 
 def test_unreadable_sources_fall_back_rather_than_hashing_nothing(monkeypatch):
-    """A hash of no files is a constant, which would silently restore the bug."""
+    """A hash of no files is a constant, which would silently restore the bug.
+
+    Both lists have to be emptied now. Clearing only the modules leaves
+    the vendored capability snapshot being hashed, which is a real input
+    and SHOULD produce a real revision -- so the fallback is reached only
+    when genuinely nothing is readable.
+    """
     monkeypatch.setattr(main, "is_frozen", lambda: False)
     monkeypatch.setattr(main, "_COUNSEL_SOURCES", ("backend.does_not_exist",))
+    monkeypatch.setattr(main, "_COUNSEL_DATA", (Path("no_such_file.json"),))
     assert _rev() == main.APP_VERSION
+
+
+def test_a_data_file_alone_still_produces_a_real_revision(monkeypatch):
+    """The prompt changes when the DATA changes, with no code edit."""
+    monkeypatch.setattr(main, "is_frozen", lambda: False)
+    monkeypatch.setattr(main, "_COUNSEL_SOURCES", ())
+    assert _rev() != main.APP_VERSION

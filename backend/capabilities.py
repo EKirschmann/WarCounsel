@@ -103,20 +103,40 @@ def trio_capabilities(classes: list) -> Optional[dict]:
             "spell_patch": (snap.get("meta") or {}).get("spellPatch")}
 
 
-def trio_capability_line(classes: list) -> Optional[str]:
+def trio_capability_line(classes: list, level=None) -> Optional[str]:
     """One prompt-sized line. None when the snapshot is unavailable.
 
-    Levels are what the advisor plans around, so they lead; a capability
-    with no recorded level still appears, without an invented one.
+    Split at the character's level when it is known, because "HAS rune"
+    for a level 21 trio invites a recommendation they cannot act on --
+    the same error the spellbook block already guards with its
+    "owned but ABOVE their level" list. A capability with no recorded
+    level counts as available now: `track` has none and a Ranger has it
+    from the start.
     """
     caps = trio_capabilities(classes)
     if not caps:
         return None
+
     def fmt(c):
         return c["name"] + (f" L{c['level']}" if c["level"] is not None else "")
-    has = " · ".join(fmt(c) for c in sorted(
-        caps["has"], key=lambda c: (c["level"] is None, c["level"] or 0)))
-    out = "HAS %s" % (has or "nothing recorded")
+
+    order = sorted(caps["has"],
+                   key=lambda c: (c["level"] is None, c["level"] or 0))
+    try:
+        lv = int(level)
+    except (TypeError, ValueError):
+        lv = None
+    now = [c for c in order if lv is None or c["level"] is None
+           or c["level"] <= lv]
+    later = [c for c in order if c not in now]
+
+    head = "HAS" if lv is None else f"HAS NOW (at level {lv})"
+    out = ["%s %s" % (head, " · ".join(fmt(c) for c in now)
+                      or "nothing recorded")]
+    if later:
+        out.append("LATER (not yet available — do not recommend these "
+                   "yet) " + " · ".join(fmt(c) for c in later))
     if caps["lacks"]:
-        out += "\nLACKS %s" % " · ".join(caps["lacks"])
-    return out + "\n(%s)" % ATTRIBUTION
+        out.append("LACKS " + " · ".join(caps["lacks"]))
+    out.append("(%s)" % ATTRIBUTION)
+    return "\n".join(out)

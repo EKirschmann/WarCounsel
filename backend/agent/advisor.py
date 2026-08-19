@@ -98,6 +98,34 @@ def _known(v: Any) -> str:
     return str(v) if v is not None else "unknown"
 
 
+def _capability_line(ctx: dict) -> Optional[str]:
+    """What the trio can and cannot DO, as capabilities rather than spells.
+
+    This is the one thing a spell list does not yield by being read more
+    carefully: "no snare and no SoW" is a fact about the three classes
+    together, it rules out kiting and makes travel slow, and it never falls
+    out of considering spells one at a time. Same for "slow at 9" being an
+    early power spike worth planning around.
+
+    No snapshot means the line is OMITTED, not emitted empty. An advisor
+    that says a trio lacks everything because a file failed to load is worse
+    than one that never mentions capabilities at all.
+    """
+    from backend.capabilities import trio_capability_line
+    classes = [x.strip() for x in (ctx.get("class_str") or "").split("/")
+               if x.strip()]
+    line = trio_capability_line(classes, ctx.get("level"))
+    if not line:
+        return None
+    return ("- Trio CAPABILITIES — what these three classes can and cannot "
+            "do BETWEEN them; the level is when it first becomes available. "
+            "Treat LACKS as hard constraints on the plan (no snare and no "
+            "SoW rules out kiting and makes travel slow; no ports means "
+            "every trip is on foot). A capability listed without a level is "
+            "one they have NOW — the source records no level for it, "
+            "which is NOT the same as not having it:\n" + line)
+
+
 def _build_prompt(ctx: dict, wiki: str) -> str:
     lines = [
         f"- Name: {ctx.get('name') or 'Unknown'} ({ctx.get('race') or 'race unknown'})",
@@ -108,6 +136,9 @@ def _build_prompt(ctx: dict, wiki: str) -> str:
         f"- Unspent AA points: {_known(ctx.get('aa_available'))}",
         f"- Recent log activity: {ctx.get('recent_activity') or 'none'}",
     ]
+    caps = _capability_line(ctx)
+    if caps:
+        lines.append(caps)
     aas = ctx.get("owned_aas") or {}
     if aas:
         aal = "; ".join(

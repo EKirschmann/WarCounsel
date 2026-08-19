@@ -110,3 +110,48 @@ def test_the_prompt_line_carries_attribution():
     assert "LACKS " in line
     assert "eqltools.com" in line
     assert "None" not in line                 # no invented levels in prose
+
+
+def test_the_line_splits_at_the_character_level():
+    """"HAS rune" for a level 21 trio invites advice they cannot act on."""
+    line = cap.trio_capability_line(["Paladin", "Enchanter", "Monk"], 21)
+    now, later = line.split("LATER")[0], line.split("LATER")[1]
+    assert "slow L9" in now and "rune L40" not in now
+    assert "rune L40" in later
+
+
+def test_a_capability_with_no_level_counts_as_available_now():
+    """A Ranger tracks from the start; track records no level for anyone."""
+    line = cap.trio_capability_line(["Ranger", "Druid", "Bard"], 5)
+    assert "track" in line.split("LATER")[0]
+
+
+def test_an_unknown_level_falls_back_to_one_undivided_list():
+    for lv in (None, "", "unknown"):
+        line = cap.trio_capability_line(["Paladin", "Enchanter", "Monk"], lv)
+        assert line.startswith("HAS ") and "LATER" not in line
+
+
+def test_the_advisor_prompt_carries_the_line_and_omits_it_when_unknown():
+    from backend.agent.advisor import _capability_line
+    ctx = {"class_str": "Paladin/Enchanter/Monk", "level": 21}
+    block = _capability_line(ctx)
+    assert "Trio CAPABILITIES" in block and "eqltools.com" in block
+    assert "LACKS snare" in block.replace(" · ", " ").replace("LACKS ", "LACKS ") \
+        or "snare" in block.split("LACKS")[1]
+    assert _capability_line({"class_str": ""}) is None
+    assert _capability_line({}) is None
+
+
+def test_the_snapshot_moves_the_counsel_revision(monkeypatch, tmp_path):
+    """Refreshing the data changes the prompt without changing any code."""
+    from backend import main
+    monkeypatch.setattr(main, "is_frozen", lambda: False)
+    before = main._advisor_code_revision()
+    original = cap.SNAPSHOT.read_bytes()
+    try:
+        cap.SNAPSHOT.write_bytes(original + b"\n")
+        assert main._advisor_code_revision() != before
+    finally:
+        cap.SNAPSHOT.write_bytes(original)
+    assert main._advisor_code_revision() == before
