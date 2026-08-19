@@ -183,6 +183,18 @@ export function OcrSettings() {
 
   return (
     <div className="ocr-set">
+      {/* The 2026-08-18 patch turned UI Scaling into eleven steps with
+          0.25 increments and added Cursor Scaling. Every region below is
+          FIXED screen pixels, so a scale change moves what is under them
+          and reading silently returns the wrong thing -- there is no
+          error to show, which is exactly why this has to be said up
+          front rather than diagnosed after. */}
+      <p className="set-note">
+        Boxes are screen positions. If you change{" "}
+        <strong>Options ▸ Interface ▸ UI Scaling</strong> or your Windows
+        display scaling, the game moves underneath them and reads go wrong
+        with no error — place the boxes again after either change.
+      </p>
       <div className="ocr-set-row">
         <div className="ocr-set-head">
           <label className="ocr-toggle">

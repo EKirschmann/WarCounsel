@@ -249,13 +249,17 @@ is not.
 Checked at launch; these are the ones needing real-world data before they
 can be finished.
 
-- **OCR calibration vs the new UI Scaling option.** The patch added UI
-  scaling (1-5) and text filtering (sharper/blurrier) to the options
-  window. The screen-OCR position feed reads fixed screen regions, so a
-  scale change moves them and a filter change alters glyph rendering.
-  Nothing in the code assumes a scale, so this is a re-calibration
-  question, not a bug — but users who change the setting will need to
-  re-run the OCR calibrator, and that is worth saying in the UI.
+- **OCR calibration vs the UI Scaling option — SAID IN THE UI 2026-08-19.**
+  The launch patch added UI scaling (1-5) and text filtering; the 2026-08-18
+  patch widened it to eleven steps in 0.25 increments and added Cursor
+  Scaling, so the odds of somebody moving it went up sharply. The screen-
+  OCR feeds read fixed screen regions, so a scale change moves what is
+  under them and the read is silently wrong — no error, nothing to diagnose
+  from. The OCR panel now says so above the three region rows, naming the
+  Windows display scale too, which is what actually bit the owner on a
+  2560x1600 laptop at 125%. Still not done: nothing DETECTS a scale change
+  and invalidates the saved regions. That needs a scale reading from
+  eqclient.ini, and is only worth it if a warning turns out not to be enough.
 - **Ornamentation slots** were added to model-visible Crushbone items.
   `SOCKET_TYPES` maps `{7 focus, 8 clicky, 9 worn, 10 proc}`; if
   ornamentation uses a new slot number it will read as `None` and be
@@ -272,15 +276,15 @@ can be finished.
 
 ## Smaller items
 
-- **Loot filter action codes are contested.** `backend/loot_filter.py`
-  maps `{1 store, 2 loot, 3 merge, 4 sell}`; 1 vs 2 was never confirmed
-  against the game's own UI. Everything downstream is read-only, so a
-  wrong label is cosmetic — but it is wrong in the merge notices if so.
 - **Three dead rows in `MECHANICS`.** The table holds 16 rows for 13 distinct
   mechanics: Dragon Roar, Feared (Dragon Roar landed) and Frost Breath each
   appear twice, byte-identical. Inert — the parser loop `return`s on the
   first match — so this is tidying, not a fix. Noticed 2026-08-19 while
   counting mechanics for the trigger starter set.
+- **Loot filter action codes are contested.** `backend/loot_filter.py`
+  maps `{1 store, 2 loot, 3 merge, 4 sell}`; 1 vs 2 was never confirmed
+  against the game's own UI. Everything downstream is read-only, so a
+  wrong label is cosmetic — but it is wrong in the merge notices if so.
 - **The leveling Gantt caps at 8 rows** (`.slice(0, 8)`). Fine for
   readability; raise it if anyone wants every candidate for their level.
 - **Item wiki coverage is partial.** 53 of 79 owned items resolved a wiki
