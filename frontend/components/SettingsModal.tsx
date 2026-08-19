@@ -26,6 +26,7 @@ import { TriggerSettings } from "./TriggerSettings";
 type GameVerdict = {
   path: string;
   ok: boolean;
+  warn?: boolean;
   reason: string;
   logs?: string;
   log_count?: number;
@@ -418,8 +419,12 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 </button>
               )}
               {verdict && (
-                <p className="set-note" data-ok={verdict.ok ? "1" : "0"}>
-                  {verdict.ok ? "✓" : "✕"} {verdict.reason}
+                <p
+                  className="set-note"
+                  data-ok={!verdict.ok ? "0" : verdict.warn ? "warn" : "1"}
+                >
+                  {!verdict.ok ? "✕" : verdict.warn ? "⚠" : "✓"}{" "}
+                  {verdict.reason}
                 </p>
               )}
 

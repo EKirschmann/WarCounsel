@@ -1610,21 +1610,40 @@ async def api_llm_set(body: dict):
 
 def _describe_game_dir(path: str) -> dict:
     """Is this folder a usable EQL install? The settings panel shows this
-    verdict before saving, so nobody has to guess why nothing is tracked."""
+    verdict before saving, so nobody has to guess why nothing is tracked.
+
+    `ok` answers "is this the install folder", NOT "is there anything to
+    read yet" -- one flag meant both until #12, and the save gate rejects
+    anything not `ok`. A folder is only PROVEN to hold logs after /log on,
+    and a first run legitimately has no Logs folder at all, so a correct
+    path could not be stored until the player had already gone in-game --
+    which they cannot be told to do by an app that will not accept it.
+    An install with nothing to tail is now `warn`: saved, and said out loud.
+    Only a folder that is not an EQL install still fails.
+    """
+    from backend.config import _looks_like_eql
     p = Path(path) if path else None
     if not p or not p.is_dir():
-        return {"path": path, "ok": False, "reason": "Folder does not exist"}
+        return {"path": path, "ok": False, "warn": False,
+                "reason": "Folder does not exist"}
+    if not _looks_like_eql(p):
+        return {"path": str(p), "ok": False, "warn": False,
+                "reason": "No eqgame.exe, eqclient.ini or Logs folder "
+                          "here - is this the EverQuest Legends install "
+                          "folder?"}
     logs = p / "Logs"
     if not logs.is_dir():
-        return {"path": str(p), "ok": False,
-                "reason": "No Logs folder here - is this the EverQuest "
-                          "Legends install folder?"}
+        return {"path": str(p), "ok": True, "warn": True, "logs": str(logs),
+                "log_count": 0,
+                "reason": "Install found. No Logs folder yet - type "
+                          "/log on in-game once and it will appear."}
     found = sorted(logs.glob("eqlog_*.txt"))
     if not found:
-        return {"path": str(p), "ok": False, "logs": str(logs),
-                "reason": "Logs folder has no eqlog_*.txt yet - type "
-                          "/log on in-game once."}
-    return {"path": str(p), "ok": True, "logs": str(logs),
+        return {"path": str(p), "ok": True, "warn": True, "logs": str(logs),
+                "log_count": 0,
+                "reason": "Install found. Logs folder has no eqlog_*.txt "
+                          "yet - type /log on in-game once."}
+    return {"path": str(p), "ok": True, "warn": False, "logs": str(logs),
             "log_count": len(found),
             "reason": f"{len(found)} character log(s) found"}
 
@@ -1723,6 +1742,8 @@ async def api_settings_set(body: dict):
     game_changed = False
     if "eql_game_dir" in config_in:
         wanted = str(config_in["eql_game_dir"] or "").strip()
+        # Blocks only a folder that is not an install; "no logs yet" is a
+        # `warn` and saves, so the path can be set BEFORE /log on (#12).
         verdict = _describe_game_dir(wanted) if wanted else {"ok": True}
         if wanted and not verdict.get("ok"):
             raise HTTPException(400, verdict.get("reason", "Unusable folder"))

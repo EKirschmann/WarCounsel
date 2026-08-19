@@ -2009,6 +2009,8 @@ button.app-version:hover { color: var(--gold-bright); }
 }
 .set-note[data-ok="1"] { color: #1fb38c; }
 .set-note[data-ok="0"] { color: #d4574a; }
+/* usable install, nothing to tail yet -- not an error (#12) */
+.set-note[data-ok="warn"] { color: #c8aa6e; }
 .set-note code {
   color: #b9ad92;
   font-family: var(--font-mono, "IBM Plex Mono"), monospace;

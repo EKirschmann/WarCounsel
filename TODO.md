@@ -58,22 +58,42 @@ nonsense that costs an advisor its credibility.
 
 ## Verify Mac and Linux against a real Wine install
 
-**Status:** shipped in v2.1.0, untested on real hardware.
+**Status:** shipped in v2.1.0. First real-hardware report arrived 2026-08-19
+as issue #12 — CachyOS, Faugus Launcher — and it found BOTH halves wrong.
 
 Detection was verified against seven simulated bottle layouts and then end
 to end on Ubuntu 25.10 — but with a synthetic game folder, because that box
-has no wine or lutris and no EQL install. Nobody has yet pointed it at a
-real bottle with the game in it.
+has no wine or lutris and no EQL install. #12 is the first time anyone has
+pointed it at a real bottle with the game in it.
 
-Two specific unknowns:
+**What #12 already settles:**
+
+- **The reported symptom was not detection at all.** Typing the correct
+  path by hand ALSO failed, because the save gate rejected any folder without
+  `Logs/eqlog_*.txt` — a file that only exists after `/log on`, which the
+  player cannot reach through an app refusing to accept the game's location.
+  Fixed 2026-08-19: `ok` now means "is this the install folder", "nothing to
+  tail yet" is a warning that saves, and only a non-install is refused. The
+  lesson generalises past Wine — on Windows the registry key hides this, so
+  the manual path had never been the only way in.
+- **Faugus is a confirmed miss in `_drive_c_roots()`.** It is umu-launcher
+  (Proton), so the layout is probably `PREFIX/pfx/drive_c`, and the only
+  `pfx/drive_c` glob we carry is hardcoded to Steam's compatdata. Prefix
+  roots to add, pending the `find` output asked for on the issue: `~/Faugus/`
+  (its README's default), `~/.config/faugus-launcher/prefixes/` (older builds),
+  and the flatpak under `~/.var/app/io.github.Faugus.faugus-launcher/`.
+
+Still unknown:
 
 - **`game_running()` is inferred, not observed.** Off Windows it scans the
   process command line for `eqgame`, borrowed from osxEQL's `pgrep -f`
   health check. If it is wrong the `/log on` banner mis-fires. Cosmetic,
   but unverified.
-- The probe list may miss a layout. One `find ~ -maxdepth 8 -type d -name
-  "EverQuest Legends"` from a real install settles it, and a miss is a
-  one-line fix.
+- Whether the probe list misses layouts BEYOND Faugus. The same `find ~
+  -maxdepth 8 -type d -name "EverQuest Legends"` settles each one, and
+  a miss stays a one-line fix — but assume more launchers, not fewer:
+  the list was written from Lutris/Bottles/Steam and the first real user
+  turned up on none of them.
 
 ---
 
