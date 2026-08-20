@@ -43,11 +43,25 @@ level matching, which is the evidence the data is stable enough to vendor.
 
 **What is left:**
 
-- **No deterministic gate uses it yet.** The original argument was that this
-  "gives the deterministic path real gates" and so far it only informs the
-  prompt. The obvious first one: hunting and travel advice that assumes
-  kiting when the trio has neither snare nor SoW. `_no_pet` in advisor.py is
-  a hand-rolled version of exactly this check and could read `pets` instead.
+- **One gate uses it: the pet gate (2026-08-20).** `_summons_a_pet` reads the
+  `pets` capability alongside its spell scan, which found a live bug -- see
+  tests/test_pet_gate_sources.py. The bigger prize is still open: no gate
+  constrains STRATEGY. Kiting advice given to a trio with neither snare nor
+  SoW is the motivating case, and it cannot be gated as things stand --
+  every existing gate takes a NAMED thing in a structured field and looks a
+  fact up about it, while a tactic lives in free prose (`note`,
+  `class_notes[].advice`). Gating prose means matching model text, which is
+  the fuzzy matching this project bans for zone names. The way in is a
+  constrained `tactics` field in the advisor's JSON (kite / root-park /
+  pull / charm / fear-kite / travel-on-foot) plus a table in our code
+  mapping each tactic to the capabilities it needs. Prompt + schema + gate
+  + tests, and it changes the model's output shape, so it wants its own
+  release.
+- **A consistency check would find more of these cheaply.** The Beastlord
+  bug was found by comparing the capability table against the spell
+  snapshot class by class. Doing that on every consult -- trio LACKS pets
+  while the spellbook holds a pet spell -- surfaces disagreements between
+  two sources instead of silently trusting whichever was read first.
 - **`ladder` is not vendored** — the per-level spell progression, which would
   let the line say what the upgrade at 23 is rather than only when a
   capability starts. Doubles the snapshot; take it if a gate wants it.
