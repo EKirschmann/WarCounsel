@@ -18,9 +18,49 @@ cd "$(dirname "$0")"
 
 MODE="${1:-prod}"
 PY="${PYTHON:-python3}"
+VENV="${WARCOUNSEL_VENV:-.venv}"
+REQS="${WARCOUNSEL_REQS:-requirements-lite.txt}"
 
 command -v "$PY" >/dev/null || { echo "python3 not found — install Python 3.11+"; exit 1; }
 command -v node >/dev/null || { echo "node not found — install Node 20+"; exit 1; }
+
+# Python dependencies. install_companion.bat has always done this on
+# Windows and this script never did, so the three commands in INSTALL.md
+# left Mac and Linux with no fastapi at all and a backend that died on
+# import while the UI came up fine on :3000 -- which reads as a pathing
+# problem rather than a missing install (issue #12).
+#
+# Into a PRIVATE venv rather than the system Python, because Arch, Fedora
+# and Homebrew all mark theirs externally-managed (PEP 668) and refuse a
+# plain pip install outright. requirements-lite.txt by choice: the OCR
+# extras it omits are Win32-only anyway. Override with WARCOUNSEL_REQS.
+#
+# Skipped entirely when PYTHON is set or a venv is already active -- that
+# is someone telling us which interpreter to use, and we should not
+# quietly build a second one behind their back.
+if [ -z "${VIRTUAL_ENV:-}" ] && [ -z "${PYTHON:-}" ]; then
+  if [ ! -x "$VENV/bin/python" ]; then
+    echo "Creating $VENV and installing Python dependencies (first run only)..."
+    "$PY" -m venv "$VENV" || {
+      echo "Could not create a virtualenv."
+      echo "  Debian/Ubuntu: sudo apt install python3-venv"
+      exit 1; }
+    "$VENV/bin/python" -m pip install --quiet --upgrade pip
+    "$VENV/bin/python" -m pip install -r "$REQS" || {
+      echo "Installing $REQS failed."
+      echo "  If a package has no wheel for your Python yet, try an older"
+      echo "  interpreter:  PYTHON=python3.12 ./start_companion.sh"
+      exit 1; }
+  fi
+  PY="$VENV/bin/python"
+fi
+
+# Say what is wrong instead of letting uvicorn raise ImportError forty
+# frames deep, which is what #12 had to read.
+"$PY" -c "import fastapi" 2>/dev/null || {
+  echo "The backend dependencies are missing from $("$PY" -c "import sys; print(sys.executable)")."
+  echo "  Install them with:  \"$PY\" -m pip install -r $REQS"
+  exit 1; }
 
 if [ ! -d frontend/node_modules ]; then
   echo "Installing UI dependencies (first run only)..."

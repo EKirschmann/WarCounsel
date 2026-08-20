@@ -335,11 +335,36 @@ cd WarCounsel
 ./start_companion.sh
 ```
 
-The first run takes a couple of minutes while it fetches what it needs.
+The first run takes a couple of minutes while it fetches what it needs:
+a private `.venv/` for the Python side and `frontend/node_modules` for
+the interface, both inside the folder you just cloned. Nothing is
+installed system-wide, and deleting the folder removes every trace.
 After that it opens **http://localhost:3000** by itself.
+
+Already manage your own environment? Set `PYTHON=/path/to/python` or
+activate a virtualenv first and the script uses that instead of
+building one of its own.
 
 **3. In the game, type `/log on` once** — then the commands in the table
 under [Day to day](#day-to-day), which are the same on every platform.
+
+### If the backend will not start
+
+`ModuleNotFoundError: No module named 'fastapi'` — with the interface
+coming up fine on :3000 — means the Python dependencies are not
+installed. Versions before 2026-08-20 never installed them on Mac or
+Linux; `git pull` and run the script again. If it still happens, your
+`PYTHON` or an active virtualenv is pointing at an interpreter that
+does not have them:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-lite.txt
+```
+
+On Arch, Fedora and Homebrew a plain `pip install` into the system
+Python is refused outright (PEP 668) — the virtualenv above is the way
+round it, not `--break-system-packages`.
 
 ### If it cannot find your game
 

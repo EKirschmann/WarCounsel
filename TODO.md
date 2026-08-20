@@ -97,6 +97,15 @@ pointed it at a real bottle with the game in it.
   (its README's default), `~/.config/faugus-launcher/prefixes/` (older builds),
   and the flatpak under `~/.var/app/io.github.Faugus.faugus-launcher/`.
 
+- **The launcher never installed the Python dependencies (fixed 2026-08-20).**
+  `install_companion.bat` runs `pip install -r requirements.txt`; `start_companion.sh`
+  installed `node_modules` and nothing else, so INSTALL.md's "three commands"
+  left Mac and Linux with no fastapi. The UI came up on :3000 and the backend
+  died on import, which reads as a pathing problem — #12 spent a day there.
+  Two untested platforms and the whole install path was one command short.
+  Now builds a private `.venv` (PEP 668 refuses system pip on Arch, Fedora
+  and Homebrew) and checks the import before launching.
+
 Still unknown:
 
 - **`game_running()` is inferred, not observed.** Off Windows it scans the
