@@ -2577,18 +2577,30 @@ def _class_overlap(a, b) -> bool:
 
 async def _exalt_targets(stone_name: str, styp: str,
                          candidates: List[str],
-                         sockets_map: Optional[dict] = None) -> List[str]:
+                         sockets_map: Optional[dict] = None) -> tuple:
     """Owned items this stone can legally socket into (eqlwiki rules):
     proc -> shared class + weapon (2H proc -> Primary only); focus/clicky/
     worn -> shared class + same slot. Source item = the stone's own name.
     When the Inventory export carries socket rows, a target must ALSO
     have an EMPTY socket of the stone's type number (game-authoritative,
-    stricter than the wiki heuristics)."""
+    stricter than the wiki heuristics).
+
+    Returns (targets, checked). `checked` is False when the answer is
+    INCOMPLETE -- the stone's own page was missing, or a candidate's
+    was -- because the empty list then means "could not look", not
+    "nothing fits", and the caller was turning that into an
+    authoritative "CANNOT be moved". Not a rare path: wiki coverage was
+    measured at 53 of 79 owned items, so a missing page is the common
+    case rather than the edge. Reported by @soaringswine in #10, whose
+    per-candidate tri-state is the fuller answer; this only stops the
+    false claim.
+    """
     src = await _item_meta(re.sub(r"\s*[(]Exaltation[)]$", "", stone_name).strip())
     if not src:
-        return []
+        return [], False        # the stone itself is unknown
     need = _SOCKET_NUM.get(styp)
     out = []
+    checked = True
     for cand in candidates:
         socket_known = False
         if sockets_map and need:
@@ -2599,6 +2611,7 @@ async def _exalt_targets(stone_name: str, styp: str,
                     continue  # no empty socket of this type on that item
         tgt = await _item_meta(cand)
         if not tgt:
+            checked = False     # unknown candidate, NOT incompatible
             continue
         if not _class_overlap(src["classes"], tgt["classes"]):
             continue
@@ -2615,7 +2628,7 @@ async def _exalt_targets(stone_name: str, styp: str,
                 if not (src["slots"] & tgt["slots"]):
                     continue
         out.append(cand)
-    return out
+    return out, checked
 
 
 async def _clickies(items: list) -> list:
@@ -3163,11 +3176,11 @@ async def generate_gear_advice(ctx: dict) -> dict:
         if usable is not False and status != "stat stone":
             try:
                 cur_host = _item_base(x.get("host") or "").lower()
-                elig = [t for t in await _exalt_targets(
-                            x["name"], styp, exalt_targets,
-                            ctx.get("item_sockets"))
+                found, targets_checked = await _exalt_targets(
+                    x["name"], styp, exalt_targets,
+                    ctx.get("item_sockets"))
+                elig = [t for t in found
                         if _item_base(t).lower() != cur_host]
-                targets_checked = True
             except Exception:
                 elig = []
                 targets_checked = False
@@ -3215,8 +3228,13 @@ async def generate_gear_advice(ctx: dict) -> dict:
         head = f"{snm}" + (f" granting {grants}" if grants else "")
         if styp2 == "proc":
             tagtxt = f"{head} (proc — may only fire from PRIMARY)"
-        elif moves:
+        elif moves and rec.get("targets_checked"):
             tagtxt = f"{head} ({styp2} stone — may ONLY move to: {moves})"
+        elif moves:
+            # found somewhere it fits, but not every candidate could be
+            # checked -- so "ONLY" would be the same overclaim in reverse
+            tagtxt = (f"{head} ({styp2} stone — may move to: {moves}; other "
+                      f"owned items could not be checked)")
         elif rec.get("targets_checked"):
             tagtxt = (f"{head} ({styp2} stone — CANNOT be moved: no other owned "
                       f"item has a free {styp2} socket in a slot it fits)")
