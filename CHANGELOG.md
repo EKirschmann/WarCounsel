@@ -4,6 +4,42 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header; update by closing the companion and running
 `update_companion.bat`.
 
+## v2.12.0 — 2026-08-26
+
+**Fixed: the app could sit showing you numbers from a character you had
+stopped playing.** Roll a new character, or switch to another one, and
+WarCounsel carried on reading the old log file. A stalled feed looks exactly
+like a quiet night, so the only sign was numbers that never moved — under a
+"Linked" badge saying everything was fine. That badge only ever meant the
+page could reach the app; it never said anything about your log. There is now
+a line under your name whenever the log being read has gone wrong, and when a
+newer log belongs to another character, a button to switch straight to them.
+The overlay has warned about this for a while and the main window never did.
+
+**Fixed: switching off the Vitals panel hid the warnings you most needed.**
+Messages like "the game is running but its own settings have logging OFF"
+lived inside that panel, so turning it off in Settings took them with it —
+and those are exactly the messages that explain why nothing else on screen is
+moving. Urgent ones now sit at the top of the window where nothing can hide
+them. Routine reminders (`/who`, re-running your output files) stay in the
+panel as before.
+
+**Better keyboard and screen-reader support.** The Atlas / Advisor / Quests /
+Progression tabs work with arrow keys now, with Enter or Space to open one —
+so arrowing past Atlas no longer loads a zone map you did not ask for.
+Settings keeps Tab inside itself while it is open and puts you back on the
+gear button when you close it. The connection status is announced when it
+changes, and the blinking indicator holds still if you have asked your system
+for reduced motion.
+
+**Beastlord advice for the 8/25 patch.** The advisor now knows about Strike
+As One (level 35, 6 points — a chance on your hit to give your warder a
+flurry burst) and that pet proc spell upgrades reach the pet, which makes
+tiering that line a real damage gain rather than just a longer buff. It also
+knows rares are guaranteed spawns in Unrest and Solusek's Eye. The AA itself
+will not appear in AA recommendations until the community AA table is
+updated — the app does not suggest abilities it cannot verify exist.
+
 ## v2.11.0 — 2026-08-19
 
 **Fixed: a correct game folder could be refused, and there was no way round

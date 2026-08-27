@@ -1598,6 +1598,11 @@ model selection itself is runtime-switchable in the UI.
   ledger updates within ~0.5s. Tag synthetic rows unmistakably ("test
   dummy") so cleanup can target them precisely.
 - Manual API checks: `/health`, `/api/character`, `/api/advisor?cached=1`.
+- **Both coverage scripts have OPEN findings as of v2.12.0**, and both are
+  waiting on data from elsewhere rather than on work here — TODO.md's
+  "08/25/2026 patch follow-ups" opens with a table of what to watch for and
+  the one command that settles each. Run them anyway after a patch; a fresh
+  MISS is a different thing from the known one.
 - Backend tests import `backend.*` — run from the repo root with the
   project's Python environment.
 
@@ -1618,7 +1623,7 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v2.11.0**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.12.0**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
 builds_data.py finds nothing there. Local clone is on **v1.4.3**; **v1.4.7**
