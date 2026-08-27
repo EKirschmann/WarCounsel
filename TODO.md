@@ -297,6 +297,49 @@ can be finished.
   already times correctly once activated; only the shave is missing. Add
   it once someone reports the base cooldown.
 
+## 08/25/2026 patch follow-ups
+
+Read against the code the day the notes landed; these are the pieces that
+cannot be finished yet.
+
+- **Bulk quest turn-ins — REVERTED the same day, and they will be back.**
+  The notes describe pre-calculated bulk turn-ins that "display clearly in
+  chat (max 4 'chat' blocks)", multi-item reward lines that state HOW MANY
+  rewards you got, coin NPCs accepting any denomination and refunding
+  overage in the highest one. Every one of those is a new shape for lines
+  `parser.py` already matches one-at-a-time — `RE_LOOT*`, `RE_COIN*` — and
+  a summarised block is exactly the case where the old per-item regex sees
+  nothing and the ledger silently under-counts a turn-in. The 08-25
+  hotfixes reverted the lot, so there is nothing to match against today.
+  When it ships again: capture the real lines first, then add forms — do
+  not guess them from the patch note wording.
+- **A new AA is invisible to counsel until the eqlbuilds snapshot catches
+  up, and that is the gate working.** 8/25 added the Beastlord AA "Strike
+  As One" (L35, 6 points) and made "Full Potential" grantable. The
+  snapshot the MCP clone ships is pinned to eqlwiki revision 151303
+  (2026-06-27) and carries neither — checked at MCP v1.4.3 AND at the
+  newest tag v1.4.7, so this is the wiki page not being edited yet, not a
+  stale clone. `_gate_aas` drops any AA name the class data does not list,
+  so until the page is edited and re-mined, an LLM naming Strike As One
+  has the rec removed with an `info` log line. That is the correct
+  failure — the alternative is trusting the model on whether an AA
+  exists — but it means the fix is a data refresh, not a code change:
+  re-check `dist/data/eqlbuilds/meta.json`'s revision after each MCP
+  release. The class guide carries the ability in prose meanwhile.
+- **`Rujarkian Hills` (zone id 901) is live in the client roster and has
+  no assets we can point at.** `Resources/ZoneNames.txt` lists it `12^60`
+  — a real level band, not one of the ten `0^0` LDoN-shaped
+  "The Rujarkian Hills: <wing>" rows — so `scripts/zone_coverage.py`
+  reports one MISS. Nothing resolves it: no `*ruj*` file in the game
+  folder, no chart in the stock `maps/`, nothing in eqlbuilds' client-mined
+  `zones.json` (checked at v1.4.7), and no `spells_us.txt` teleport row
+  naming a short zone. The Brewall packs ship `ruja`..`rujg`, which are the
+  LDoN instance wings — aliasing 901 to one of those is precisely the
+  wrong-dungeon failure the no-fuzzy rule exists to prevent, so it stays
+  unresolved. The client on this machine is dated 08-17, so the assets may
+  simply arrive with the patch: re-run the coverage script after the client
+  actually updates, and only then look for the short name.
+
 ## Smaller items
 
 - **Three dead rows in `MECHANICS`.** The table holds 16 rows for 13 distinct

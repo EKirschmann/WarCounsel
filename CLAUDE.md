@@ -1597,13 +1597,17 @@ model selection itself is runtime-switchable in the UI.
 
 ## Releasing
 
-Latest: **v2.10.1**. MCP server clone at `MCP_SERVER_DIR` is
+Latest: **v2.11.0**. MCP server clone at `MCP_SERVER_DIR` is
 **ArtSabintsev/everquest-legends-mcp** — note a DIFFERENT project shares that
 name (Sergeantfirstclass...); it has no tags and no `src/data/eqlbuilds`, so
-builds_data.py finds nothing there. Local clone is on **v1.3.4**; **v1.3.5**
-is out (dependency bumps incl. the TypeScript 6->7 one previously unreleased,
-plus an atomic-release CI fix) and is safe to take. Data snapshot refreshed
-twice weekly; stay on release tags, not main. Update the MCP
+builds_data.py finds nothing there. Local clone is on **v1.4.3**; **v1.4.7**
+is out (dep bumps, a client-data refresh from the CrossOver patch, and a wiki
+commands snapshot) and is safe to take. Data snapshot refreshed twice weekly;
+stay on release tags, not main. **A new tag does not mean new AA data**: the
+`eqlbuilds` AA rows are pinned to a wiki REVISION, recorded in
+`dist/data/eqlbuilds/meta.json` — v1.4.3 and v1.4.7 both carry revision
+151303 (2026-06-27), which is why the 8/25 Beastlord AA is absent from
+both. Check that revision, not the tag, when an AA is missing. Update the MCP
 with `git merge --ff-only <tag> && npm install && npm run build` in its
 clone. Benign `eql_wiki_page returned isError` lines (pages that don't
 exist; HTTP fallback covers them) log at DEBUG.
