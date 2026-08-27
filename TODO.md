@@ -300,7 +300,14 @@ can be finished.
 ## 08/25/2026 patch follow-ups
 
 Read against the code the day the notes landed; these are the pieces that
-cannot be finished yet.
+cannot be finished yet. Two of them are WAITING ON SOMEBODY ELSE'S DATA
+rather than on work here, so they are written as triggers — the thing to
+watch for, and the one command that settles it:
+
+| When | Do | Settles |
+|---|---|---|
+| Your client actually downloads the 08/25 patch (this machine was still on 08-17 when this was written) | `python scripts/zone_coverage.py` | Whether Rujarkian Hills ships assets, and with them a short name we can evidence |
+| Any MCP release lands | `git show <tag>:src/data/eqlbuilds/meta.json` — read `revisionId`, not the tag | Whether the AA table has moved past eqlwiki 151303 (2026-06-27) and finally carries Strike As One |
 
 - **Bulk quest turn-ins — REVERTED the same day, and they will be back.**
   The notes describe pre-calculated bulk turn-ins that "display clearly in
