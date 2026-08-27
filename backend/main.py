@@ -252,7 +252,7 @@ async def switch_character(file_name: str) -> bool:
     _advice_cache = _advice_sig = None
     asyncio.create_task(asyncio.to_thread(spell_file.load, settings.eql_game_dir))
     asyncio.create_task(_load_exalt_effects())
-    await ws_manager.broadcast({"type": "state", "data": tracker.snapshot()})
+    await ws_manager.broadcast({"type": "state", "data": _snapshot_out()})
     logger.info(f"Switched to {tracker.name} ({tracker.server})")
     return True
 
@@ -322,7 +322,7 @@ async def _check_cast(spell: str) -> None:
             tracker.loadout_hint = (
                 f"You're casting {names} — not castable by {tracker.class_str}. "
                 "Loadout changed? Type /who in-game to re-sync.")
-            await ws_manager.broadcast({"type": "state", "data": tracker.snapshot()})
+            await ws_manager.broadcast({"type": "state", "data": _snapshot_out()})
     except Exception:
         logger.exception("Cast/loadout check failed")
 
@@ -460,7 +460,7 @@ async def _flush_events() -> None:
     now = time.monotonic()
     if now - _last_state_broadcast >= STATE_BROADCAST_MIN_INTERVAL:
         _last_state_broadcast = now
-        await ws_manager.broadcast({"type": "state", "data": tracker.snapshot()})
+        await ws_manager.broadcast({"type": "state", "data": _snapshot_out()})
 
 
 def _drain_roster_updates() -> None:
@@ -557,7 +557,7 @@ async def periodic_state_push():
     while True:
         await asyncio.sleep(3.0)
         if ws_manager.connections:
-            await ws_manager.broadcast({"type": "state", "data": tracker.snapshot()})
+            await ws_manager.broadcast({"type": "state", "data": _snapshot_out()})
         if watcher and getattr(tracker, "_dirty", True):
             tracker._dirty = False
             await asyncio.to_thread(session_state.save, tracker,
@@ -799,10 +799,28 @@ async def post_group_trust(body: dict):
 
 @app.get("/api/character")
 async def get_character():
+    return _snapshot_out()
+
+
+# The directory walk below is cheap but not free, and `_snapshot_out` now
+# runs on every broadcast (~6/s) rather than once per REST call. Same
+# treatment the eqclient hints already get for the same reason.
+_NEWER_LOG_TTL = 5.0
+_newer_log_cache: tuple[float, Optional[str]] = (0.0, None)
+
+
+def _snapshot_out() -> dict:
+    """The tracker snapshot as it leaves the process, log health included.
+
+    Log health rides the SNAPSHOT, not just /health. A stalled tailer looks
+    exactly like "nothing is happening" — every surface simply shows the
+    last numbers forever, with no way to tell a quiet night from a dead
+    feed. This has to decorate the WebSocket pushes too, not only
+    /api/character: the web HUD takes its first snapshot over REST and
+    every one after that over the socket, so decorating the REST call alone
+    meant the fields appeared once and were then overwritten with nothing.
+    """
     snap = tracker.snapshot()
-    # Log health rides the snapshot, not just /health. A stalled tailer looks
-    # exactly like "nothing is happening" — the overlay simply shows the last
-    # numbers forever, with no way to tell a quiet night from a dead feed.
     if watcher:
         growth = watcher.last_growth
         # last_growth is None when the file has not grown ONCE since we
@@ -815,8 +833,19 @@ async def get_character():
     # A NEWER log for a DIFFERENT character means they rolled or switched and
     # we are still tailing the old one — the classic launch-day symptom, and
     # invisible otherwise because the old file simply stops growing.
-    snap["newer_log"] = _newer_log_for_other_character()
+    snap["newer_log"] = _newer_log_cached()
     return snap
+
+
+def _newer_log_cached() -> Optional[str]:
+    global _newer_log_cache
+    now = time.monotonic()
+    stamp, value = _newer_log_cache
+    if now - stamp < _NEWER_LOG_TTL:
+        return value
+    value = _newer_log_for_other_character()
+    _newer_log_cache = (now, value)
+    return value
 
 
 def _newer_log_for_other_character() -> Optional[str]:
@@ -865,8 +894,8 @@ async def patch_character(patch: CharacterPatch, db: Session = Depends(get_db)):
         # equipped list; /pet inventory check repopulates it
         tracker.pet_inventory = {}
     db.commit()
-    await ws_manager.broadcast({"type": "state", "data": tracker.snapshot()})
-    return tracker.snapshot()
+    await ws_manager.broadcast({"type": "state", "data": _snapshot_out()})
+    return _snapshot_out()
 
 
 class CharacterSelect(BaseModel):
@@ -885,7 +914,11 @@ async def select_character(body: CharacterSelect):
     if not await switch_character(body.file):
         raise HTTPException(status_code=404,
                             detail=f"No log file {body.file} — type /log on in-game first")
-    return tracker.snapshot()
+    # the newly-watched file has its own health; the cached answer is
+    # about the file we just stopped tailing
+    global _newer_log_cache
+    _newer_log_cache = (0.0, None)
+    return _snapshot_out()
 
 
 @app.get("/api/aas")
@@ -2790,7 +2823,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
 async def websocket_endpoint(ws: WebSocket):
     await ws_manager.connect(ws)
     try:
-        await ws.send_json({"type": "hello", "data": tracker.snapshot()})
+        await ws.send_json({"type": "hello", "data": _snapshot_out()})
         while True:
             await ws.receive_text()  # keepalive / ignore client messages
     except WebSocketDisconnect:

@@ -13,9 +13,12 @@ import { AtlasPanel } from "@/components/AtlasPanel";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { EncounterPanel } from "@/components/EncounterPanel";
 import { WarLedger } from "@/components/WarLedger";
+import { StatusStrip } from "@/components/StatusStrip";
 import { usePanelPrefs } from "@/lib/panelPrefs";
 
 const MAX_ROWS = 300;
+
+type CenterTab = "atlas" | "advisor" | "quests" | "progression";
 
 interface CharacterEntry {
   name: string;
@@ -71,7 +74,8 @@ export default function Home() {
       .catch(() => {});
   }, []);
   const [rows, setRows] = useState<LedgerRow[]>([]);
-  const [centerTab, setCenterTab] = useState<"atlas" | "advisor" | "quests" | "progression">("atlas");
+  const [centerTab, setCenterTab] = useState<CenterTab>("atlas");
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [centerOpen, setCenterOpen] = useState(true);
 
   useEffect(() => {
@@ -128,6 +132,32 @@ export default function Home() {
   const showEnc = show("encounter");
   const showQuests = show("quests");
   const showProgression = show("progression");
+  const centerTabs: { id: CenterTab; label: string }[] = [
+    { id: "atlas", label: "Atlas" },
+    { id: "advisor", label: "Advisor" },
+    ...(showQuests ? [{ id: "quests" as CenterTab, label: "Quests" }] : []),
+    ...(showProgression ? [{ id: "progression" as CenterTab, label: "Progression" }] : []),
+  ];
+  // Settings can switch off the tab that is currently open, which used to
+  // leave the row with nothing marked selected while Advisor rendered.
+  const activeTab: CenterTab = centerTabs.some((x) => x.id === centerTab)
+    ? centerTab
+    : "advisor";
+  // Arrows move focus, Enter/Space selects — the MANUAL activation half of
+  // the ARIA tabs pattern, because opening Atlas fetches zone geometry and
+  // arrowing across the row must not fire four panel loads on the way past.
+  const onTabKey = (e: React.KeyboardEvent, i: number) => {
+    const n = centerTabs.length;
+    const next =
+      e.key === "ArrowRight" ? (i + 1) % n
+      : e.key === "ArrowLeft" ? (i - 1 + n) % n
+      : e.key === "Home" ? 0
+      : e.key === "End" ? n - 1
+      : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    tabRefs.current[next]?.focus();
+  };
   // Only set when something is OFF, so the default layout stays exactly
   // the stylesheet's — including its media queries, which a blanket
   // inline override would have flattened.
@@ -286,12 +316,19 @@ export default function Home() {
           >
             {overlayOn ? "Overlay ✕" : "Overlay"}
           </button>
-          <div className="link" data-status={status}>
+          {/* Announced, because losing the backend freezes every number on
+              screen and the only other tell is a small diamond changing
+              colour. */}
+          <div className="link" data-status={status} role="status" aria-live="polite">
             <span className="link-rune" aria-hidden />
             {statusLabel}
           </div>
         </div>
       </header>
+
+      {/* Outside the grid and outside every panel pref on purpose: this is
+          the surface that explains why the panels are empty. */}
+      <StatusStrip snap={snap} chars={chars} onSwitch={switchChar} />
 
       <div
         className="hud-grid"
@@ -301,43 +338,28 @@ export default function Home() {
         {showVitals && <CharacterPanel snap={snap} onSnapChange={setSnap} />}
         {centerOpen ? (
           <div className="center-stack">
-            <div className="tab-row" role="tablist">
-              <button
-                role="tab"
-                aria-selected={centerTab === "atlas"}
-                data-active={centerTab === "atlas"}
-                onClick={() => setCenterTab("atlas")}
-              >
-                Atlas
-              </button>
-              <button
-                role="tab"
-                aria-selected={centerTab === "advisor"}
-                data-active={centerTab === "advisor"}
-                onClick={() => setCenterTab("advisor")}
-              >
-                Advisor
-              </button>
-              {showQuests && (
-              <button
-                role="tab"
-                aria-selected={centerTab === "quests"}
-                data-active={centerTab === "quests"}
-                onClick={() => setCenterTab("quests")}
-              >
-                Quests
-              </button>
-              )}
-              {showProgression && (
-              <button
-                role="tab"
-                aria-selected={centerTab === "progression"}
-                data-active={centerTab === "progression"}
-                onClick={() => setCenterTab("progression")}
-              >
-                Progression
-              </button>
-              )}
+            <div className="tab-row">
+              <div className="tab-group" role="tablist" aria-label="Center panel">
+                {centerTabs.map((tab, i) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-controls="center-tabpanel"
+                    aria-selected={activeTab === tab.id}
+                    tabIndex={activeTab === tab.id ? 0 : -1}
+                    data-active={activeTab === tab.id}
+                    ref={(el) => {
+                      tabRefs.current[i] = el;
+                    }}
+                    onKeyDown={(e) => onTabKey(e, i)}
+                    onClick={() => setCenterTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 className="tab-collapse"
@@ -347,15 +369,22 @@ export default function Home() {
                 ◂ hide
               </button>
             </div>
-            {centerTab === "atlas" ? (
-              <AtlasPanel zone={snap?.zone ?? null} position={snap?.position ?? null} />
-            ) : centerTab === "progression" && showProgression ? (
-              <ProgressionPanel />
-            ) : centerTab === "quests" && showQuests ? (
-              <QuestPanel level={snap?.level ?? null} />
-            ) : (
-              <AdvisorPanel snap={snap} onSnapChange={setSnap} />
-            )}
+            <div
+              className="center-tabpanel"
+              id="center-tabpanel"
+              role="tabpanel"
+              aria-labelledby={`tab-${activeTab}`}
+            >
+              {activeTab === "atlas" ? (
+                <AtlasPanel zone={snap?.zone ?? null} position={snap?.position ?? null} />
+              ) : activeTab === "progression" ? (
+                <ProgressionPanel />
+              ) : activeTab === "quests" ? (
+                <QuestPanel level={snap?.level ?? null} />
+              ) : (
+                <AdvisorPanel snap={snap} onSnapChange={setSnap} />
+              )}
+            </div>
           </div>
         ) : (
           <button

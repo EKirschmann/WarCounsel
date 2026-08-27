@@ -113,6 +113,10 @@ export const CharacterPanel = memo(function CharacterPanel({
   }
 
   const s = snap.session;
+  // StatusStrip owns the urgent ones and the /log on one; see below.
+  const routineHints = snap.sync_hints.filter(
+    (h) => !h.urgent && h.command !== "/log on",
+  );
   const dpsPct = snap.session_max_dps > 0
     ? Math.min(100, (snap.dps / snap.session_max_dps) * 100)
     : 0;
@@ -214,14 +218,14 @@ export const CharacterPanel = memo(function CharacterPanel({
           <p className="loadout-hint" role="status">{snap.loadout_hint}</p>
         )}
 
-        {snap.sync_hints.length > 0 && (
+        {/* Routine hints only. The urgent ones -- and anything about the
+            log feed itself -- belong to StatusStrip, which sits above the
+            grid where no panel pref can switch it off. Showing them in both
+            places would just say everything twice whenever Vitals is on. */}
+        {routineHints.length > 0 && (
           <div className="sync-hints" role="status">
-            {snap.sync_hints.map((h) => (
-              <p
-                key={h.command + h.reason}
-                className="sync-hint"
-                data-urgent={h.urgent ? "1" : undefined}
-              >
+            {routineHints.map((h) => (
+              <p key={h.command + h.reason} className="sync-hint">
                 {h.reason} — type <code>{h.command}</code> in-game.
               </p>
             ))}

@@ -228,6 +228,17 @@ export interface Snapshot {
   owned_aas: { distinct: number; ranks: number; synced: string | null };
   spellbook: { file: string; updated: string; age_hours: number; count: number } | null;
   sync_hints: { command: string; reason: string; urgent?: boolean }[];
+  /* Log health — why the numbers are not moving. Decorated onto every
+     snapshot that leaves the backend (`_snapshot_out`), REST and socket
+     alike, so the HUD can tell a quiet night from a dead feed. */
+  /** seconds since the log file last grew; null if it never has */
+  log_stale_s?: number | null;
+  /** false = the file has not grown ONCE since startup — the frozen case */
+  log_seen_growth?: boolean;
+  /** the log we are actually tailing */
+  log_file?: string | null;
+  /** a NEWER log belongs to this character — they rolled or switched */
+  newer_log?: string | null;
   last_death: DeathRecap | null;
   mob_stats: MobStat[];
   zone: string | null;

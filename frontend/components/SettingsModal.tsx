@@ -196,6 +196,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [saved, setSaved] = useState(false);
   const firstField = useRef<HTMLInputElement>(null);
   const didFocus = useRef(false);
+  const card = useRef<HTMLDivElement>(null);
+  // Whatever was focused when this opened — the gear button, normally.
+  const opener = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     apiGet<SettingsData>("/api/settings")
@@ -232,9 +235,38 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     firstField.current?.focus();
   }, [data]);
 
+  // Give focus back to whatever opened this. Without it, closing drops
+  // focus on <body> and a keyboard user restarts from the top of the page.
+  useEffect(() => {
+    opener.current = document.activeElement as HTMLElement | null;
+    return () => opener.current?.focus?.();
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      // aria-modal="true" tells assistive tech the page behind is gone, so
+      // Tab must not walk into it. Cycle within the card instead.
+      if (e.key !== "Tab" || !card.current) return;
+      const focusable = card.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const on = document.activeElement;
+      // Also covers focus having escaped already (a click on the veil, or
+      // the panel swapping out the element that had it).
+      if (e.shiftKey && (on === first || !card.current.contains(on))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (on === last || !card.current.contains(on))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -353,6 +385,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     <div className="modal-veil" onMouseDown={onClose} role="presentation">
       <div
         className="modal-card"
+        ref={card}
         role="dialog"
         aria-modal="true"
         aria-label="Settings"

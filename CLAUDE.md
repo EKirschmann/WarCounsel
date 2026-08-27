@@ -306,6 +306,27 @@ snapshot, not only `/health`, so both surfaces can explain themselves.
   frozen numbers. This is the launch-day report.
 - The overlay renders one red line for these and nothing at all when
   healthy — silence while idling is normal and must stay silent.
+- **`_snapshot_out()` is what leaves the process, not `tracker.snapshot()`.**
+  Log health used to be added inside `GET /api/character` alone, so the web
+  HUD — which takes its FIRST snapshot over REST and every one after that
+  over the socket — showed the fields once and then overwrote them with
+  nothing. Every WS push and every snapshot-returning endpoint goes through
+  the decorator now. `newer_log` globs the log dir, so at ~6 broadcasts/s it
+  is cached for 5s (and the cache is dropped on a character switch, since it
+  describes the file we just stopped tailing).
+- **The web's `StatusStrip` sits ABOVE the grid and outside every panel
+  pref, on purpose.** It is the surface that explains why the panels are
+  empty, so nothing may switch it off — `sync_hints` used to render only
+  inside CharacterPanel, and turning Vitals off took "the game is running
+  but logging is OFF" with it. The split is: urgent hints and the `/log on`
+  one belong to the strip, routine hints stay in the panel, and neither
+  renders both. It follows the overlay's rule (silence while idling) and its
+  precedence — a known CAUSE suppresses the symptom row, so "you are playing
+  somebody else" never prints beside "your log is quiet". Thresholds are
+  duplicated in `StatusStrip.tsx` and `overlay._log_warning`; both say so.
+- The header's link rune reports the BROWSER-to-backend socket only. It is
+  not a log indicator and must not be made to look like one — the strip is
+  what says the other half.
 - **Never rewrite the ex-style without re-asserting the alpha.**
   `_set_click_through()` adds WS_EX_LAYERED/WS_EX_TRANSPARENT via
   `SetWindowLongW`, but Tk ALREADY made the window layered when it applied
