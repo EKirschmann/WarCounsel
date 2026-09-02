@@ -43,24 +43,55 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
+  // The packaged build installs itself: download, checksum, then a swap
+  // performed after we exit. Poll so the wait shows progress — a 44MB
+  // download behind a silent button reads as a click that did nothing.
+  const pollUpdate = () => {
+    const id = setInterval(async () => {
+      try {
+        const s = await apiGet<{
+          phase: string; detail: string; pct: number | null; error: string | null;
+        }>("/api/update/status");
+        if (s.error) {
+          setUpdateMsg({ text: s.error, newer: false });
+          clearInterval(id);
+        } else if (s.phase === "done") {
+          setUpdateMsg({ text: s.detail, newer: true });
+          clearInterval(id);
+        } else if (s.phase !== "idle") {
+          const pct = s.pct != null ? ` ${s.pct}%` : "";
+          setUpdateMsg({ text: `${s.phase}${pct} — ${s.detail}`, newer: true });
+        }
+      } catch {
+        clearInterval(id); // the swap closes the app under us; that is the success case
+      }
+    }, 700);
+    setTimeout(() => clearInterval(id), 10 * 60 * 1000);
+  };
+
   const runUpdate = async () => {
     try {
-      const r = await apiSend<{ note: string }>("/api/update/run", {});
+      const r = await apiSend<{ note: string; packaged?: boolean }>("/api/update/run", {});
       setUpdateMsg({ text: r.note, newer: true });
+      if (r.packaged) pollUpdate();
     } catch {
-      setUpdateMsg({ text: "couldn't launch the updater — run update_companion.bat by hand", newer: false });
+      setUpdateMsg({ text: "couldn't start the update — see the releases page", newer: false });
     }
   };
 
   const checkUpdates = async () => {
     setUpdateMsg({ text: "checking…", newer: false });
     try {
-      const r = await apiGet<{ current: string; latest: string | null; update_available?: boolean; error?: string }>(
-        "/api/update-check",
-      );
+      const r = await apiGet<{
+        current: string; latest: string | null; update_available?: boolean;
+        error?: string; how?: string | null;
+      }>("/api/update-check");
       if (r.error) setUpdateMsg({ text: r.error, newer: false });
       else if (r.update_available)
-        setUpdateMsg({ text: `v${r.latest} available — close the app and run update_companion.bat`, newer: true });
+        // `how` differs by build — the packaged one installs itself, a
+        // source checkout runs the script. The backend knows which; saying
+        // it here in two places is how the two came to disagree before.
+        setUpdateMsg({ text: `v${r.latest} available — ${r.how ?? "see the releases page"}`, newer: true });
       else setUpdateMsg({ text: "up to date", newer: false });
     } catch {
       setUpdateMsg({ text: "backend offline", newer: false });
@@ -244,7 +275,7 @@ export default function Home() {
                 type="button"
                 className="update-avail"
                 onClick={runUpdate}
-                title={`v${updateAvail} is out — click to update (runs update_companion.bat in its own window)`}
+                title={`v${updateAvail} is out — click to download it, check it against its published SHA256, and install it`}
               >
                 Update available — v{updateAvail}
               </button>

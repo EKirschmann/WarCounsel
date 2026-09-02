@@ -214,6 +214,29 @@ jobs:
           # smoke-test step -- each step is its own process, so it only ever
           # printed "started in 0s, reports , packaged=". Removed.)
 
+      - name: Verify the self-updater is reachable in the frozen build
+        # The installer half runs as `WarCounsel.exe --apply-update`, spawned
+        # by the version it replaces. If that flag is not dispatched in the
+        # packaged entrypoint the update fails INVISIBLY -- the app closes,
+        # the helper exits doing nothing, and it reopens on the old version
+        # looking like the click was ignored. Same class of silent failure as
+        # the missing pystray hidden import, so it gets the same kind of gate.
+        # Called with no --target it must refuse with exit 2, which proves the
+        # flag reached backend.updater rather than argparse's error path.
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'apply-update.log'
+          $p = Start-Process -FilePath (Resolve-Path dist/WarCounsel.exe) `
+                 -ArgumentList '--apply-update','--log',$log -Wait -PassThru
+          if ($p.ExitCode -ne 2) {
+            throw "--apply-update should refuse without a target (exit 2), got $($p.ExitCode)"
+          }
+          if (-not (Test-Path $log)) { throw "the installer wrote no log at $log" }
+          if (-not (Select-String -Path $log -Pattern 'needs --target' -Quiet)) {
+            throw "the installer ran but did not reach backend.updater's argument check"
+          }
+          "self-updater reachable; refuses without a target" | Write-Host
+
       - name: Record the hash
         # Publish it so anyone can check their download, and so an antivirus
         # false-positive report has something concrete to reference.
@@ -427,6 +450,24 @@ jobs:
                  -ArgumentList '--ocr-check' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "OCR engine self-check failed (exit $($p.ExitCode))" }
           "OCR engine read its test image" | Write-Host
+
+      - name: Verify the self-updater is reachable in the OCR build
+        # Same gate as the lean build, and it matters MORE here: a onedir
+        # install swaps WarCounsel.exe and _internal individually because
+        # data/ sits inside that same folder, so this is the variant where
+        # getting the update path wrong could cost somebody their sessions.
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'apply-update-ocr.log'
+          $p = Start-Process -FilePath (Resolve-Path dist/WarCounsel/WarCounsel.exe) `
+                 -ArgumentList '--apply-update','--log',$log -Wait -PassThru
+          if ($p.ExitCode -ne 2) {
+            throw "--apply-update should refuse without a target (exit 2), got $($p.ExitCode)"
+          }
+          if (-not (Select-String -Path $log -Pattern 'needs --target' -Quiet)) {
+            throw "the installer ran but did not reach backend.updater's argument check"
+          }
+          "self-updater reachable in the onedir build" | Write-Host
 
       - name: Zip it
         shell: pwsh

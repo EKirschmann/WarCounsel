@@ -105,8 +105,48 @@ Hard-won, all of it load-bearing:
     never hold back the exe most people use.
   - `Windows.Media.Ocr` is not an alternative — it silently drops short
     lines like "Z: 4", which is precisely the data this reads.
-- The packaged updater cannot pull or rebuild a source tree, and the exe
-  cannot overwrite itself while running — it points at the releases page.
+- **The packaged build UPDATES ITSELF** (`backend/updater.py`). It used to
+  point at the releases page, because a running .exe cannot be OVERWRITTEN
+  and there is no source tree to pull. Measured 2026-09-02, that was the
+  single largest thing costing this project users: everquest-companion
+  reached 4,409 machines within a day of publishing v1.15.0 with nobody
+  deciding anything, while v2.12.0 reached 9 in six days because 9 people
+  decided. A tool people must remember to update is a tool most of them stop
+  running.
+  - **A running .exe cannot be overwritten, but it CAN be RENAMED** — the
+    loader holds the file object, not the directory entry. `_swap()` copies
+    the new build to `<name>.new`, renames `<name>` to `<name>.old`, then
+    renames `.new` into place. Only the two renames must not be interrupted,
+    and a failure on the second renames `.old` straight back, so the install
+    is the old version or the new one and never a mixture.
+  - **The helper that performs the swap is the NEWLY DOWNLOADED BUILD**, run
+    with `--apply-update` (a third flag beside `--overlay` / `--ocr-overlay`,
+    dispatched the same way and for the same reason — a frozen build has no
+    interpreter to hand). This is deliberate and not merely convenient: the
+    swap logic then ships WITH the version being installed. A .cmd written by
+    the OLD build would carry the old build's bugs forever, and the one
+    mechanism that must never need a manual fix is the one delivering fixes.
+  - **The SHA256 gate ABORTS, it does not warn.** Nothing is executed before
+    it matches the `.sha256` asset published beside it, the checksum file is
+    matched BY ARTIFACT NAME (the exe and the OCR zip ship side by side), and
+    a missing checksum is a refusal. This is the only path in the app that
+    runs a file fetched off the network.
+  - **`data/` lives INSIDE a onedir install**, so the OCR build never
+    replaces its folder wholesale — only `WarCounsel.exe` and `_internal`,
+    the two entries the build actually ships, are moved aside. A recursive
+    replace would delete the user's sessions, settings and mined geometry.
+    `variant()` tells the two builds apart by asking whether `_MEIPASS` sits
+    beside the .exe, so no build-time flag can fall out of step with reality.
+  - **The app exits through the NORMAL path**, never `os._exit`: `QUIT_HOOK`
+    destroys the pywebview window, which is exactly what the user does, which
+    runs the lifespan handler, which snapshots the session. An update that
+    cost you the evening's session state would be worse than no update.
+  - `_wait_for_exit()` blocks on a SYNCHRONIZE handle rather than polling. A
+    handle that cannot be opened means the process is ALREADY GONE — the
+    normal race, since the app can exit before the helper gets that far — and
+    must not read as a timeout, which would abandon the update.
+  - A `.old` the installer could not delete (still mapped) is swept at the
+    next startup, where it is certainly free.
 
 - `--reload` restarts on .py changes and re-reads `.env`; editing `.env`
   alone does NOT trigger a reload — touch a backend file or restart.
@@ -689,8 +729,14 @@ throttled `state` pushes. REST highlights (see main.py for all):
   heals from gem 8, utility, pets; loadout set "companion", buff set
   "prebuffs"; one-time .companion-backup beside the LO*.ini)
 - `GET /api/update-check` (badge click + 6-hourly poll; API with plain
-  tags-page fallback) · `POST /api/update/run` (spawns the updater in its
-  own console window)
+  tags-page fallback) · `POST /api/update/run` — source installs spawn
+  `update_companion.bat` in its own console; PACKAGED builds self-update
+  (above). The tag is resolved SERVER-SIDE, never taken from the request:
+  the hash gate would catch a bad artifact either way, but an endpoint that
+  downloads and runs whatever version it is handed is not a thing to leave
+  on localhost. · `GET /api/update/status` — download/verify progress,
+  polled by the header; answers from source runs too, so the UI has one
+  shape rather than a branch only the packaged build exercises
 - `GET /api/map|zones|route|geometry|geometry3d|texture/{short}/{name}`
 - `POST /api/overlay` — toggle (launches or kills; `GET` reports state)
 - `GET/POST /api/overlay/prefs` — section/field visibility (below); the

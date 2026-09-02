@@ -1,8 +1,35 @@
 # Changelog
 
 Notable changes per release. Check for updates by clicking the version badge
-in the app header; update by closing the companion and running
-`update_companion.bat`.
+in the app header. The packaged .exe installs the update itself; a source
+install updates by closing the companion and running `update_companion.bat`.
+
+## Unreleased
+
+**The .exe updates itself.** Until now the packaged build could tell you a
+new version existed and then had to send you to the releases page to
+download and replace the file by hand — so most people simply kept running
+whatever they first installed. Click the version badge now and WarCounsel
+downloads the new build, checks it against the SHA256 published beside it,
+closes itself, swaps in the new version and reopens. It shows progress while
+it downloads, because a 44MB fetch behind a silent button reads as a click
+that did nothing.
+
+Three things it deliberately will not do:
+
+- **Install anything whose checksum does not match.** The download is
+  verified before it is ever run, and a missing or mismatched checksum stops
+  the update entirely. The app you are running is left untouched and says so.
+- **Leave you with a half-installed app.** The old build is moved aside
+  before the new one takes its name, and if anything goes wrong at that
+  moment the old one is moved straight back. You end up on the old version or
+  the new one, never on a mixture.
+- **Touch your `data` folder.** Sessions, settings, triggers, overlay layout
+  and mined geometry are never part of the swap — including in the OCR build,
+  where the folder sits inside the app's own directory.
+
+It also closes the app the same way you do, so the session you were in is
+still saved on the way out.
 
 ## v2.12.0 — 2026-08-26
 
