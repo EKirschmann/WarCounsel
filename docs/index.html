@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WarCounsel — a combat meter and advisor for EverQuest Legends</title>
+<meta name="description" content="WarCounsel tails the log file EverQuest Legends already writes and turns it into a live HUD, an overlay damage meter, mined 3D zone maps, and spell and gear counsel checked against your own spellbook. Free, MIT, no paid tier.">
+<link rel="icon" href="warcounsel.ico" sizes="any">
+<link rel="canonical" href="https://ekirschmann.github.io/WarCounsel/">
+<meta property="og:title" content="WarCounsel — a combat meter and advisor for EverQuest Legends">
+<meta property="og:description" content="Your combat log, read properly. Live HUD, overlay meter, mined 3D zone maps, and verified spell and gear counsel. Free and MIT.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ekirschmann.github.io/WarCounsel/">
+<meta property="og:image" content="https://ekirschmann.github.io/WarCounsel/screenshots/hud-overview.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* WarCounsel landing — StoneGlass tokens, mirrored from frontend/app/globals.css */
+:root{
+  --world:#0b0d10;
+  --panel:rgba(18,21,26,.82);
+  --inset:rgba(8,10,13,.72);
+  --gold:#c8aa6e;
+  --gold-bright:#e7cd92;
+  --hairline:rgba(200,170,110,.34);
+  --hairline-dim:rgba(200,170,110,.16);
+  --text:#e9e4d8;
+  --muted:#9aa0a8;
+  --dmg-out:#c8aa6e;
+  --dmg-in:#d4574a;
+  --heal:#1fb38c;
+  --cast:#b07cc6;
+  --display:"Cinzel",Georgia,serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:radial-gradient(1200px 700px at 70% -10%,rgba(200,170,110,.05),transparent 60%),var(--world);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;height:auto;display:block}
+code{font-family:var(--mono);font-size:.92em;color:var(--text)}
+a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--hairline-dim)}
+a:hover{color:var(--gold-bright);border-bottom-color:var(--gold)}
+:focus-visible{outline:1px solid var(--gold-bright);outline-offset:3px}
+
+.wc-skip{position:absolute;left:-9999px;top:0;background:var(--panel);border:1px solid var(--gold);padding:10px 16px;z-index:10}
+.wc-skip:focus{left:12px;top:12px}
+
+.wc-wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+
+/* ---- header ---- */
+.wc-head{border-bottom:1px solid var(--hairline-dim);position:sticky;top:0;background:rgba(11,13,16,.88);backdrop-filter:blur(8px);z-index:5}
+.wc-head .wc-wrap{display:flex;align-items:center;gap:24px;height:60px}
+.wc-brand{font-family:var(--display);font-size:17px;letter-spacing:.16em;color:var(--gold);border:0;text-transform:uppercase}
+.wc-brand:hover{color:var(--gold-bright)}
+.wc-nav{margin-left:auto;display:flex;gap:22px;font-size:14px}
+.wc-nav a{color:var(--muted);border:0}
+.wc-nav a:hover{color:var(--text)}
+
+/* ---- shared section rhythm ---- */
+.wc-sec{padding:76px 0;border-top:1px solid var(--hairline-dim)}
+.wc-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+h2{font-family:var(--display);font-weight:600;font-size:clamp(22px,3vw,30px);letter-spacing:.05em;line-height:1.25;margin-bottom:14px}
+h3{font-family:var(--display);font-weight:500;font-size:17px;letter-spacing:.06em;margin-bottom:8px}
+.wc-lede{color:var(--muted);max-width:62ch;font-size:17px}
+.wc-lede strong{color:var(--text);font-weight:500}
+
+/* ---- the log device: the page's spine ---- */
+.wc-log{
+  font-family:var(--mono);
+  font-size:13.5px;
+  line-height:1.85;
+  background:var(--inset);
+  border:1px solid var(--hairline-dim);
+  border-left:2px solid var(--gold);
+  padding:18px 20px;
+  overflow-x:auto;
+  white-space:pre;
+  color:#848b94;
+  margin:22px 0;
+}
+/* the app's rule, applied to prose: colour only where it means something */
+.wc-log .t{color:#5d6570}
+.wc-log .out{color:var(--dmg-out)}
+.wc-log .in{color:var(--dmg-in)}
+.wc-log .cst{color:var(--cast)}
+.wc-log .ms{color:var(--gold-bright)}
+.wc-log .out,.wc-log .in,.wc-log .cst,.wc-log .ms{font-weight:500}
+/* visible by default: the reveal is opt-in, so no-JS and a thrown script
+   both leave the log readable rather than blank */
+.wc-log div{opacity:1}
+html.wc-anim .wc-log div{opacity:0}
+html.wc-anim .wc-log.is-lit div{animation:wc-fade .5s ease-out forwards}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@keyframes wc-fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+.wc-derived{font-size:15px;color:var(--muted);max-width:70ch}
+.wc-derived b{color:var(--text);font-weight:500}
+
+/* ---- hero ---- */
+.wc-hero{padding:84px 0 68px}
+.wc-hero h1{
+  font-family:var(--display);font-weight:600;
+  font-size:clamp(34px,6.2vw,60px);
+  line-height:1.08;letter-spacing:.01em;margin-bottom:20px;
+}
+.wc-hero .wc-lede{font-size:19px;max-width:60ch}
+.wc-cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:32px 0 8px}
+.wc-btn{
+  font-family:var(--body);font-size:15px;font-weight:500;letter-spacing:.02em;
+  padding:13px 26px;border:1px solid var(--gold);color:var(--gold);
+  background:transparent;transition:background .18s ease,color .18s ease;
+}
+.wc-btn:hover{background:var(--gold);color:#0b0d10;border-bottom-color:var(--gold)}
+.wc-btn-quiet{border-color:var(--hairline);color:var(--muted)}
+.wc-btn-quiet:hover{background:transparent;color:var(--text);border-color:var(--gold)}
+.wc-meta{font-size:13.5px;color:var(--muted);font-family:var(--mono)}
+
+/* ---- figures ---- */
+figure{margin:26px 0 0}
+figure img{border:1px solid var(--hairline-dim)}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:10px;max-width:70ch}
+.wc-narrow{max-width:420px}
+
+/* ---- three-up ---- */
+.wc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:34px}
+.wc-card p{font-size:14.5px;color:var(--muted);margin-top:8px}
+/* the three sources have different aspect ratios; pin one so the headings
+   sit on a shared baseline */
+.wc-card img{
+  border:1px solid var(--hairline-dim);
+  margin-bottom:14px;
+  width:100%;height:auto;
+  aspect-ratio:2/1;
+  object-fit:cover;
+  object-position:top center;
+}
+
+/* ---- trust ---- */
+.wc-list{list-style:none;margin-top:26px;display:grid;gap:16px;max-width:74ch}
+.wc-list li{padding-left:22px;position:relative;color:var(--muted);font-size:15.5px}
+.wc-list li::before{content:"";position:absolute;left:0;top:11px;width:9px;height:1px;background:var(--gold)}
+.wc-list b{color:var(--text);font-weight:500}
+.wc-fine{color:var(--muted);max-width:70ch;margin-top:26px;font-size:15.5px}
+
+/* ---- download ---- */
+.wc-opts{display:grid;grid-template-columns:repeat(3,1fr);margin-top:32px;border:1px solid var(--hairline-dim)}
+.wc-opt{padding:24px;border-right:1px solid var(--hairline-dim)}
+.wc-opt:last-child{border-right:0}
+.wc-opt p{font-size:14.5px;color:var(--muted);margin-top:8px}
+.wc-opt .wc-meta{margin-top:14px;display:block;font-size:12.5px}
+
+/* ---- footer ---- */
+.wc-foot{border-top:1px solid var(--hairline-dim);padding:38px 0 56px;font-size:13.5px;color:var(--muted)}
+.wc-foot p{max-width:78ch;margin-bottom:12px}
+
+@media (max-width:820px){
+  .wc-grid,.wc-opts{grid-template-columns:1fr}
+  .wc-opt{border-right:0;border-bottom:1px solid var(--hairline-dim)}
+  .wc-opt:last-child{border-bottom:0}
+  .wc-nav{gap:16px}
+  .wc-nav a:first-child{display:none}
+  .wc-sec{padding:56px 0}
+  .wc-hero{padding:56px 0 48px}
+  .wc-log{font-size:12px}
+}
+</style>
+<script>
+/* Arm the reveal only where it can actually complete. Everything below
+   renders visible without it. */
+(function () {
+  try {
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        && 'IntersectionObserver' in window) {
+      document.documentElement.className += ' wc-anim';
+    }
+  } catch (e) { /* leave the log visible */ }
+})();
+</script>
+</head>
+<body>
+<a class="wc-skip" href="#main">Skip to content</a>
+
+<header class="wc-head">
+  <div class="wc-wrap">
+    <a class="wc-brand" href="#main">WarCounsel</a>
+    <nav class="wc-nav" aria-label="Sections">
+      <a href="#what">What it does</a>
+      <a href="#reads">What it touches</a>
+      <a href="#get">Download</a>
+      <a href="https://github.com/EKirschmann/WarCounsel">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="wc-hero">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">EverQuest Legends companion</p>
+    <h1>Your combat log,<br>read properly.</h1>
+    <p class="wc-lede">Everything below is built out of the text file your client already writes when you type
+      <code>/log on</code>. A live HUD, a damage meter over the game, 3D zone maps mined from your own install,
+      and spell and gear counsel checked against your actual spellbook.
+      <strong>It reads. It never plays.</strong></p>
+
+    <div class="wc-cta">
+      <a class="wc-btn" href="https://github.com/EKirschmann/WarCounsel/releases/latest">Download WarCounsel.exe</a>
+      <a class="wc-btn wc-btn-quiet" href="https://github.com/EKirschmann/WarCounsel">Read the source</a>
+    </div>
+    <p class="wc-meta">Free · MIT · ~44 MB, one file · Windows 10/11 · Mac and Linux from source under Wine</p>
+
+    <p class="wc-eyebrow" style="margin-top:52px">Forty-three seconds of one fight, as your client wrote it</p>
+    <div class="wc-log" id="wc-hero-log">
+<div><span class="t">[Fri Jul 10 21:25:06 2026]</span> A wan ghoul knight hits YOU for <span class="in">10</span> points of damage.</div>
+<div><span class="t">[Fri Jul 10 21:25:06 2026]</span> A wan ghoul knight kicks YOU for <span class="in">7</span> points of damage.</div>
+<div><span class="t">[Fri Jul 10 21:25:07 2026]</span> You slash a wan ghoul knight for <span class="out">69</span> points of damage.</div>
+<div><span class="t">[Fri Jul 10 21:25:09 2026]</span> You kick a wan ghoul knight for <span class="out">80</span> points of damage. (Critical)</div>
+<div><span class="t">[Fri Jul 10 21:25:12 2026]</span> A wan ghoul knight staggers.</div>
+<div><span class="t">[Fri Jul 10 21:25:21 2026]</span> You gain experience! <span class="ms">(1.019%)</span></div>
+<div><span class="t">[Fri Jul 10 21:25:49 2026]</span> A kor ghoul wizard begins casting <span class="cst">Major Shielding</span>.</div>
+    </div>
+    <p class="wc-derived">From those seven lines WarCounsel knows: <b>149 damage across two swings, one critical</b> ·
+      <b>17 taken</b> · <b>a stun that landed on the mob you were actually on</b> ·
+      <b>1.019% of a level</b> · and <b>a wizard mid-cast</b> you still have time to answer.
+      Now multiply by a night of them.</p>
+  </div>
+</section>
+
+<section class="wc-sec" id="what">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">The meter</p>
+    <h2>Numbers your group can argue about</h2>
+    <p class="wc-lede">Per-ability hits, crits, and the tags EQL stacks beside them — Riposte, Slay Undead, Finishing Blow —
+      kept whole instead of flattened into one bool. Everyone in the group gets a damage and DPS row, and
+      <strong>every pet gets its own row rather than being folded into its owner</strong>, so your "You" matches what
+      their copy shows for you. That is the difference between two meters and one conversation.</p>
+    <figure>
+      <img src="screenshots/hud-overview.jpg" width="2560" height="1440" loading="lazy" decoding="async"
+           alt="The WarCounsel HUD: vitals and spell timers on the left, a 3D zone view in the middle, the encounter breakdown on the right">
+      <figcaption>Vitals and countdown timers, the Atlas, and the fight breakdown with per-ability crits, your pet's line, and each group member's damage.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="wc-sec">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">Reads this line</p>
+    <div class="wc-log wc-obs"><div><span class="t">[Fri Jul 10 22:03:41 2026]</span> You have entered Najena.</div></div>
+    <h2>The Atlas</h2>
+    <p class="wc-lede">Zone charts with a live position dot and hop-by-hop routing — and where a dungeon has no chart,
+      which is most of them, <strong>the walls and floors are mined out of the game's own geometry files</strong> and drawn
+      in 3D. The camera follows you. Nothing is downloaded; it is your install, read.</p>
+    <figure class="wc-narrow">
+      <img src="screenshots/atlas-3d-tracking.gif" width="740" height="604" loading="lazy" decoding="async"
+           alt="The 3D Atlas following a player through Najena, mined from the game's own zone geometry">
+      <figcaption>Najena, mined from the .s3d your client ships. The dot is your <code>/loc</code>.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="wc-sec">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">This one comes from a different file</p>
+    <div class="wc-log wc-obs"><div>/outputfile spellbook<span class="t">   →   Kenkyo_freeport-Spellbook.txt</span></div></div>
+    <h2>Counsel that has to prove itself</h2>
+    <p class="wc-lede">A spell loadout for your exact trio and level, an AA plan, a vendor shopping list, and gear picks
+      slot by slot — read off your own exports and the wiki. <strong>Every suggestion is machine-checked before you see
+      it:</strong> owned, legal at your level, not superseded by something better already in your book, and not fighting
+      another pick for the same buff slot — two buffs in one slot overwrite each other, so recommending both wastes a gem.
+      Anything that fails the check is dropped rather than shown. One click writes the result as an in-game spell set.</p>
+    <figure>
+      <img src="screenshots/advisor-loadout.jpg" width="2560" height="1440" loading="lazy" decoding="async"
+           alt="The Advisor tab showing a tiered spell loadout with must-have, should-have and nice-to-have picks">
+      <figcaption>Tiered loadout counsel, with pre-buffs called out separately so a 36-minute self-buff never eats a combat gem.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="wc-sec">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">Reads this line</p>
+    <div class="wc-log wc-obs"><div><span class="t">[Fri Jul 10 22:14:08 2026]</span> Your <span class="cst">Spirit of Wolf</span> has worn off of Kenkyo.</div></div>
+    <h2>An overlay you can see past</h2>
+    <p class="wc-lede">A compact always-on-top meter over the game: ranked damage bars, draining spell and cooldown timers,
+      session rates, and a banner for the things you would otherwise miss — a mez breaking, a named in the loot you just
+      took, your cast interrupted. Click-through by default; Scroll Lock makes it interactive.
+      <strong>Every section switches off, and so does every field inside one.</strong></p>
+    <figure class="wc-narrow">
+      <img src="screenshots/overlay.png" width="450" height="555" loading="lazy" decoding="async"
+           alt="The WarCounsel overlay: ranked damage bars, timers, session rates and an alert banner">
+      <figcaption>Keep the kill count, drop the coin. Changes reach a running overlay in about half a second.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="wc-sec">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">And the rest of the night</p>
+    <h2>What your bags and your level already know</h2>
+    <div class="wc-grid">
+      <div class="wc-card">
+        <img src="screenshots/quests.jpg" width="1568" height="765" loading="lazy" decoding="async" alt="The Quests tab matching inventory items to wiki quests">
+        <h3>Quests</h3>
+        <p>Your inventory export joined to the wiki, so a bag of oddments becomes a list of things you can finish — and a search that says plainly whether you are even carrying the item.</p>
+      </div>
+      <div class="wc-card">
+        <img src="screenshots/progression.jpg" width="1568" height="765" loading="lazy" decoding="async" alt="The Progression tab showing class unlocks, raid targets, keys and factions">
+        <h3>Progression</h3>
+        <p>Class unlocks, raid targets, keys and factions read from the game's own achievements export — the game's answer, not a guess inferred from what happens to be in your bags.</p>
+      </div>
+      <div class="wc-card">
+        <img src="screenshots/hunting-and-leveling.jpg" width="2560" height="1440" loading="lazy" decoding="async" alt="Hunting zone candidates ranked against the community level table, above a leveling Gantt chart">
+        <h3>Where to hunt</h3>
+        <p>Zones ranked against the community level table, over a chart of the bands around you, so you can see what you are about to outgrow.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wc-sec" id="reads">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">What it touches</p>
+    <h2>It reads. It does not play.</h2>
+    <p class="wc-lede">Game Jawn and Daybreak do not review, approve or endorse any third-party add-on, including this one.
+      So here is exactly what it does, plainly enough that you can judge it yourself.</p>
+    <ul class="wc-list">
+      <li><b>It tails a text file.</b> Your log, plus data files the client already ships — spells, zone names, zone geometry — and the exports <code>/outputfile</code> writes. It sends no input to the game and automates nothing. Every action it suggests is one you perform.</li>
+      <li><b>No memory, no packets, no injection.</b> Nothing is read out of the game process, and nothing is put into it.</li>
+      <li><b>It writes exactly one file inside the game folder, and only when you press the button:</b> the <code>[SpellLoadouts]</code> section of your <code>LO*.ini</code>, so <code>/memspellset</code> can recall a suggested bar. It backs the file up first, and the feature is off until you switch it on.</li>
+      <li><b>Free and MIT-licensed.</b> No paid tier, no subscription, nothing behind a purchase.</li>
+      <li><b>What leaves your machine:</b> a version check against GitHub, and wiki lookups for item and spell pages. If you plug in an LLM yourself, your character context goes to that provider — run a local model, or none at all, and nothing about your character leaves the machine.</li>
+    </ul>
+    <p class="wc-fine">None of this is legal advice. The
+      <a href="https://www.daybreakgames.com/terms-of-service">Terms of Service</a> are the authority, and the risk of
+      using any third-party tool is yours. If you think something here crosses a line,
+      <a href="https://github.com/EKirschmann/WarCounsel/issues">open an issue</a> — I would rather remove a feature than
+      argue about it.</p>
+  </div>
+</section>
+
+<section class="wc-sec" id="get">
+  <div class="wc-wrap">
+    <p class="wc-eyebrow">Get it</p>
+    <h2>Three ways in. Most people want the first.</h2>
+    <div class="wc-opts">
+      <div class="wc-opt">
+        <h3>The single .exe</h3>
+        <p>Download, double-click. Nothing else to install — no Python, no Node. Everything works except reading your position off the screen.</p>
+        <span class="wc-meta">~44 MB · one file</span>
+      </div>
+      <div class="wc-opt">
+        <h3>The OCR build</h3>
+        <p>The same app plus screen reading, for position data the log never prints. A folder rather than one file, because the image libraries are large.</p>
+        <span class="wc-meta">a ZIP, about 5× bigger</span>
+      </div>
+      <div class="wc-opt">
+        <h3>From source</h3>
+        <p>Run the installer script; it offers to fetch Python and Node, and finds your game folder. The only route on Mac and Linux, where the game runs under Wine.</p>
+        <span class="wc-meta">about ten minutes</span>
+      </div>
+    </div>
+    <div class="wc-cta">
+      <a class="wc-btn" href="https://github.com/EKirschmann/WarCounsel/releases/latest">Go to the downloads</a>
+      <a class="wc-btn wc-btn-quiet" href="https://github.com/EKirschmann/WarCounsel/blob/main/INSTALL.md">Step-by-step install guide</a>
+    </div>
+    <p class="wc-meta">Windows 10 or 11 · EverQuest Legends installed and run once · type <code>/log on</code> in game</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="wc-foot">
+  <div class="wc-wrap">
+    <p>WarCounsel is an independent, fan-made companion for EverQuest Legends. It is not affiliated with, endorsed by or
+      associated with Daybreak Game Company LLC or Game Jawn. EverQuest is a registered trademark of Daybreak Game
+      Company LLC.</p>
+    <p>Wiki-derived content is used under CC BY-SA 4.0; vendored data keeps its own terms — see
+      <a href="https://github.com/EKirschmann/WarCounsel/blob/main/NOTICE.md">NOTICE.md</a>.
+      The app itself is MIT-licensed. <a href="https://github.com/EKirschmann/WarCounsel">Source</a> ·
+      <a href="https://github.com/EKirschmann/WarCounsel/discussions">Discussions</a> ·
+      <a href="https://github.com/EKirschmann/WarCounsel/issues">Issues</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  if (root.className.indexOf('wc-anim') === -1) { return; }
+
+  var all = document.querySelectorAll('.wc-log');
+  function light(el) {
+    var rows = el.querySelectorAll('div');
+    for (var i = 0; i < rows.length; i++) { rows[i].style.animationDelay = (i * 90) + 'ms'; }
+    el.classList.add('is-lit');
+  }
+  /* Last resort: whatever happened, nothing stays hidden. */
+  function lightAll() { Array.prototype.forEach.call(all, light); }
+  setTimeout(lightAll, 2500);
+
+  try {
+    var hero = document.getElementById('wc-hero-log');
+    if (hero) { light(hero); }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { light(e.target); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.6 });
+    Array.prototype.forEach.call(document.querySelectorAll('.wc-obs'), function (el) {
+      io.observe(el);
+    });
+  } catch (e) { lightAll(); }
+})();
+</script>
+</body>
+</html>

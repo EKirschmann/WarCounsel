@@ -2,6 +2,12 @@
   <img src="docs/logo.svg" alt="WarCounsel" width="640">
 </p>
 
+<p align="center">
+  <a href="https://ekirschmann.github.io/WarCounsel/"><b>ekirschmann.github.io/WarCounsel</b></a>
+  · <a href="https://github.com/EKirschmann/WarCounsel/releases/latest">Download</a>
+  · <a href="INSTALL.md">Install guide</a>
+</p>
+
 A real-time companion app for **EverQuest Legends**. It tails your combat log
 and gives you a live HUD in the browser — nothing injected, nothing touching
 the game process. The one thing it can write is optional: recommended spell

@@ -623,3 +623,130 @@ never cast.
   names. Revisit only with a clear appetite for correlation-grade answers.
 - Anything requiring lockout state: the log carries none, see the raid
   section above.
+
+---
+
+## Where the players actually are (measured 2026-09-02)
+
+Third survey. The first two (above) compared FEATURES and concluded we were
+ahead on most of them. That conclusion still holds and it did not matter.
+This one measures ADOPTION, because that is the question that was actually
+being asked, and the answer is not close.
+
+### The numbers, and how they were read
+
+GitHub release asset download counts, pulled per release per asset. Read as
+ACTIVE INSTALLS, not curiosity, for a reason specific to each updater:
+
+- **everquest-companion (jmoyers)** — 49 releases since 2026-08-04.
+  `Setup-1.15.0.exe` 4,409 and its `.blockmap` 4,216, within a day of
+  publishing; v1.14.0 9,970 / 8,884; v1.10.0 6,419 / 6,394. electron-updater
+  fetches the blockmap and then byte-ranges the exe, so the two counts
+  moving TOGETHER is the auto-update population reporting itself.
+  **~4,000-6,000 active installs.** `latest.yml` alone is 236,046 — that is
+  the poll, not the users, and it is why the headline 435,236 total means
+  nothing.
+- **EQBuddy** — 175 releases since 2026-07-18. `EQBuddySetup.exe` runs
+  600-1,000 per release (v1.99.15: 962, v1.99.13: 757, v1.99.10: 803); the
+  updater pulls the whole signed installer, so one download is one machine.
+  **~800-1,200 active installs.** Linux/macOS builds are real but small
+  (~35-57 per release).
+- **WarCounsel** — 41 releases since 2026-07-25. `WarCounsel.exe` 9-24 per
+  release, 337 downloads LIFETIME across every asset. We have no updater, so
+  every one of those is a person who decided to fetch it. **Tens.**
+
+We are at roughly 0.5% of jmoyers and 2% of EQBuddy.
+
+**Stars are not the signal and must not be used as one.** 43 / 45 / 14 —
+within 3x, while installs are within 200x. We are found on GitHub about as
+often as they are; we are not installed FROM it. The gap is conversion and
+retention, not awareness among people who read GitHub.
+
+### Four differences that explain it, ranked by size
+
+1. **Signed installer plus silent auto-update.** EQBuddy signs with Azure
+   Artifact Signing (publisher "FlossworksCross-Stitch") and checks at
+   startup, every 6 hours and on demand; jmoyers leads its landing page with
+   "One-click install, no admin prompt. ✓ signed" and ships delta updates.
+   We ship an unsigned PyInstaller onefile through SmartScreen and point at a
+   releases page. CLAUDE.md's reason is correct — the exe cannot overwrite
+   itself while running — and the CONSEQUENCE is the whole retention gap:
+   their v1.15.0 reached 4,409 machines in a day with nobody deciding
+   anything; our v2.12.0 reached 9 in six days because 9 people decided.
+2. **A findable front door.** jmoyers has
+   `jmoyers.github.io/everquest-companion` and it ranks. A web search for
+   "WarCounsel EverQuest Legends" returns the GitHub topics page and nothing
+   else — the README is good and it sits behind a URL nobody is handed.
+3. **Cadence read as liveness.** Both shipped on the day of this survey.
+   EQBuddy 175 releases in seven weeks, jmoyers 49 in four. We last shipped
+   2026-08-27. Five weeks after a launch, cadence is how a player decides a
+   tool is still maintained.
+4. **A visible feedback loop.** EQBuddy runs GitHub Discussions (ON, 163
+   threads) and names the asker in every release note — "discussion #240,
+   thanks joeymavity" — credits ~50 testers, and merges player PRs
+   (Hateborne shipped four highlights in v1.99.12). Ours are OFF; 1 open
+   issue, 5 in the repo's life.
+
+### The field is wider than the two we were watching
+
+Found while surveying, all live and all overlapping us:
+
+- **BasaBots EQL** — $3/month, 7-day trial, ~140MB, auto-updating. Live map
+  with con-colouring, DPS meter with 300-fight history, **exaltation
+  planner** across Focus/Click/Proc/Worn for all three classes, 1,300
+  prebuilt triggers with GINA-format import (.gtp/.xml/.tgf.gz), neural TTS.
+  A PAID competitor exists and it took the exaltation ground.
+- **Loadout Legends** — web app plus a gear-sync desktop client, accounts,
+  leaderboards for raid times and speedruns, proc-rate calculator, mob
+  resist tracking. Self-reports 415 registered users, 38 daily.
+- **EQL Meter** (eqlmeter.com), **spinips** (22*), **eql-tooltip** (10*),
+  **eqltools-companion**, **MySEQL**, **eqlc**, **seqo**.
+
+EQBuddy is the closest thing to us and has been closing: it now has zone
+maps with spawn circles and hop-by-hop routing, a gear locker that flags
+outclassed items, an 11,000-item catalog, a 1,100-quest tracker, spawn
+timers learned from your own kills, buff durations learned per character,
+and a LAN mobile second screen. Maps, routing and gear comparison are no
+longer ours alone.
+
+### What is still only ours
+
+The LLM advisor with deterministic verification gates; spell-set write-back
+into `LO*.ini`; the mined 3D geometry Atlas; ZEM-gated hunting counsel;
+Wine/Mac/Linux from source. Nothing else in the field has any of these.
+
+They are also the hardest to photograph and the slowest to demo, which is
+part of why they do not convert. A DPS bar sells itself in a screenshot; a
+verification gate does not.
+
+### What would move it, in effect-per-hour order
+
+1. **Auto-update the exe.** The constraint is that a RUNNING process cannot
+   replace its own file — not that the machine cannot. A sidecar that waits
+   for exit, swaps the file and relaunches settles it. This is the single
+   largest item on this list; every other tool's version graph is a straight
+   line because of it.
+2. **Code signing.** Azure Trusted Signing is what EQBuddy uses and costs
+   about $10/month. CLAUDE.md is right that it will NOT remove the
+   SmartScreen prompt (reputation is per hash since 2024) — take it for the
+   publisher name and for the AV heuristics that a packed onefile trips.
+3. **A landing page.** GitHub Pages, built from the screenshots already in
+   the README. jmoyers' page is the entire difference between being
+   searchable and not.
+4. **Turn Discussions on, and name the asker in release notes.** EQBuddy's
+   flywheel is not a marketing trick; it is why their feature list reads
+   like the playerbase's own list.
+5. **Ship weekly even when the week was small.**
+
+Items 1-3 are distribution and cost no product work. The feature lists in
+the two surveys above are not what is losing this.
+
+### MCP: nothing is waiting for us there
+
+`v1.4.7` (2026-08-26) is still the newest tag; main carries nothing since it
+but three dependabot PRs. The whole `v1.4.3..v1.4.7` delta is two dev-dep
+bumps, an `eql-client` refresh from the CrossOver patch, and a wiki commands
+snapshot (rev 172602). **The AA revision did not move** — `meta.json` reads
+151303 / 2026-06-27 at BOTH tags — so the 8/25 Beastlord AA is still absent
+and CLAUDE.md's "check the revision, not the tag" holds exactly as written.
+Taking v1.4.7 is safe and buys the client-data refresh; it buys no new AAs.
