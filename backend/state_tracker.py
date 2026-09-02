@@ -10,6 +10,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Optional
 
+from backend import learned_durations as learned
 from backend import alerts, builds_data, race_unlocks, spell_file
 from backend.alert_data import (ABILITY_COOLDOWNS, BASE_DURATION_ROWS,
                                 COOLDOWN_SHAVES, SPELL_TIMERS,
@@ -34,6 +35,32 @@ COMBAT_TIMEOUT_SECONDS = 8
 # reason. Only CONFIRMED groupmates extend: before the roster was
 # trustworthy this could not be done at all.
 GROUP_EXTEND_SECONDS = 20
+
+# Individual hits kept per encounter, for the fight timeline and the per-hit
+# drill-down. Counters alone cannot say WHEN in a fight a skill landed or
+# which swings missed, which is the one question "why did that go badly"
+# actually asks. A 4-minute fight at ~2 swings/s is ~500 rows; the cap is
+# what keeps a 20-minute raid from growing the 3-second session snapshot
+# without bound. Past it the counters stay exact and `hits_dropped` says
+# how much of the timeline is missing. In-memory and session-state only:
+# never persisted to the DB, never broadcast over the socket -- both are
+# read at 6 frames/s and a timeline is fetched on demand.
+HIT_CAP = 800
+
+# Attack rounds: our melee swings grouped by (second, target, verb). The log
+# stamps whole seconds, so every swing of one round shares a stamp, and the
+# size of the group is the number of attacks that round produced. Two
+# swings of a WEAPON verb in one second may be two hands rather than a
+# double attack, so the multi-swing rate on slash/crush/pierce/hit is
+# contaminated by dual wield and says so. Kick and bash cannot be dual
+# wielded: a two-swing round on those is a double attack and nothing else,
+# which makes them the one clean read of that skill (per jmoyers/
+# everquest-companion's attack-round-stats note, and measured here at
+# 14.1% kick / 7.3% bash across 1.75M lines before this was built).
+CLEAN_ROUND_VERBS = frozenset({"kick", "bash"})
+# Fewer rounds than this and the rate is noise, so it reports the count
+# it is waiting on instead of a percentage.
+MIN_ROUNDS_FOR_RATE = 20
 
 # How long a filtered contributor stays on the "not counted" list after
 # their last hit. Long enough to decide, short enough that the list stays
@@ -152,6 +179,10 @@ class CharacterTracker:
         self.skill_ups = 0
         self.swings_hit = 0     # melee accuracy
         self.swings_missed = 0
+        # {verb: {round_size: count}}; _round is the one being assembled:
+        # [second, target, verb, swings_so_far]
+        self.rounds: dict = {}
+        self._round: Optional[list] = None
         self.loots: deque[str] = deque(maxlen=20)
         self.last_target: Optional[str] = None
         self.last_event_at: Optional[datetime] = None
@@ -169,6 +200,10 @@ class CharacterTracker:
         self.loadout_hint: Optional[str] = None
         # Death recap: frozen slice of incoming damage at the moment of death
         self.last_death: Optional[dict] = None
+        self._died_at: Optional[datetime] = None
+        # base name -> the exact cast name (tier included) last seen, so a
+        # fade that prints without the tier can still be measured under it
+        self._last_cast_name: dict = {}
         # Per-mob session stats (kills, attributed xp, loot seen on corpses)
         self.mob_stats: dict[str, dict] = {}
         self._last_kill: Optional[tuple] = None  # (foe key, ts) for xp attribution
@@ -309,7 +344,8 @@ class CharacterTracker:
                               "oom": 0,
                               # stamped from /con at creation, so a later
                               # re-con cannot rewrite a finished fight
-                              "mob_level": None, "mob_rare": False}
+                              "mob_level": None, "mob_rare": False,
+                              "hits": [], "hits_dropped": 0}
         else:
             self.encounter["last"] = ts
             # ...and OUR clock, which is what bounds how long a groupmate
@@ -570,6 +606,83 @@ class CharacterTracker:
         except TypeError:
             return False
 
+    def _note_swing(self, ts: datetime, target: str, verb: str) -> None:
+        """Fold one of our melee swings (hit OR miss) into its round.
+
+        A round is closed by the first swing that belongs to a different one;
+        the round in progress is also closed by any later-second event
+        through _flush_round, so a fight's final round is not lost.
+        """
+        key = [int(ts.timestamp()), target.lower(), verb.lower()]
+        if self._round is not None and self._round[:3] == key:
+            self._round[3] += 1
+            return
+        self._flush_round()
+        self._round = key + [1]
+
+    def _flush_round(self, now: Optional[datetime] = None) -> None:
+        r = self._round
+        if r is None:
+            return
+        if now is not None and int(now.timestamp()) <= r[0]:
+            return  # still inside the round's second
+        dist = self.rounds.setdefault(r[2], {})
+        size = str(r[3])
+        dist[size] = dist.get(size, 0) + 1
+        self._round = None
+
+    def attack_rounds(self) -> Optional[dict]:
+        """Multi-attack rates per verb, and the clean double-attack read.
+
+        Returns None until there is at least one round, so the panel has
+        nothing to draw rather than a table of zeros.
+        """
+        if not self.rounds:
+            return None
+        verbs = []
+        clean_rounds = clean_multi = 0
+        for verb, dist in self.rounds.items():
+            total = sum(dist.values())
+            multi = sum(n for size, n in dist.items() if int(size) >= 2)
+            clean = verb in CLEAN_ROUND_VERBS
+            if clean:
+                clean_rounds += total
+                clean_multi += multi
+            verbs.append({
+                "verb": verb, "rounds": total, "multi": multi,
+                "pct": (round(100.0 * multi / total, 1)
+                        if total >= MIN_ROUNDS_FOR_RATE else None),
+                "clean": clean,
+                "dist": {int(k): v for k, v in sorted(dist.items(), key=lambda kv: int(kv[0]))},
+            })
+        verbs.sort(key=lambda v: (-v["clean"], -v["rounds"]))
+        return {
+            "verbs": verbs,
+            "double_attack_pct": (round(100.0 * clean_multi / clean_rounds, 1)
+                                  if clean_rounds >= MIN_ROUNDS_FOR_RATE else None),
+            "clean_rounds": clean_rounds,
+            "min_rounds": MIN_ROUNDS_FOR_RATE,
+        }
+
+    def _record_hit(self, enc: dict, ts: datetime, kind: str, name: str,
+                    amount: int, target: Optional[str], mod: str = "") -> None:
+        """One row on the fight timeline: [t, kind, name, amount, target, mod].
+
+        A list, not a dict -- there are hundreds per fight and they ride the
+        3-second session snapshot. `t` is whole seconds from the fight's
+        start, which is the log's own granularity. `mod` carries what the
+        counters flatten: the stacked tag on a hit ("Riposte Critical"),
+        the defense verb on an incoming miss, "miss" or "resist".
+        """
+        hits = enc.get("hits")
+        if hits is None:
+            hits = enc["hits"] = []
+        if len(hits) >= HIT_CAP:
+            enc["hits_dropped"] = enc.get("hits_dropped", 0) + 1
+            return
+        hits.append([int((ts - enc["started"]).total_seconds()),
+                     kind, name, amount, target or "", mod])
+
     def _encounter_heal(self, ts: datetime, label: str, amount: int,
                         crit: bool = False) -> None:
         enc = self.encounter
@@ -582,6 +695,8 @@ class CharacterTracker:
         hl["total"] += amount
         if crit:
             hl["crits"] = hl.get("crits", 0) + 1
+        self._record_hit(enc, ts, "heal", label, amount, None,
+                         "Critical" if crit else "")
 
     def _encounter_ability(self, ts: datetime, name: str, kind: str, damage: int,
                            target: Optional[str] = None,
@@ -598,6 +713,10 @@ class CharacterTracker:
         for m in mods or ():
             ab.setdefault("mods", {})[m] = ab.get("mods", {}).get(m, 0) + 1
             self.mods[m] = self.mods.get(m, 0) + 1
+        # The stacked tag stays whole, exactly as the log printed it; a bare
+        # crit with no other tag reads "Critical" so the timeline can mark it.
+        self._record_hit(enc, ts, kind, name, damage, target,
+                         " ".join(mods) if mods else ("Critical" if crit else ""))
         # A stagger prints on the line AFTER the hit that caused it and names
         # no attacker, so crediting it means remembering what we just landed
         # -- and on WHOM, since other players' strikes stagger things too and
@@ -737,6 +856,7 @@ class CharacterTracker:
                 self.spell_cast_at[e.spell.lower()] = e.ts
                 self.spell_cast_at[strip_tier(e.spell).lower()] = e.ts
                 self._infer_class(e.spell, e.ts)
+                self._last_cast_name[strip_tier(e.spell).lower()] = e.spell
                 if live:
                     base = strip_tier(e.spell).lower()
                     if base in ABILITY_COOLDOWNS:
@@ -744,8 +864,18 @@ class CharacterTracker:
                         # lists some as "durations" — the cooldown wins)
                         self._start_cooldown(e.spell, e.ts)
                     else:
+                        # A length measured on THIS character, at this tier,
+                        # beats the table: the pack was timed at an unknown
+                        # tier and cannot see focus effects or AAs, which is
+                        # why it under-promises. It also fills the table's
+                        # gaps -- a spell the pack never heard of gets a
+                        # timer the third time its fade is seen.
+                        measured = learned.estimate(self._char_key(), e.spell)
                         secs = SPELL_TIMERS.get(base)
-                        if secs:
+                        if measured:
+                            self._start_timer(e.spell, measured["seconds"],
+                                              "spell", e.ts, source="measured")
+                        elif secs:
                             secs = _tier_scaled(base, secs, e.spell)
                             self._start_timer(e.spell, secs, "spell", e.ts)
                         elif base not in self._timer_misses:
@@ -824,6 +954,7 @@ class CharacterTracker:
             if self.session_started is None:
                 self.session_started = e.ts
             self._active_buckets.add(int(e.ts.timestamp()) // 120)
+            self._flush_round(e.ts)
             if isinstance(e, ev.LevelUp):
                 self._dinged = True
             self._sweep_pending(e.ts)
@@ -844,6 +975,7 @@ class CharacterTracker:
                     self.crits += 1
                 if isinstance(e, ev.MeleeOut):
                     self.swings_hit += 1
+                    self._note_swing(e.ts, e.target, e.verb)
                     shave = COOLDOWN_SHAVES.get(e.verb)
                     if shave:
                         # a landed Smite/Reave shaves its big cooldown
@@ -880,6 +1012,14 @@ class CharacterTracker:
                                         "ds", e.damage, e.target)
             elif isinstance(e, ev.MissOut):
                 self.swings_missed += 1
+                self._note_swing(e.ts, e.target, e.verb)
+                # On the timeline, but never opening or extending a fight:
+                # a miss is not evidence anything is being fought.
+                enc = self.encounter
+                if (enc is not None and
+                        (e.ts - enc["last"]).total_seconds() <= COMBAT_TIMEOUT_SECONDS):
+                    self._record_hit(enc, e.ts, "melee", e.verb.capitalize(),
+                                     0, e.target, "miss")
             elif isinstance(e, ev.OtherDamageOut):
                 owner = self.pet_owners.get(e.attacker)
                 if (e.attacker.lower() == f"{self.name} pet".lower()
@@ -1014,6 +1154,10 @@ class CharacterTracker:
                 self.encounter["in_hits"] = self.encounter.get("in_hits", 0) + 1
                 self._encounter_foe(e.attacker, taken=e.damage)
                 self._hp_walk(-e.damage)
+                self._record_hit(self.encounter, e.ts, "in",
+                                 getattr(e, "spell", None) or e.verb,
+                                 e.damage, e.attacker,
+                                 "Critical" if e.crit else "")
             elif isinstance(e, ev.MissIn):
                 # tanking view: which defense ate each incoming swing
                 enc = self.encounter
@@ -1021,6 +1165,8 @@ class CharacterTracker:
                         (e.ts - enc["last"]).total_seconds() <= COMBAT_TIMEOUT_SECONDS):
                     d = enc.setdefault("defense", {})
                     d[e.defense] = d.get(e.defense, 0) + 1
+                    self._record_hit(enc, e.ts, "in", e.verb, 0, e.attacker,
+                                     e.defense)
             elif isinstance(e, ev.HealReceived):
                 self.healing_received += e.amount
             elif isinstance(e, ev.HealOut):
@@ -1125,6 +1271,7 @@ class CharacterTracker:
                         "mention", f"[{e.channel}] {e.sender}: {e.text}", e.ts)
             elif isinstance(e, ev.BuffFade):
                 if not e.pet:
+                    self._learn_duration(e)
                     self._cancel_timer(e.spell)
                     label = e.spell + (f" ({e.target})" if e.target else "")
                     self._fire_alerts("fade", label, e.ts)
@@ -1152,6 +1299,7 @@ class CharacterTracker:
                 # and never opens an encounter
                 self.damage_taken += e.damage
             elif isinstance(e, ev.MyDeath):
+                self._died_at = e.ts
                 self._fire_alerts("death", "slain by " + e.killer, e.ts)
                 self.deaths += 1
                 self.last_death = self._death_recap(e)
@@ -1241,6 +1389,8 @@ class CharacterTracker:
                     rs = enc.setdefault("resists", {})
                     rkey = e.spell or "spell"
                     rs[rkey] = rs.get(rkey, 0) + 1
+                    self._record_hit(enc, e.ts, "spell", rkey, 0, e.target,
+                                     "resist")
 
         self._dirty = True
         if e.type not in ("other_out", "aa_list", "aa_meta", "who_other",
@@ -1263,7 +1413,7 @@ class CharacterTracker:
         return round(value, 1)
 
     def _start_timer(self, name: str, seconds: int, kind: str,
-                     ts: datetime) -> None:
+                     ts: datetime, source: str = "table") -> None:
         self.active_timers = [t for t in self.active_timers
                               if t["name"] != name][-9:]
         # `target` is set ONLY by a tick that names the victim
@@ -1275,7 +1425,42 @@ class CharacterTracker:
         # for good. A never-ticking spell keeps None and runs out instead.
         self.active_timers.append({
             "name": name, "kind": kind, "seconds": seconds, "target": None,
+            "source": source,
             "ends": ts + timedelta(seconds=seconds)})
+
+    def _char_key(self) -> str:
+        return learned.char_key(self.name, self.server)
+
+    def _learn_duration(self, e) -> None:
+        """One cast-to-fade cycle, if this fade can be trusted to be one.
+
+        "Your X spell has worn off." prints for ANY effect leaving you --
+        our own buff, or a mob's debuff we never cast -- so a fade with no
+        cast of ours behind it is not ours to measure (tangling weeds: 62
+        fades, 0 casts, in the owner's logs). The cycle is the gap from
+        our LAST cast of that name, which is also right for a refresh. A
+        fade inside a few seconds of our death is every buff dropping at
+        once, not a duration. Everything else that can go wrong -- two
+        mobs sharing the spell, a cure, an overwrite -- produces a gap
+        that will not agree with the others, and the store demands three
+        that do before anything downstream may use the number.
+        """
+        if self._died_at is not None and (e.ts - self._died_at).total_seconds() < 8:
+            return
+        low = e.spell.lower()
+        base = strip_tier(e.spell).lower()
+        cast_ts = self.spell_cast_at.get(low) or self.spell_cast_at.get(base)
+        if cast_ts is None:
+            return
+        gap = (e.ts - cast_ts).total_seconds()
+        if gap <= 0:
+            return
+        # key on the tiered cast name: the fade line may print without it
+        name = e.spell if low != base else self._last_cast_name.get(base, e.spell)
+        verdict = learned.observe(self._char_key(), name, gap)
+        if verdict and verdict["usable"] and verdict["agree"] == learned.MIN_AGREE:
+            logger.info("measured %r on this character: %ss over %d agreeing cycles",
+                        name, verdict["seconds"], verdict["agree"])
 
     def _bind_timer_target(self, spell: Optional[str], target: str,
                            ts: datetime) -> None:
@@ -1345,6 +1530,7 @@ class CharacterTracker:
         return sorted(
             ({"name": t["name"], "kind": t["kind"],
               "seconds": t["seconds"], "target": t.get("target"),
+              "source": t.get("source", "table"),
               "remaining": round((t["ends"] - now).total_seconds())}
              for t in self.active_timers),
             key=lambda t: t["remaining"])
@@ -1414,6 +1600,8 @@ class CharacterTracker:
         self.xp_percent = 0.0
         self.aa_points = self.skill_ups = 0
         self.swings_hit = self.swings_missed = 0
+        self.rounds = {}
+        self._round = None
         self.crits = self.coin_copper = self.rune_absorbed = 0
         self.loot_count = 0
         self.stuns_taken = self.overheal = 0
@@ -1699,6 +1887,22 @@ class CharacterTracker:
                 break
             out.append(self._encounter_view(enc, live=False))
         return out
+
+    def hits_view(self, started: str) -> Optional[dict]:
+        """Every retained row of one fight, keyed by its start stamp -- the
+        same `started` the encounter views carry, so the panel asks for the
+        fight it is already showing. Live first, then history."""
+        encs = ([self.encounter] if self.encounter else []) + list(self.encounter_history)
+        for enc in encs:
+            if enc["started"].isoformat() == started:
+                return {
+                    "started": started,
+                    "duration": max((enc["last"] - enc["started"]).total_seconds(), 1.0),
+                    "hits": list(enc.get("hits") or []),
+                    "dropped": enc.get("hits_dropped", 0),
+                    "cap": HIT_CAP,
+                }
+        return None
 
     def ability_summary(self) -> dict:
         """Per-ability aggregate across the last 5 pulls — surfaces which
@@ -1998,6 +2202,7 @@ class CharacterTracker:
             "zone": self.zone,
             "rates": self.rates(),
             "timers": self.timers_view(),
+            "attack_rounds": self.attack_rounds(),
             "alerts": list(self.alerts),
             "in_combat": self.in_combat(),
             "dps": self.dps(),

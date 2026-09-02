@@ -248,7 +248,18 @@ export const CharacterPanel = memo(function CharacterPanel({
           <ul className="vital-timers" aria-label="Active timers">
             {(snap.timers ?? []).slice(0, 5).map((tm) => (
               <li key={tm.name} data-kind={tm.kind} data-short={tm.remaining <= 5 ? "1" : undefined}>
-                <span>{tm.name}</span>
+                <span>
+                  {tm.name}
+                  {/* The table under-promises on purpose; a length read off
+                      this character's own cast-to-fade cycles does not, and
+                      the row says which it is. */}
+                  {tm.source === "measured" && (
+                    <i className="vital-timer-src"
+                       title="Length measured from this character's own casts and fades — three cycles agreeing within 15%">
+                      measured
+                    </i>
+                  )}
+                </span>
                 <span className="vital-timer-clock">
                   {tm.remaining >= 60
                     ? `${Math.floor(tm.remaining / 60)}:${String(tm.remaining % 60).padStart(2, "0")}`
@@ -316,6 +327,26 @@ export const CharacterPanel = memo(function CharacterPanel({
             <div className="tile-label">Hit rate</div>
           </div>
           )}
+          {show("vitals", "accuracy") && snap.attack_rounds && (() => {
+            // Kick and bash only: a weapon verb swinging twice in one second
+            // may be two hands, so the rate off those would flatter a dual
+            // wielder. Until there are enough clean rounds, show the count
+            // being waited on rather than a percentage built on noise.
+            const ar = snap.attack_rounds;
+            const contaminated = ar.verbs.filter((v) => !v.clean && v.pct != null)
+              .map((v) => `${v.verb} ${v.pct}%`).join(" · ");
+            return (
+              <div className="tile"
+                   title={`Rounds where kick or bash swung more than once in the same second: a double attack, since neither can be dual-wielded.${contaminated ? ` Weapon verbs (two hands + double attack + flurry mixed): ${contaminated}.` : ""}`}>
+                <div className="tile-value">
+                  {ar.double_attack_pct != null
+                    ? `${ar.double_attack_pct}%`
+                    : <span className="adv-cls">{ar.clean_rounds}/{ar.min_rounds}</span>}
+                </div>
+                <div className="tile-label">Double attack</div>
+              </div>
+            );
+          })()}
           {show("vitals", "accuracy") && (
           <div className="tile">
             <div className="tile-value">{s.skill_ups}</div>

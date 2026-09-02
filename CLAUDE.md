@@ -395,6 +395,32 @@ hours-to-level estimate (exact only after a same-session ding).
   durations vendored from kpxcoolx/eql-alerts, MIT; collisions kept the
   SHORTEST) and CANCEL on own fizzle/interrupt/outgoing resist. Tier
   scaling of durations is NOT modeled — timers under-promise.
+- **Timers learn their real length on THIS character**
+  (`backend/learned_durations.py`, `data/learned_durations.json`;
+  `_learn_duration` in the tracker). The table was timed at an unknown
+  tier and cannot see focus effects or AAs, which is why it under-promises;
+  the log carries both ends of every cycle — our cast line and the
+  "Your X spell has worn off[ of T]." that follows — so the true length is
+  there to be read. A measured length outranks the table (`source:
+  "measured"` on the timer, a tag on the Vitals row) and FILLS the table's
+  gaps: a spell the pack never heard of gets a timer the third time its
+  fade is seen.
+  - **Three cycles agreeing within 15% before a number is USED** (EQBuddy's
+    rule, adopted deliberately). One clean gap is never enough: the same
+    spell on two mobs measures the second target's fade against the first's
+    cast, a refresh shortens the gap, a cure or overwrite ends it early.
+    None of those agree with each other or with the truth, so demanding
+    agreement is what keeps them out. Outliers stay on record and are
+    outvoted, never deleted. Rounded DOWN, per the under-promise rule.
+  - **"Your X spell has worn off." prints for ANY effect leaving you**,
+    including a mob's debuff you never cast — Tangling Weeds showed 62
+    fades against 0 casts in the owner's logs. A fade with no cast of ours
+    behind it (`spell_cast_at`) teaches nothing. Fades inside 8s of our
+    death are every buff dropping at once, not cycles (`_died_at`).
+  - Keyed per character AND per exact cast name, tier included
+    (`_last_cast_name` recovers the tier when the fade prints without it):
+    the tier changes the length, and extended-duration AAs belong to one
+    character.
 - **Raid mechanics** (MECHANICS battery) match at the very END of
   parse_line — only lines nothing else recognized — and emit
   ev.MechanicTimer (boss shouts survive the chat guard: NPC shouts have
@@ -568,6 +594,11 @@ source of truth the panel renders from), so there is one pattern to learn.
   The first is the answer to "is this worth keeping" and a count cannot
   express it. The wording stops short of "safe to sell" — the wiki not
   tying an item to a quest is not evidence that nothing does.
+- **Quest rows sort closest-to-done first**, BEFORE the 25-row cap, so the
+  cap keeps the achievable ones rather than whatever the backend emitted
+  first. Only rows with a STATED requirement carry a fraction; rows with no
+  bar keep the backend's order, since there is nothing honest to rank them
+  by. Ready-to-turn-in sits at the very top.
 - Quests is a TAB, not a column, so its switch hides the tab button; if it
   was the open tab the Advisor shows rather than an empty stack.
   - When exactly ONE section survives, its header is SUPPRESSED — there is
@@ -604,6 +635,42 @@ source of truth the panel renders from), so there is one pattern to learn.
   tier. Encounters carry "trio" (per-trio DPS comparison via
   GET /api/trio-compare) and a 2s-bucket damage "timeline" (the
   Encounter panel sparkline).
+- **Encounters keep their individual hits** (`enc["hits"]`, rows of
+  `[t, kind, name, amount, target, tag]`; `_record_hit`). Counters could
+  say what a fight totalled and nothing about WHEN a skill landed or which
+  swings missed — the one question "why did that go badly" actually asks —
+  and the per-skill fight timeline was the most screenshot-able thing every
+  other tool had and this one could not draw at any price. Retention is
+  what unblocks it, and the attack-round stats fall out of the same rows.
+  - **In memory and the session snapshot ONLY.** Never in the DB payload
+    (`_encounter_view` carries counters, and `pending_encounters` is what
+    gets persisted) and never on the socket (six frames a second, hundreds
+    of rows). `GET /api/encounter/hits?started=` serves one fight on demand,
+    keyed by the `started` stamp the views already carry; a fight older
+    than the five held answers 404 and says so, rather than an empty list
+    that reads as "nothing happened".
+  - **`HIT_CAP` (800) bounds the 3-second session snapshot.** Past it the
+    counters stay exact and `hits_dropped` records how much of the timeline
+    is missing; the panel prints that number. Without a cap a 20-minute
+    raid would grow `session_state.json` without bound.
+  - A MISS is recorded but never OPENS or EXTENDS a fight — a miss is not
+    evidence anything is being fought. Stacked tags stay whole on the row
+    exactly as the parser keeps them ("Riposte Slay Undead").
+  - Every heal, incoming hit and avoided swing (tag = the defense verb),
+    and outgoing resist is a row too, so the lanes show both sides.
+- **Attack rounds** (`_note_swing` / `attack_rounds()`, snapshot
+  `attack_rounds`): our melee swings grouped by (second, target, verb). The
+  log stamps whole seconds, so a round's swings share a stamp and the group
+  size is the number of attacks it produced. **Kick and bash cannot be dual
+  wielded** (`CLEAN_ROUND_VERBS`), so a two-swing round there is a double
+  attack and nothing else — the one clean read of that skill. Weapon verbs
+  are contaminated by two hands (slash reaches size 5 on the fixture: two
+  hands + double attack + flurry, while kick never exceeds 2) and the view
+  marks them `clean: false` rather than pretending. Rates wait for
+  `MIN_ROUNDS_FOR_RATE` (20) and report the count until then. The round in
+  progress (`_round`) is closed by the next swing of a different key OR by
+  any event a second later (`_flush_round`), so a fight's last round is not
+  lost. Both persist with the session.
 - **`class_str` has TWO writers with DIFFERENT orderings, and anything
   keyed on the string must expect both.** The /who parse keeps the GAME's
   order ("[3 WIZ/BST]" -> "Wizard/Beastlord"); a manual trio edit joins
@@ -676,6 +743,8 @@ throttled `state` pushes. REST highlights (see main.py for all):
 - `GET /api/character` (snapshot) · `PATCH /api/character` (trio/level/AA/slots)
 - `GET /api/characters` + `POST /api/character/select` — multi-log switching
 - `GET /api/events|encounters|chat/history` · `POST /api/chat`
+- `GET /api/encounter/hits?started=` — every retained hit of one in-memory
+  fight (live + last five), on demand; 404 for anything older
 - `GET /api/advisor` / `GET /api/gear` — LLM consults; `?refresh=1` forces,
   `?cached=1` returns the cache instantly or `{"cached": false}` WITHOUT
   running the LLM (the tab restores results on load; consults are

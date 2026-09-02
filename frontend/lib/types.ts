@@ -207,8 +207,20 @@ export interface Snapshot {
   /** User-reported from the in-game UI — the log never prints them. */
   max_hp?: number | null;
   max_mana?: number | null;
-  /** Live countdowns: spell durations from your casts + raid mechanics. */
-  timers?: { name: string; kind: string; seconds: number; remaining: number }[];
+  /** Live countdowns: spell durations from your casts + raid mechanics.
+   *  `source` says where the length came from: "table" (the vendored
+   *  pack), or "measured" (this character's own cast-to-fade cycles). */
+  timers?: { name: string; kind: string; seconds: number; remaining: number; source?: string }[];
+  /** Our melee swings grouped into rounds by (second, target, verb).
+   *  Kick and bash cannot be dual-wielded, so a multi-swing round there
+   *  is a double attack and nothing else -- the one clean read. */
+  attack_rounds?: {
+    verbs: { verb: string; rounds: number; multi: number; pct: number | null;
+             clean: boolean; dist: Record<string, number> }[];
+    double_attack_pct: number | null;
+    clean_rounds: number;
+    min_rounds: number;
+  } | null;
   /** Fired tracked-rule alerts (data/tracked_rules.json). */
   alerts?: { id: number; ts: string; kind: string; text: string; sound: boolean }[];
   pet_inventory?: Record<string, string>;
