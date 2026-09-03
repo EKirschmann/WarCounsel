@@ -122,7 +122,8 @@ def _open_window(url: str, wait_for_server: bool = True) -> bool:
                 time.sleep(0.5)
     try:
         import webview  # pywebview
-        webview.create_window(WINDOW_TITLE, url, width=1500, height=950)
+        window = webview.create_window(WINDOW_TITLE, url, width=1500, height=950)
+        _register_quit_hook(window)
         webview.start()  # blocks until the user closes the window
         return True
     except Exception:
@@ -132,9 +133,69 @@ def _open_window(url: str, wait_for_server: bool = True) -> bool:
         return False
 
 
+def _register_quit_hook(window) -> None:
+    """Let the backend close this window.
+
+    A self-update has to exit through the SAME path the user takes, not
+    os._exit: closing the window sets server.should_exit below, which runs
+    the lifespan handler, which is what snapshots the session. An update
+    that cost you the evening's session state would be worse than no
+    update at all.
+    """
+    try:
+        from backend import updater
+        updater.QUIT_HOOK = window.destroy
+    except Exception:
+        logging.info("no quit hook available for updates", exc_info=True)
+
+
+def _sweep_update_leftovers() -> None:
+    """Clear the previous version's binary, which the installer could not
+    delete while it was still mapped. Certainly free by now."""
+    if not _is_frozen():
+        return
+    try:
+        from backend import updater
+        updater.sweep_leftovers(updater.target_exe())
+    except Exception:
+        logging.info("could not sweep update leftovers", exc_info=True)
+
+
+def _apply_update(args) -> int:
+    """The installer half of a self-update, running inside the NEW build.
+
+    Its own streams are dead (windowed), and it is deliberately given the
+    log path rather than deriving one — see the note at the call site.
+    """
+    from pathlib import Path
+    log_path = Path(args.log) if args.log else Path("update.log")
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+    logging.basicConfig(
+        level=logging.INFO, force=True,
+        handlers=[logging.FileHandler(log_path, encoding="utf-8")],
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    if sys.stdout is None or sys.stderr is None:
+        stream = open(log_path, "a", encoding="utf-8", buffering=1)
+        sys.stdout = sys.stdout or stream
+        sys.stderr = sys.stderr or stream
+    if not args.target or not args.wait_pid:
+        logging.error("--apply-update needs --target and --wait-pid")
+        return 2
+    from backend.updater import apply_update
+    try:
+        return apply_update(Path(args.target), args.wait_pid)
+    except Exception:
+        logging.exception("the installer itself failed")
+        return 1
+
+
 def _serve() -> None:
     import uvicorn
     _setup_logging()
+    _sweep_update_leftovers()
     from backend.main import app  # the object, not an import string:
     #                               a frozen build has no module search path
     if _port_is_ours(DEFAULT_PORT):
@@ -176,7 +237,22 @@ def main() -> None:
     parser.add_argument("--ocr-check", action="store_true",
                         help="verify screen OCR really works, then exit "
                              "(0 = usable) — used by the OCR release build")
+    parser.add_argument("--apply-update", action="store_true",
+                        help="install this build over an existing one, then "
+                             "relaunch it (spawned by the running app; not "
+                             "meant to be typed)")
+    parser.add_argument("--target", help="the executable to replace")
+    parser.add_argument("--wait-pid", type=int,
+                        help="wait for this pid to exit before replacing it")
+    parser.add_argument("--log", help="where the installer writes its log")
     args, _unknown = parser.parse_known_args()
+    if args.apply_update:
+        # Handled before anything else, and before _adopt_dead_streams():
+        # this process is the DOWNLOADED build running out of a staging
+        # folder, so data_path() would resolve beside the staged copy
+        # rather than beside the install. The log path is passed in for
+        # exactly that reason.
+        raise SystemExit(_apply_update(args))
     _adopt_dead_streams()
     try:
         if args.ocr_check:

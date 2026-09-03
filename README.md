@@ -343,10 +343,13 @@ and 3D, the Advisor, sessions and settings.
 
 ## Updating
 
-**Using the .exe?** Download the new one and replace the old file. Your
-`data` folder beside it is untouched, so sessions, settings, and mined
-geometry all survive. The in-app version badge tells you when a newer
-release exists.
+**Using the .exe?** Click the version badge in the app header. It downloads
+the new build, checks it against the SHA256 published beside it on the
+releases page, then closes WarCounsel, swaps itself for the new version and
+reopens — no file to replace by hand. If the checksum does not match,
+nothing is installed and the app you are running is untouched. Your `data`
+folder is never part of the swap, so sessions, settings and mined geometry
+all survive.
 
 **Source install:** click the version badge in the app header to check for a newer release.
 To update: close the companion, run `update_companion.bat`, start it again —

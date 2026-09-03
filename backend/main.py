@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import re
+import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -1513,10 +1514,10 @@ def _parse_ver(v: str) -> tuple:
     return tuple(int(x) for x in re.findall(r"\d+", v)[:3]) or (0,)
 
 
-@app.get("/api/update-check")
-async def update_check():
-    """Compare the running version against the newest GitHub tag. On-demand
-    (the version badge in the header triggers it) — never automatic."""
+async def _latest_release() -> tuple:
+    """(newest published version, error). Shared by the version check and
+    the self-updater, which must agree on what "latest" means — resolving
+    it in two places is how they would come to disagree."""
     import urllib.request
 
     from backend.wiki_http import _ssl_ctx as _ctx  # cached CA bundle
@@ -1550,15 +1551,21 @@ async def update_check():
                 break
         except Exception as e:
             err = f"{type(e).__name__}: {str(e)[:120]}"
+    return latest, err
+
+
+@app.get("/api/update-check")
+async def update_check():
+    """Compare the running version against the newest GitHub tag. On-demand
+    (the version badge in the header triggers it) — never automatic."""
+    latest, err = await _latest_release()
     if latest is None:
         return {"current": APP_VERSION, "latest": None,
                 "error": f"could not reach GitHub ({err or 'no tags found'})"}
     newer = latest is not None and _parse_ver(latest) > _parse_ver(APP_VERSION)
-    # the packaged build has no source tree to update in place — the user
-    # swaps the .exe, so say that instead of naming a script it does not have
     how = None
     if newer:
-        how = ("download the new WarCounsel.exe from the releases page"
+        how = ("download it, verify it and install it for you"
                if is_frozen() else
                "close the companion and run update_companion.bat")
     return {"current": APP_VERSION, "latest": latest, "update_available": newer,
@@ -1572,13 +1579,38 @@ async def run_update():
     git installs to git pull and ZIP installs to the Python downloader."""
     import subprocess
     if is_frozen():
-        # Nothing to pull or rebuild inside a one-file bundle, and the exe
-        # cannot overwrite itself while it is running.
-        return {"launched": False, "packaged": True,
-                "releases_url": RELEASES_URL,
-                "note": "This is the packaged build — close it and replace "
-                        "WarCounsel.exe with the new download. Your data "
-                        "folder beside it is kept."}
+        # The packaged build updates ITSELF now: it downloads the release
+        # asset for its own variant, checks it against the published
+        # SHA256, and hands off to that download to perform the swap after
+        # we exit. See backend/updater.py for why the new build is the one
+        # that installs itself.
+        from backend import updater
+        if updater.busy():
+            return {"launched": True, "packaged": True,
+                    "note": "Already updating — watch the progress here."}
+        if updater.status().get("staged"):
+            # A helper is already waiting on our pid. Staging again would
+            # clear the folder it is running from, so the second press is
+            # answered rather than obeyed.
+            return {"launched": True, "packaged": True,
+                    "note": "The new version is downloaded and waiting — "
+                            "close WarCounsel and it will install itself."}
+        latest, err = await _latest_release()
+        if not latest:
+            raise HTTPException(
+                503, f"could not reach GitHub ({err or 'no tags found'})")
+        if _parse_ver(latest) <= _parse_ver(APP_VERSION):
+            return {"launched": False, "packaged": True,
+                    "note": f"Already on the newest release (v{APP_VERSION})."}
+        # The TAG is resolved here rather than taken from the request. The
+        # hash gate would catch a bad artifact either way, but an endpoint
+        # that downloads and runs whatever version it is handed is not a
+        # thing to leave lying on localhost.
+        threading.Thread(target=updater.run, args=(f"v{latest}",),
+                         daemon=True).start()
+        return {"launched": True, "packaged": True, "target": latest,
+                "note": f"Downloading v{latest} — the app will close and "
+                        f"reopen on the new version."}
     bat = bundle_path("update_companion.bat")
     if not bat.exists():
         raise HTTPException(404, "update_companion.bat not found")
@@ -1594,6 +1626,20 @@ async def run_update():
     return {"launched": True,
             "note": "Updater opened in its own window — restart the app "
                     "when it finishes."}
+
+
+@app.get("/api/update/status")
+async def update_status():
+    """Progress of a packaged self-update, for the header to poll.
+
+    Always answers, including from a source run, so the UI has one shape to
+    render rather than a branch that only exists in the build nobody
+    developing this ever runs.
+    """
+    from backend import updater
+    state = updater.status()
+    state["packaged"] = is_frozen()
+    return state
 
 
 @app.get("/api/llm")
