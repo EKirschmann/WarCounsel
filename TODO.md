@@ -750,3 +750,74 @@ snapshot (rev 172602). **The AA revision did not move** — `meta.json` reads
 151303 / 2026-06-27 at BOTH tags — so the 8/25 Beastlord AA is still absent
 and CLAUDE.md's "check the revision, not the tag" holds exactly as written.
 Taking v1.4.7 is safe and buys the client-data refresh; it buys no new AAs.
+
+## Advisor rework: deterministic first, a narrow prompt second
+
+**Status:** shelved 2026-09-03 for the release after v2.13.0. The goal is
+to lessen what the model is asked to decide and what it is sent, and to
+have the deterministic gates carry every decision the data can already
+make. Mapped in full on 2026-09-03; the facts below are the ones that
+shape the design. Line numbers are as of v2.13.0.
+
+**What the prompt costs today.** `ADVISOR_PROMPT` (advisor.py:44) is
+6.3k chars of static instruction; `GEAR_PROMPT` (advisor.py:2046) is 8.9k,
+and two of its paragraphs are 2.9k and 1.7k chars each. On top of that:
+class guides at `guide_budget()` (3200 floor, up to 9000 per class, plus
+general/races/stances/rituals at 3400 each — realistically 8-13k chars),
+the wiki block at 12k chars (20k with no spellbook), the USABLE NOW
+spellbook UNCAPPED, owned AAs UNCAPPED, gear lines capped at 100 base
+items, the pet pool at 40. A full consult on a real character is
+therefore ~35-50k chars before the model answers.
+
+**The prompt is never persisted.** It exists as a local variable in
+`generate_advice` (advisor.py:1811) and `generate_gear_advice` (3616)
+and is dropped. STEP ONE of the rework is a `?prompt=1` branch on
+`/api/advisor` and `/api/gear` that returns the built prompt without
+invoking the model, so every change is measured rather than guessed.
+Everything needed is already in ctx by the time the prompt is built.
+
+**What the model decides that the data already knows.** Every pre-pass
+already runs before the LLM and writes `_`-keys into ctx (`_hunting`,
+`_permanent`, `_long_buffs`, `_no_pet`, `_measured`, `_viable`,
+`_pregated`), and `_builtin_counsel` (advisor.py:840) already fills
+must/should/nice from effect categories with no model at all. The gates
+then DROP anything the model gets wrong. So for loadout picks, prebuffs,
+replace pairs, AA ranks and locations the model is choosing among a
+pre-verified set, and the pick order is the only thing it adds. The
+rework direction: run the builtin path FIRST as the proposal, hand the
+model the proposal plus the short list of alternatives it may swap in,
+and ask only for the decisions the data cannot make — ordering, which of
+two equal buffs suits the playstyle, and the one-line reasons.
+
+**What is sent to the model but never verified** (the honest list of
+free text, and where a smaller prompt is safe to cut):
+`horizon[*]` (level/cls/name all free), `class_notes[*]`, `farm[*]` in
+gear (wholly ungated), `aa_now/aa_save[].cost` (taken as text), every
+`reason`/`why`. Of these, `horizon` and `farm` are derivable — horizon
+from scribed-ahead + missing_spells (the builtin already does it), farm
+from `item_acquisition` — and should move to the deterministic side
+rather than stay as model prose.
+
+**Sections to drop or shrink, by expected saving.** (1) Class guides:
+the model gets up to 13k chars of playstyle prose to inform a choice
+among ~10 pre-verified spells. Send only the guide paragraphs that name
+a spell in the candidate set, or a fixed 600-char summary per class.
+(2) The wiki block: with the eqlbuilds snapshot present, `_viable`
+already carries the record for every candidate; send the candidates'
+effect lines, not the class page. (3) Static instructions: most of both
+prompt constants are rules the gates enforce anyway ("must be owned",
+"never a travel ritual"); a rule the gate enforces does not need to be
+explained to the model. (4) Owned AAs: send only the ranks with a next
+rank purchasable at the current points.
+
+**Traps already found.** `_gate_locations` passes everything through
+when the ZEM table is empty — the vendored snapshot is what keeps it
+armed offline; do not let a leaner ctx skip `hunting_candidates`.
+`_lmstudio_budget` sizes max_tokens from the prompt length, so a shorter
+prompt raises the completion budget for free. Cached counsel is keyed on
+`_advisor_revision()` (main.py:685) over `_COUNSEL_SOURCES`, so editing
+either prompt constant invalidates every cache — expected, and the
+reason the rework should land as one release rather than trickle.
+Splitting one consult into concurrent sub-prompts was MEASURED and
+rejected (CLAUDE.md, prompt sizing) — a leaner single prompt, not more
+prompts.
