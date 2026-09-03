@@ -6,6 +6,23 @@ install updates by closing the companion and running `update_companion.bat`.
 
 ## Unreleased
 
+**Spell timers follow your level.** The client's duration for a spell is a
+CAP, not what you get at every level: Regeneration at level 34 was timed at
+20m30s when the game gives 11m12s. Forty client-derived rows now resolve
+their duration formula at your current level (or the spell's minimum level
+until yours is known), before tier scaling. Audited against the installed
+`spells_us.txt` through level 50. Ported from @soaringswine's fork.
+
+**The advisor's prose is checked, not just its picks.** A consult described
+Insidious Malady as a Necromancer disease DoT; it is Shaman-only and does no
+HP damage. The class column is now stamped from structured spell data, a
+reason that calls a non-damage spell a DoT or nuke gets the real effect
+appended, and poison, disease and curse DoTs are separate families for
+supersession so one no longer "upgrades" another. Spells whose data carries
+no description (26 of 1,223, Leech among them) get their effect synthesized
+from the effect array instead of leaving the model to invent one. All three
+from @soaringswine's fork.
+
 **The .exe updates itself.** Until now the packaged build could tell you a
 new version existed and then had to send you to the releases page to
 download and replace the file by hand — so most people simply kept running
