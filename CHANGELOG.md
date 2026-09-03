@@ -4,7 +4,7 @@ Notable changes per release. Check for updates by clicking the version badge
 in the app header. The packaged .exe installs the update itself; a source
 install updates by closing the companion and running `update_companion.bat`.
 
-## Unreleased
+## v2.13.0 — 2026-09-03
 
 **Spell timers follow your level.** The client's duration for a spell is a
 CAP, not what you get at every level: Regeneration at level 34 was timed at
