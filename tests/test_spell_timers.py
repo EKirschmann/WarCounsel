@@ -250,6 +250,7 @@ def test_requested_casts_start_live_timers(spell, expected_seconds):
         "seconds": expected_seconds,
         "target": None,
         "ends": ts + timedelta(seconds=expected_seconds),
+        "source": "table",   # a measured length would say "measured"
     }
 
 
