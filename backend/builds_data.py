@@ -118,6 +118,55 @@ def spell_entry(name: str) -> Optional[dict]:
             "levels": dict(hit["levels"])}
 
 
+# Effect ids eqlbuilds leaves unnamed ("Effect 457") whose meaning is
+# established by EVIDENCE, not guesswork. 457: carried by Leech, whose
+# in-game tooltip reads "100% of the life-force taken is used to heal
+# your wounds", and carried by NONE of the plain DoTs checked (Poison
+# Bolt, Disease Cloud, Clinging Darkness) — so it is the damage-returned-
+# as-healing conversion, in TENTHS of a percent (base 1000 = 100%).
+# Verified 2026-07-30 from a player screenshot of the client tooltip.
+_EFFECT_NOTES = {457: ("life drained returned as healing", 0.1, "%")}
+
+# self-heal-on-damage target types, per spell_file.py's documented set
+_LIFETAP_TARGETS = {13, 20}
+
+
+def effect_summary(entry: dict, cap: int = 110) -> str:
+    """Compact effect prose for a spell the snapshot describes with an
+    EMPTY description (26 of 1223 spells, Leech among them). The client
+    composes its tooltip from exactly this data, so rendering it keeps the
+    advisor grounded instead of filling the hole from model memory — which
+    is what put an invented 'larger lifetap' Leech in a real consult, and
+    then had a checker correctly call it unsupported.
+
+    Spacer slots (id-10 charisma placeholders, the convention documented
+    in game_data._primary_effect) are skipped."""
+    effects = entry.get("effects") or []
+    ticks = entry.get("durationTicks") or 0
+    per_tick = " per tick" if ticks else ""
+    bits = []
+    for e in effects:
+        eid, base = e.get("effectId"), e.get("baseValue") or 0
+        if eid == 10 and not base:
+            continue  # spacer
+        if not base:
+            continue
+        note = _EFFECT_NOTES.get(eid)
+        if note:
+            label, scale, unit = note
+            bits.append(f"{base * scale:g}{unit} {label}")
+        elif eid == 0:
+            bits.append(f"{abs(base)} damage{per_tick}" if base < 0
+                        else f"heals {base}{per_tick}")
+        else:
+            bits.append(f"{e.get('name') or f'effect {eid}'} {base}")
+    if ticks:
+        bits.append(f"over {ticks} ticks ({entry.get('duration') or ''})".strip())
+    if entry.get("targetTypeId") in _LIFETAP_TARGETS:
+        bits.append("lifetap (heals you)")
+    return "; ".join(bits)[:cap]
+
+
 def class_spell_lines(cls_name: str, lo: int, hi: int) -> Optional[list]:
     """Compact per-level spell lines for the advisor prompt window, straight
     from the snapshot (exact levels). None = no snapshot / unknown class."""
@@ -130,7 +179,9 @@ def class_spell_lines(cls_name: str, lo: int, hi: int) -> Optional[list]:
         if lv is None or not (lo <= lv <= hi):
             continue
         desc = (s.get("resolvedDescription") or s.get("description") or "")
-        desc = " ".join(desc.split())[:110]
+        # no description in the snapshot: synthesize one from the effect
+        # data rather than leaving the model a bare name and mana cost
+        desc = " ".join(desc.split())[:110] or effect_summary(s)
         mana = s.get("manaCost")
         out.append(f"L{lv} {s.get('name')}"
                    + (f" [mana {mana}]" if mana else "")

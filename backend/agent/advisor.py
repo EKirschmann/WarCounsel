@@ -72,6 +72,7 @@ Reply with ONLY a JSON object (no markdown fences, no prose) shaped exactly like
 
 Rules:
 - The loadout is tiered and must USE ALL __SLOTS_NOTE__ slots. Choose ONLY from the "Spellbook USABLE NOW" list (owned AND at or below the character's level). Name the job each pick does. Never pick a spell superseded by another owned spell.
+  Spellbook entries may include a deterministic role tag derived from effect data. Treat it as authoritative: never describe a non-damage spell as a DoT, nuke, or other damage source.
   - must_have: the core spells that should always be memorized, in priority order (typically 5-7).
   - should_have: fills the REMAINING slots, in priority order — must_have + should_have together must total EXACTLY __SLOTS_NOTE__ picks.
   - nice_to_have: 10-14 EXTRA alternatives beyond the slot count, in priority order, so the player can swap by situation (different zone, tougher pulls, low mana).
@@ -124,6 +125,101 @@ def _capability_line(ctx: dict) -> Optional[str]:
             "every trip is on foot). A capability listed without a level is "
             "one they have NOW — the source records no level for it, "
             "which is NOT the same as not having it:\n" + line)
+
+
+def _spell_damage_role(name: str) -> str:
+    """Compact damage role from structured spell effects for prompt grounding.
+
+    Names and long durations are not evidence of periodic damage: Insidious
+    Malady, for example, has disease-counter and disease-resistance effects
+    but no HP-loss effect.  An empty result means the local snapshot is not
+    available, so callers preserve the prior name-and-level format.
+    """
+    entry = builds_data.spell_entry(name)
+    if not entry:
+        return ""
+    damages_hp = any(
+        effect.get("effectId") in (0, 100)
+        and (effect.get("baseValue") or 0) < 0
+        for effect in (entry.get("effects") or [])
+    )
+    if not damages_hp:
+        return "non-damage"
+    return "DoT" if (entry.get("durationTicks") or 0) > 0 else "direct damage"
+
+
+def _stamp_owner_class(picks: List[dict], classes: List[str]) -> None:
+    """Overwrite each pick's `cls` from the eqlbuilds snapshot.
+
+    The model writes `cls` free-form and NO gate ever read it, so a real
+    consult credited the Shaman's Insidious Malady to the Necromancer --
+    wrong class beside a wrong "disease DoT" rationale, both displayed.
+    The snapshot knows exactly who learns each spell, so this is the same
+    deterministic stamp the spellbook `level` already gets.
+
+    Only trio classes that actually LEARN the spell are named. A spell the
+    snapshot does not carry keeps whatever the model said: absence of data
+    is not evidence, the rule the curated stacking lines already follow.
+    """
+    trio = {c.strip().lower(): c.strip() for c in classes if c and c.strip()}
+    for pick in picks:
+        name = str(pick.get("name") or "")
+        owners = builds_data.spell_levels(name)
+        if not owners:
+            continue
+        mine = sorted(trio[o.lower()] for o in owners if o.lower() in trio)
+        if mine:
+            stamped = "/".join(mine)
+            if stamped != (pick.get("cls") or ""):
+                logger.info("Stamped %s as %s (model said %r)",
+                            name, stamped, pick.get("cls"))
+            pick["cls"] = stamped
+        else:
+            # Owned and level-legal, yet no trio class learns it. That is a
+            # data mismatch worth seeing, not something to blank silently.
+            logger.info("%s is owned but no trio class learns it "
+                        "(snapshot says %s; trio is %s) -- leaving cls %r",
+                        name, ", ".join(sorted(owners)),
+                        "/".join(classes), pick.get("cls"))
+
+
+# Words that claim a spell deals damage. Deliberately broad: a resist
+# debuff's CORRECT rationale also names DoTs ("lowers disease resistance
+# so your disease DoTs land"), and annotating that harmlessly beats
+# tightening the pattern until a real fabrication slips past.
+_DAMAGE_CLAIM = re.compile(
+    r"\b(dots?|damage[- ]over[- ]time|nukes?|direct damage"
+    r"|damage source|dps)\b",
+    re.I)
+
+
+def _gate_reason_claims(picks: List[dict]) -> None:
+    """Append the effect data to any reason claiming a non-damage spell hurts.
+
+    The role tag `_spell_damage_role` puts in the briefing is ADVISORY --
+    prompt text the model can ignore, and did: "Your highest-level disease
+    DoT" shipped for a spell whose only effects are disease counters and a
+    resistance debuff. The house rule wants the check after generation too.
+
+    The note is phrased as a neutral FACT rather than a contradiction, so
+    it reads as useful detail beside a correct rationale and as a flat
+    refutation beside a false one. ANNOTATED, never dropped -- the pick can
+    be right while the prose about it is wrong (the `_warn_displacements`
+    precedent).
+    """
+    for pick in picks:
+        reason = str(pick.get("reason") or "")
+        if not reason or not _DAMAGE_CLAIM.search(reason):
+            continue
+        name = str(pick.get("name") or "")
+        if _spell_damage_role(name) != "non-damage":
+            continue
+        entry = builds_data.spell_entry(name)
+        effects = builds_data.effect_summary(entry) if entry else ""
+        note = "no HP-loss effect" + (f" -- {effects}" if effects else "")
+        pick["reason"] = f"{reason} [{note}]"
+        logger.info("Annotated %s: reason claims damage, effects show none",
+                    name)
 
 
 def _build_prompt(ctx: dict, wiki: str) -> str:
@@ -211,7 +307,21 @@ def _build_prompt(ctx: dict, wiki: str) -> str:
         if viable:
             keep = {n.lower() for n in viable}
             usable = [s for s in usable if s["name"].lower() in keep]
-        owned = "; ".join(f"{s['name']} (L{s['level']})" for s in usable)
+        # Without the snapshot every role tag is empty and the briefing
+        # silently reverts to a bare name+level -- the model is then free to
+        # call a debuff a DoT with nothing contradicting it, and the only
+        # symptom is prose nobody can tell apart from a grounded answer.
+        if not builds_data.available():
+            logger.warning("eqlbuilds snapshot unavailable -- spell role "
+                           "tags omitted from the briefing, so damage "
+                           "claims in the counsel are ungrounded")
+
+        def spell_label(spell: dict) -> str:
+            role = _spell_damage_role(spell["name"])
+            detail = f"L{spell['level']}" + (f"; {role}" if role else "")
+            return f"{spell['name']} ({detail})"
+
+        owned = "; ".join(spell_label(s) for s in usable)
         pre = ""
         if viable and ctx.get("_pregated"):
             pre = (f" [{len(ctx['_pregated'])} owned spells already removed "
@@ -1844,6 +1954,11 @@ async def generate_advice(ctx: dict) -> dict:
         for lst in (must_have, should_have, nice_to_have):
             for s in lst:
                 s["level"] = level_by_name.get(str(s["name"]).lower())
+            # `cls` and `reason` are the two fields the model writes free-form
+            # that no gate used to read, which is how a Shaman-only debuff was
+            # displayed as the Necromancer's "highest-level disease DoT".
+            _stamp_owner_class(lst, classes)
+            _gate_reason_claims(lst)
         loadout = must_have + should_have  # combined = the actual slot fill
         prebuffs = _describe_prebuffs(_annotate_stacking(_gate_pet_spells(_backfill_prebuffs(_gate_prebuffs(await _gate_picks(
             _clean_list(data.get("prebuffs"), ("name", "cls", "reason"), cap=8),
@@ -1857,6 +1972,8 @@ async def generate_advice(ctx: dict) -> dict:
         prebuffs = _cap_prebuffs(prebuffs, ctx)
         for s in prebuffs:
             s["level"] = level_by_name.get(str(s["name"]).lower())
+        _stamp_owner_class(prebuffs, classes)
+        _gate_reason_claims(prebuffs)
         replace = _clean_list(data.get("replace"), ("using", "upgrade", "why"),
                               cap=8, require="using")
         verified = []

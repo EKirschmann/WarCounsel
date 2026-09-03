@@ -14,7 +14,7 @@ from backend import learned_durations as learned
 from backend import alerts, builds_data, race_unlocks, spell_file
 from backend.alert_data import (ABILITY_COOLDOWNS, BASE_DURATION_ROWS,
                                 COOLDOWN_SHAVES, SPELL_TIMERS,
-                                TIER_DURATION_RATE)
+                                LEVEL_DURATION_ROWS, TIER_DURATION_RATE)
 from backend.log_system import events as ev
 from backend.log_system.parser import CLASS_ABBREV, spell_tier, strip_tier
 
@@ -124,6 +124,65 @@ def _tier_scaled(base: str, secs: int, cast_name: str) -> int:
     if tier <= 0 or base not in BASE_DURATION_ROWS:
         return secs
     return int(secs * (1 + TIER_DURATION_RATE * tier))
+
+
+def _duration_formula_ticks(formula: int, level: int) -> int:
+    """Return base duration ticks for EverQuest buff formulas 1 through 15."""
+    if formula == 1:
+        return level // 2 if level > 3 else 1
+    if formula == 2:
+        return level // 2 + 5 if level > 3 else 6
+    if formula == 3:
+        return 30 * level
+    if formula == 4:
+        return 50
+    if formula == 5:
+        return 2
+    if formula == 6:
+        return level // 2 + 2
+    if formula == 7:
+        return level
+    if formula == 8:
+        return level + 10
+    if formula == 9:
+        return 2 * level + 10
+    if formula == 10:
+        return 3 * level + 10
+    if formula == 11:
+        return 30 * (level + 3)
+    if formula == 12:
+        return level // 4 if level > 7 else 1
+    if formula == 13:
+        return 4 * level + 10
+    if formula == 14:
+        return 5 * (level + 2)
+    if formula == 15:
+        return 10 * (level + 10)
+    raise ValueError(f"unsupported buff duration formula: {formula}")
+
+
+def _level_scaled_duration(base: str, cap_seconds: int,
+                           caster_level: Optional[int]) -> int:
+    """Resolve level-based client buff duration formulas to seconds.
+
+    SPELL_TIMERS normally stores a fixed duration. A row listed in
+    LEVEL_DURATION_ROWS stores its client duration CAP instead; apply the
+    formula at the tracker's current level before any upgrade-tier scaling.
+    Unknown levels use the spell's minimum cast level so the timer remains
+    conservative rather than incorrectly displaying the cap.
+    """
+    rule = LEVEL_DURATION_ROWS.get(base)
+    if not rule:
+        return cap_seconds
+    formula, cap_ticks, minimum_level = rule
+    level = max(caster_level or minimum_level, minimum_level)
+    try:
+        ticks = _duration_formula_ticks(formula, level)
+    except ValueError:
+        logger.warning("unsupported timer duration formula %s for %r",
+                       formula, base)
+        return cap_seconds
+    return min(ticks, cap_ticks) * 6
 
 
 # "A froglok ghoul", "the guard" -- an attacker carrying an article is an
@@ -876,6 +935,8 @@ class CharacterTracker:
                             self._start_timer(e.spell, measured["seconds"],
                                               "spell", e.ts, source="measured")
                         elif secs:
+                            secs = _level_scaled_duration(base, secs,
+                                                          self.level)
                             secs = _tier_scaled(base, secs, e.spell)
                             self._start_timer(e.spell, secs, "spell", e.ts)
                         elif base not in self._timer_misses:

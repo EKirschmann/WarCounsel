@@ -18,7 +18,12 @@ DoTs, plus the roots, snares, fears, charms, slows and resist
 debuffs, which need timers just as much and never tick — a shaman
 has no other way to know when a slow or a malaise has dropped.
 The druid pass incidentally covers nine RANGER spells that share a
-name and an identical duration.
+name and an identical duration. Regeneration is additionally included as
+a SHAMAN/DRUID heal-over-time requested for the same live timer view.
+Client `durationTicks` is a CAP, not always the duration at the caster's
+current level. LEVEL_DURATION_ROWS records every client-derived row where
+the duration formula has not reached that cap at every legal casting level,
+so those timers follow caster level.
 
 Still pack-only, and still missing every hostile spell with a
 duration: Enchanter (36, INCLUDING the whole charm/mez line at
@@ -247,6 +252,7 @@ SPELL_TIMERS = {
     "pyrocuror": 114,
     "quivering veil of xarn": 18,
     "rapture": 24,
+    "regeneration": 1230,      # [client cap] formula 10, max 205 ticks
     "remedy | ${2} <--": 3,
     "rest the dead": 180,      # [eqlbuilds] 30 ticks
     "root": 48,                # [eqlbuilds] 8 ticks
@@ -401,6 +407,7 @@ BASE_DURATION_ROWS = frozenset({
     "paralyzing earth",
     "plague",
     "poison bolt",
+    "regeneration",
     "rest the dead",
     "root",
     "scent of darkness",
@@ -430,6 +437,68 @@ BASE_DURATION_ROWS = frozenset({
     "walking sleep",
     "wave of enfeeblement",
 })
+
+# spell -> (client buff-duration formula, cap in ticks, minimum cast level)
+#
+# SPELL_TIMERS stores each row's duration cap in seconds. These client-derived
+# rows can be cast before their formula reaches that cap, so resolve them from
+# caster level first. The minimum level is the earliest any class can cast the
+# spell and is the conservative fallback until /who or a level line is seen.
+#
+# Audited against the installed EQL spells_us.txt across every legal caster
+# level through 50. Regeneration exposed the bug at level 34: formula 10 gives
+# 112 ticks (11m12s), while treating its 205-tick cap as fixed showed 20m30s.
+LEVEL_DURATION_ROWS = {
+    # formula 1: level / 2 (one tick through level 3)
+    "clinging darkness": (1, 8, 4),
+    "dooming darkness": (1, 15, 27),
+    "eternities torment": (1, 21, 27),
+    "heat blood": (1, 6, 10),
+    "negation of life": (1, 15, 18),
+    "stinging swarm": (1, 9, 10),
+    # formula 2: level / 2 + 5 (six ticks through level 3)
+    "ensnaring roots": (2, 16, 21),
+    "grasping roots": (2, 8, 2),
+    "harmony": (2, 20, 5),
+    "instill": (2, 16, 17),
+    "root": (2, 8, 3),
+    "snare": (2, 39, 1),
+    # formula 3: 30 * level
+    "disease cloud": (3, 60, 1),
+    "siphon strength": (3, 60, 1),
+    # formula 6: level / 2 + 2
+    "drowsy": (6, 35, 5),
+    "shackle of bone": (6, 35, 17),
+    "shackle of spirit": (6, 35, 38),
+    "tagar's insects": (6, 35, 27),
+    "togor's insects": (6, 35, 38),
+    "walking sleep": (6, 35, 13),
+    # formula 7: level
+    "cancelling of life": (7, 10, 8),
+    "disempower": (7, 20, 12),
+    "fear": (7, 3, 2),
+    "incapacitate": (7, 65, 40),
+    "listless power": (7, 65, 25),
+    # formula 8: level + 10
+    "numb the dead": (8, 20, 2),
+    "shadow vortex": (8, 75, 19),
+    "wave of enfeeblement": (8, 40, 9),
+    # formula 9: 2 * level + 10
+    "ensnare": (9, 140, 26),
+    "fixation of ro": (9, 100, 42),
+    "insidious fever": (9, 140, 17),
+    "insidious malady": (9, 140, 38),
+    "malaise": (9, 140, 18),
+    "malaisement": (9, 140, 32),
+    "malosi": (9, 140, 48),
+    "scent of darkness": (9, 140, 37),
+    "scent of dusk": (9, 140, 10),
+    "scent of shadow": (9, 140, 21),
+    # formula 10: 3 * level + 10
+    "beguile undead": (10, 205, 31),
+    "dominate undead": (10, 205, 18),
+    "regeneration": (10, 205, 23),
+}
 
 # Duration gained per upgrade tier (eqltools.com /learn/spell-upgrades,
 # 2026-07-30): +10%/tier for buffs and debuffs, +5%/tier for DoTs and HoTs,

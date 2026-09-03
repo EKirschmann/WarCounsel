@@ -158,6 +158,18 @@ def _pet_unlock_level(name: str) -> Optional[int]:
 # ("Summon Drink supersedes Hammer of Striking" was a real bug: both are
 # SPA 32 and the summoned item id compared as if it were power).
 NONCOMPARABLE_SPAS = {32, 33, 85, 113}
+# Secondary ailment counters identify damage families that share the same
+# primary HP effect but resist independently.  Comparing only the strongest
+# HP effect made Venom of the Snake (poison) look like an upgrade to Scourge
+# (disease), so the advisor silently removed the disease DoT from its prompt.
+AILMENT_COUNTER_SPAS = {35, 36, 116}  # disease, poison, curse
+
+
+def _ailment_signature(rec: dict) -> frozenset:
+    return frozenset(
+        e.get("effectId") for e in (rec.get("effects") or [])
+        if e.get("effectId") in AILMENT_COUNTER_SPAS
+    )
 
 
 async def is_resurrection(name: str) -> bool:
@@ -208,10 +220,10 @@ def _primary_effect(rec: dict):
 
 async def same_spell_line(using: str, upgrade: str) -> bool:
     """True only when `upgrade` plausibly supersedes `using`: both are real
-    spells doing the SAME JOB (same primary effect id and direction, same
-    target type) with the upgrade hitting harder. Kills hallucinated pairs
-    like a teleport 'upgrading' to a nuke — an LLM judgment this codebase
-    no longer trusts unverified."""
+    spells doing the SAME JOB (same primary effect id and direction, target
+    type, and ailment family) with the upgrade hitting harder. Kills
+    hallucinated pairs like a teleport 'upgrading' to a nuke — an LLM
+    judgment this codebase no longer trusts unverified."""
     ra = await spell_record(using)
     rb = await spell_record(upgrade)
     if not ra or not rb:
@@ -221,6 +233,10 @@ async def same_spell_line(using: str, upgrade: str) -> bool:
     if _is_pet(ra) and _is_pet(rb):
         la, lb = _pet_unlock_level(using), _pet_unlock_level(upgrade)
         return la is not None and lb is not None and lb > la
+    ailments_a = _ailment_signature(ra)
+    ailments_b = _ailment_signature(rb)
+    if (ailments_a or ailments_b) and ailments_a != ailments_b:
+        return False
     pa = _primary_effect(ra)
     pb = _primary_effect(rb)
     if not pa or not pb:
