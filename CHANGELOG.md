@@ -31,8 +31,6 @@ Three things it deliberately will not do:
 It also closes the app the same way you do, so the session you were in is
 still saved on the way out.
 
-## Unreleased
-
 **Every fight now has a timeline you can read.** Under the damage
 sparkline in the Encounter panel there is a "timeline" toggle. Open it and
 each ability gets its own lane — a mark per hit, taller for harder, hollow
