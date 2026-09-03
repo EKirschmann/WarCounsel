@@ -10,6 +10,7 @@ import type {
 } from "@/lib/types";
 import { trustAll, trustMember } from "@/lib/api";
 import { usePanelPrefs } from "@/lib/panelPrefs";
+import { FightTimeline } from "@/components/FightTimeline";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -121,6 +122,18 @@ export const EncounterPanel = memo(function EncounterPanel({
   const foes = enc?.foes ?? [];
   const slain = foes.filter((f) => f.slain).length;
   const [scale, setScale] = useState(1);
+  // The per-hit lanes are opt-in below the sparkline: hundreds of marks
+  // are the answer to "why did that fight go badly", not a thing to read
+  // mid-pull. Remembered, because whoever opens it once wants it again.
+  const [ftOpen, setFtOpen] = useState(false);
+  useEffect(() => {
+    setFtOpen(localStorage.getItem("eql.ftOpen") === "1");
+  }, []);
+  const toggleFt = () =>
+    setFtOpen((v) => {
+      localStorage.setItem("eql.ftOpen", v ? "0" : "1");
+      return !v;
+    });
   // Collapsible for the same reason the ledger is: on a narrow screen this
   // panel is the widest thing competing with the Atlas, and someone reading
   // a map or a quest list does not need a per-ability breakdown beside it.
@@ -239,6 +252,16 @@ export const EncounterPanel = memo(function EncounterPanel({
                       />
                     ));
                   })()}
+                </div>
+              )}
+              {show("encounter", "timeline") && (
+                <div className="ft-row">
+                  <button type="button" className="ft-toggle" onClick={toggleFt}
+                          aria-expanded={ftOpen}
+                          title="Every hit, miss and resist of this fight, one lane per ability">
+                    {ftOpen ? "▾ timeline" : "▸ timeline"}
+                  </button>
+                  {ftOpen && <FightTimeline started={enc.started} active={enc.active} />}
                 </div>
               )}
               {foes.length > 1 && (

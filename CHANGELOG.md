@@ -31,6 +31,40 @@ Three things it deliberately will not do:
 It also closes the app the same way you do, so the session you were in is
 still saved on the way out.
 
+## Unreleased
+
+**Every fight now has a timeline you can read.** Under the damage
+sparkline in the Encounter panel there is a "timeline" toggle. Open it and
+each ability gets its own lane — a mark per hit, taller for harder, hollow
+for a miss or a resist, with your incoming damage and heals on lanes of
+their own. Hover any mark for the second it landed, the number, the tag
+(critical, riposte, slay undead) and the target. Zoom to 8× and scroll to
+pan. This is the answer to "why did that pull go badly" that totals could
+never give, and it works for the current fight and the last five.
+
+**Your timers learn how long your spells really last.** The countdown
+table this app ships was timed on somebody else's character at an unknown
+tier, which is why it always ran a little short. WarCounsel now reads both
+ends of every cycle in your own log — the cast, and the "has worn off"
+that follows — and once three cycles agree within 15%, that measured
+length replaces the table's for that spell, on that character, at that
+tier. Timers built this way carry a small "measured" tag. It also fills
+the gaps: a spell the table never knew gets a timer the third time its
+fade is seen. One reading is never used on its own; a mob's debuff fading
+off you, a death dropping every buff at once, or the same spell on two
+mobs all produce readings that disagree, and disagreement is what keeps
+them out.
+
+**Double attack, measured.** A new Vitals tile reads your double-attack
+rate off kick and bash rounds — the two attacks that cannot be dual
+wielded, so two of them in the same second is a double attack and nothing
+else. Hover it for the same rate on your weapon swings, marked as mixed,
+because there two swings in a second may simply be two hands.
+
+**Quests sort by closest to done.** The rows with a stated requirement now
+lead the list, ready-to-turn-in first, and that order is applied before
+the 25-row cap — so the cap keeps the ones you can actually finish.
+
 ## v2.12.0 — 2026-08-26
 
 **Fixed: the app could sit showing you numbers from a character you had

@@ -30,6 +30,8 @@ PERSIST_FIELDS = [
     "damage_dealt", "damage_taken", "healing_received", "healing_done",
     "kills", "deaths", "xp_ticks", "xp_percent", "aa_points", "skill_ups",
     "swings_hit", "swings_missed", "loots", "last_target", "last_event_at",
+    # attack-round distribution and the round in progress
+    "rounds", "_round",
     "position", "session_max_dps", "ledger", "encounter",
     "encounter_history", "unknown_casts", "loadout_hint", "last_death",
     "mob_stats", "_last_kill", "_pending_xp", "_pending_coin",

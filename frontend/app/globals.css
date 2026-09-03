@@ -2000,6 +2000,78 @@ button.app-version:hover { color: var(--gold-bright); }
   opacity: 0.75;
 }
 
+/* fight timeline: one lane per ability, a mark per hit ------------------
+   Height inside a lane is magnitude; a hollow mark is a swing that did
+   nothing (miss, resist, an avoided incoming hit). Colour is the app's
+   semantic set and nothing else -- out gold, in red, heal green -- so a
+   lane reads the same way the ledger does. */
+.ft { margin: 6px 0 4px; font-family: var(--font-mono), ui-monospace, monospace; }
+.ft-note { color: var(--muted); font-size: 12px; margin: 4px 0; }
+.ft-row { margin: 2px 0 4px; }
+.ft-toggle {
+  font: inherit; font-size: 11px; padding: 0; background: transparent;
+  color: var(--muted); border: 0; cursor: pointer;
+}
+.ft-toggle:hover { color: var(--gold); }
+
+/* a timer whose length came off this character's own log, not the table */
+.vital-timer-src {
+  font-style: normal; font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--heal); margin-left: 6px; opacity: .85;
+}
+.ft-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 11px; color: var(--muted); margin-bottom: 4px;
+}
+.ft-legend { display: inline-flex; align-items: center; gap: 4px; }
+.ft-legend .ft-mark { position: static; height: 10px; margin-right: 2px; }
+.ft-zoom { margin-left: auto; display: inline-flex; gap: 2px; }
+.ft-zoom button {
+  font: inherit; padding: 1px 6px; background: transparent; color: var(--muted);
+  border: 1px solid var(--hairline-dim); cursor: pointer;
+}
+.ft-zoom button[data-on] { color: var(--gold); border-color: var(--gold); }
+.ft-dropped { color: var(--dmg-in); }
+.ft-scroll { overflow-x: auto; overflow-y: hidden; border: 1px solid var(--hairline-dim); }
+.ft-lanes { position: relative; min-width: 100%; }
+.ft-axis { position: relative; height: 14px; border-bottom: 1px solid var(--hairline-dim); margin-left: 118px; }
+.ft-axis .ft-grid b {
+  position: absolute; left: 2px; top: 0; font-weight: 400; font-size: 10px;
+  color: var(--muted); white-space: nowrap;
+}
+.ft-lane { display: flex; align-items: stretch; height: 22px; border-bottom: 1px solid var(--hairline-dim); }
+.ft-lane:last-child { border-bottom: 0; }
+.ft-label {
+  flex: 0 0 118px; display: flex; justify-content: space-between; align-items: center;
+  gap: 6px; padding: 0 6px; font-size: 11px; overflow: hidden;
+  border-right: 1px solid var(--hairline-dim); background: var(--inset);
+}
+.ft-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ft-label em { font-style: normal; color: var(--muted); font-size: 10px; }
+.ft-lane[data-side="out"] .ft-label span { color: var(--dmg-out); }
+.ft-lane[data-side="in"] .ft-label span { color: var(--dmg-in); }
+.ft-lane[data-side="heal"] .ft-label span { color: var(--heal); }
+.ft-track { position: relative; flex: 1 1 auto; }
+.ft-grid { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--hairline-dim); }
+.ft-mark {
+  position: absolute; bottom: 2px; width: 3px; margin-left: -1px;
+  background: var(--dmg-out); opacity: 0.9;
+}
+.ft-mark[data-side="in"] { background: var(--dmg-in); }
+.ft-mark[data-side="heal"] { background: var(--heal); }
+.ft-mark[data-tag="crit"] { background: var(--gold-bright); width: 4px; }
+.ft-mark[data-tag="miss"], .ft-mark[data-tag="resist"], .ft-mark[data-tag="avoid"] {
+  background: transparent; border: 1px solid currentColor; opacity: 0.55; width: 4px;
+}
+.ft-mark[data-side="out"] { color: var(--dmg-out); }
+.ft-mark[data-side="in"] { color: var(--dmg-in); }
+.ft-mark[data-tag="resist"] { border-style: dashed; }
+.ft-mark:hover { opacity: 1; outline: 1px solid var(--text); z-index: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .ft-mark { transition: opacity .12s ease; }
+}
+
 /* ---------- settings (gear + modal) ---------- */
 /* Same glass/gold vocabulary as the panels: flat, square-ended, no radius. */
 .gear-btn {

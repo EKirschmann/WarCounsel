@@ -131,7 +131,17 @@ export function QuestPanel({ level }: { level?: number | null }) {
   // Out-of-era quests are the Kunark-and-later content EQL does not
   // implement. Kept, because the ITEMS are real and sit in your bags —
   // but moved below, because they are not things you can go and do.
-  const inEra = found.filter((q) => !q.out_of_era);
+  // Closest to done first. A row with a STATED requirement carries the only
+  // number that answers "what can I actually finish tonight", so those sort
+  // ahead of rows without one, by fraction complete — ready-to-turn-in at
+  // the very top. Rows with no bar keep the backend's order: there is
+  // nothing honest to rank them by. Sorted BEFORE the 25-row cap, so the
+  // cap keeps the achievable ones rather than whatever came first.
+  const progress = (q: QuestRow) =>
+    q.needed != null && q.have != null && q.needed > 0 ? q.have / q.needed : -1;
+  const inEra = found
+    .filter((q) => !q.out_of_era)
+    .sort((a, b) => progress(b) - progress(a));
   const outEra = found.filter((q) => q.out_of_era);
   const shown = showAll || needle ? inEra : inEra.slice(0, 25);
 

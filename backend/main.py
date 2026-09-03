@@ -1510,6 +1510,24 @@ async def get_encounters(limit: int = 50, db: Session = Depends(get_db)):
     return {"encounters": [r.payload for r in rows]}
 
 
+@app.get("/api/encounter/hits")
+async def get_encounter_hits(started: str):
+    """Every retained hit of one in-memory fight, for the timeline.
+
+    On demand and by `started` stamp, NOT part of the snapshot: the socket
+    pushes six frames a second and a fight is hundreds of rows. Only the
+    live fight and the last five are held -- older ones exist as counters
+    in the DB and nothing else, and this says so rather than answering
+    with an empty list that reads as "nothing happened".
+    """
+    view = tracker.hits_view(started)
+    if view is None:
+        raise HTTPException(404, "that fight is no longer held in memory — "
+                                 "only the current fight and the last five "
+                                 "keep their individual hits")
+    return view
+
+
 def _parse_ver(v: str) -> tuple:
     return tuple(int(x) for x in re.findall(r"\d+", v)[:3]) or (0,)
 
